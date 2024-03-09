@@ -1,29 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Vova map</title>
-    <script src='https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js'></script>
+    <title>Vova Experiments</title>
+    <script src='https://unpkg.com/maplibhre-gl@4.0.0/dist/maplibre-gl.js'></script>
     <style>
         body {
-            margin: 0;
-            padding: 0;
-        }
-        html, body, #map {
-            height: 100%;
+            margin: 40px;
+            padding: 40px;
+		font-family: inter;
+		font-size: 20px;
+		background-color:black;
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
-    <script>
-        var map = new maplibregl.Map({
-            container: 'map', // container id
-            style: 'style1.json', // подставляю стиль
-            //style: 'https://map.windyapp.co/styles/whb_app_dev/style.json', // подставляю стиль
-            // style: 'https://demotiles.maplibre.org/style.json', // демо файл мэплибре
-            center: [0, 0], // starting position [lng, lat]
-            zoom: 1 // starting zoom
-        });
-    </script>
+<h1><span style="color:#ffffff"><strong>Vova's Map Sanbox</strong></span></h1>
+<br/>
+<br/>
+<a href="/map1.html" style="color:#ff6600">Example Map Style - Google dark streets</a>
+<br/>
+<br/>
+<a href="/map2.html" style="color:#ff6600">Example Map Style - Empty</a>
+<br/>
+<br/>
+<a href="/map3.html" style="color:#ff6600">Example Map Style - Empty</a>
 </body>
 </html>
