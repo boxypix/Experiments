@@ -11,7 +11,12 @@
             font-family: Arial, sans-serif;
             font-size: 14px;
             margin: 0;
-            padding: 30px;
+            padding: 24px;
+            padding-top: 8px;
+        }
+
+        h1 {
+            color: #B6C8D4;
         }
 
         .gradient-step {
@@ -24,7 +29,7 @@
             width: 60px;
             height: 30px;
             margin-right: 10px;
-            border-radius: 0px;
+            border-radius: 6px;
         }
 
         .controls {
@@ -44,7 +49,7 @@
         }
 
         input[type="color"] {
-            padding: 2px;
+            padding: 1px;
         } 
 
         input[type="range"] {
@@ -80,7 +85,7 @@
         }
 
         .alpha-range {
-            min-width: 100px;
+            min-width: 70px;
             max-width: 200px;
             width: 100%; /* Используйте ширину контейнера, если это необходимо */
         }
@@ -176,20 +181,20 @@ input[type="range"]::-ms-thumb {
 </head>
 <body>
     <div class="container">
-        <h1>Vova's JSON Gradient Editor</h1>
-        <span>У тебя есть джейсоны покраски? Смотри и редактируй тут, сэкономишь время</span><br>
+        <h1 id="headerTitle">Vova's JSON Gradient Editor</h1>
+        <span>У тебя есть джейсоны покраски? Смотри и редактируй тут, сэкономишь время</span>
         <span>Фокус на редактировании от старта, до середины. 
-            Максимальные значения срезал до некого value, 
-            чтобы не засорять экстримальными значениями.</span>
+            Максимальные значения срезал до value 30, 
+            чтобы не засорять экстремальными значениями.</span>
         <div id="gradientPreview"></div>
         <div id="gradientContainer"></div>
         <div class="buttons">
-            <button class="export-button" onclick="exportJsonFile()">Export JSON</button>
-            <button class="show-button" onclick="showJsonText()">Show text style</button>
             <label class="import-button">
                 Import JSON
                 <input type="file" id="importFile" style="display: none;" onchange="importJsonFile(event)">
             </label>
+            <button class="show-button" onclick="showJsonText()">Show text style</button>
+            <button class="export-button" onclick="exportJsonFile()">Export JSON</button>
         </div>
         <pre id="exportedJson" style="display: none;"></pre>
     </div>

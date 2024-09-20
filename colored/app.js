@@ -7,27 +7,57 @@ let gradientData = [
     },
     {
         "color": "#46B1FF",
-        "value": 10.0,
+        "value": 5.0,
         "alpha": 0.5,
         "wnd": "Sky"
     },
     {
         "color": "#51ED29",
-        "value": 20.0,
-        "alpha": 1.0,
+        "value": 10.0,
+        "alpha": 0.75,
         "wnd": "Green"
     },
     {
         "color": "#BDFF00",
+        "value": 15.0,
+        "alpha": 1.0,
+        "wnd": "Lemon"
+    },
+    {
+        "color": "#FFC700",
+        "value": 20.0,
+        "alpha": 1.0,
+        "wnd": "Orange"
+    },
+    {
+        "color": "#FF8541",
+        "value": 25.0,
+        "alpha": 1.0,
+        "wnd": "Red"
+    },
+    {
+        "color": "#FF416E",
         "value": 30.0,
         "alpha": 1.0,
-        "wnd": "Lemon finish"
+        "wnd": "Purple finish"
     }
 ];
 
 const gradientContainer = document.getElementById('gradientContainer');
 const gradientPreview = document.getElementById('gradientPreview');
 const exportedJsonElement = document.getElementById('exportedJson');
+
+const headerTitle = document.getElementById('headerTitle');
+let currentFileName = '';
+
+// Функция для обновления заголовка с названием файла
+function updateHeaderTitle() {
+    if (currentFileName) {
+        headerTitle.textContent = `Vova's JSON Gradient Editor / ${currentFileName}`;
+    } else {
+        headerTitle.textContent = `Vova's JSON Gradient Editor`;
+    }
+}
 
 // Функция для обновления отображения градиента
 function renderGradient() {
@@ -42,6 +72,8 @@ function renderGradient() {
         colorPreview.style.backgroundColor = step.color;
         colorPreview.style.opacity = step.alpha;
 
+        console.log(`Rendering step: color=${step.color}, alpha=${step.alpha}`); // Debugging line
+
         const controls = document.createElement('div');
         controls.className = 'controls';
 
@@ -52,6 +84,7 @@ function renderGradient() {
         colorInput.style.borderColor = '#71828F';
         colorInput.addEventListener('input', (e) => {
             step.color = e.target.value;
+            console.log(`Color changed: ${step.color}`); // Debugging line
             renderGradientPreview();  // Обновляем отображение градиента
         });
 
@@ -66,6 +99,7 @@ function renderGradient() {
         alphaInput.addEventListener('input', (e) => {
             step.alpha = e.target.value;
             alphaText.value = step.alpha;
+            console.log(`Alpha changed: ${step.alpha}`); // Debugging line
             renderGradientPreview();  // Обновляем отображение градиента
         });
 
@@ -78,6 +112,7 @@ function renderGradient() {
         alphaText.addEventListener('input', (e) => {
             step.alpha = e.target.value;
             alphaInput.value = step.alpha;
+            console.log(`Alpha text changed: ${step.alpha}`); // Debugging line
             renderGradientPreview();  // Обновляем отображение градиента
         });
 
@@ -85,25 +120,27 @@ function renderGradient() {
         const valueInput = document.createElement('input');
         valueInput.type = 'range';
         valueInput.min = 0;
-        valueInput.max = 40;
+        valueInput.max = 30;
         valueInput.step = 0.1;
         valueInput.value = step.value;
         valueInput.style.borderColor = '#71828F';
         valueInput.addEventListener('input', (e) => {
             step.value = e.target.value;
             valueText.value = step.value;
+            console.log(`Value changed: ${step.value}`); // Debugging line
             renderGradientPreview();  // Обновляем отображение градиента
         });
 
         const valueText = document.createElement('input');
         valueText.type = 'number';
         valueText.min = 0;
-        valueText.max = 40;
+        valueText.max = 30;
         valueText.step = 0.1;
         valueText.value = step.value;
         valueText.addEventListener('input', (e) => {
             step.value = e.target.value;
             valueInput.value = step.value;
+            console.log(`Value text changed: ${step.value}`); // Debugging line
             renderGradientPreview();  // Обновляем отображение градиента
         });
 
@@ -112,7 +149,6 @@ function renderGradient() {
         commentInput.type = 'text';
         commentInput.value = step.wnd;
         commentInput.placeholder = 'Comment';
-        //commentInput.style.borderColor = '#71828F'; //отрубил было ярко
         commentInput.addEventListener('input', (e) => {
             step.wnd = e.target.value;
         });
@@ -157,7 +193,7 @@ function renderGradient() {
         controls.appendChild(addButton);
         controls.appendChild(deleteButton);
 
-        stepElement.appendChild(colorPreview);
+        //stepElement.appendChild(colorPreview);
         stepElement.appendChild(controls);
         gradientContainer.appendChild(stepElement);
     });
@@ -184,6 +220,8 @@ function importJsonFile(event) {
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
+        currentFileName = file.name; // Обновляем название файла
+        updateHeaderTitle(); // Обновляем заголовок
         reader.onload = (e) => {
             try {
                 const importedData = JSON.parse(e.target.result);
@@ -209,6 +247,7 @@ function importJsonFile(event) {
 
 // Функция для создания градиента с учетом alpha
 function renderGradientPreview() {
+    const maxValue = 30; // Устанавливаем максимальное значение для value
     const gradientStops = gradientData.map(step => {
         // Преобразование HEX в RGBA
         const hex = step.color.replace('#', '');
@@ -220,7 +259,10 @@ function renderGradientPreview() {
         // Формирование строки цвета в формате rgba
         const color = `rgba(${r}, ${g}, ${b}, ${a})`;
 
-        return `${color} ${step.value}%`;
+        // Преобразуем значение в проценты относительно maxValue
+        const adjustedValue = (step.value / maxValue) * 100;
+
+        return `${color} ${adjustedValue}%`;
     }).join(', ');
 
     gradientPreview.style.background = `linear-gradient(to right, ${gradientStops})`;
