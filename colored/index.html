@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vova's JSON Gradient Editor</title>
+    <style>
+        body {
+            background-color: #3E454A;
+            color: #8C9FAD;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .gradient-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .color-preview {
+            width: 60px;
+            height: 30px;
+            margin-right: 10px;
+            border-radius: 0px;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        input[type="color"], input[type="range"], input[type="text"], input[type="number"] {
+            background-color: #2A2F34;
+            color: #8496a4;
+            border: 1px solid #515A60;
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        input[type="color"] {
+            padding: 2px;
+        } 
+
+        input[type="range"] {
+            flex-grow: 1;
+            border: 0px solid;
+        }
+
+        input[type="range"].alpha-range {
+            width: 10px;
+        }
+
+        input[type="number"] {
+            width: 40px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        
+        .export-button, .import-button, .add-button, .delete-button, .show-button {
+            background-color: #71828F;
+            color: white;
+            border: none;
+            padding: 10px;
+            padding-top: 5px;
+            padding-bottom: 5px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 13px;
+            border: 1.5px solid #7f919d;
+        }
+
+        .alpha-range {
+            min-width: 100px;
+            max-width: 200px;
+            width: 100%; /* Используйте ширину контейнера, если это необходимо */
+        }
+        #gradientPreview {
+            width: 100%;
+            height: 90px;
+            border: 1px solid #373D42;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        #exportedJson {
+            color: #8EA0AC;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+        
+/* Общий стиль для ползунков */
+input[type="range"] {
+    -webkit-appearance: none; /* Убираем стандартный стиль для WebKit браузеров */
+    width: 100%; /* Ширина ползунка */
+    height: 6px; /* Высота трека */
+    background: transparent; /* Прозрачный фон трека */
+    position: relative; /* Для позиционирования псевдоэлементов */
+}
+
+/* Стиль трека для WebKit браузеров */
+input[type="range"]::-webkit-slider-runnable-track {
+    background: #2A2F34; /* Цвет фона трека */
+    height: 6px; /* Высота трека */
+    border-radius: 5px; /* Скругление углов трека */
+    border: none; /* Убираем обводку трека */
+}
+
+/* Стиль ползунка для WebKit браузеров */
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Убираем стандартный стиль для WebKit браузеров */
+    width: 20px; /* Ширина ползунка */
+    height: 20px; /* Высота ползунка */
+    background: #8EA0AC; /* Цвет ползунка */
+    border: 2px solid #9BB0BE; /* Цвет обводки */
+    border-radius: 50%; /* Круглый ползунок */
+    cursor: pointer; /* Курсор при наведении */
+    position: relative;
+    top: -7px; /* Сдвиг вверх для центрирования ползунка */
+}
+
+/* Стиль трека для Firefox */
+input[type="range"]::-moz-range-track {
+    background: #2A2F34; /* Цвет фона трека */
+    height: 6px; /* Высота трека */
+    border-radius: 5px; /* Скругление углов трека */
+    border: none; /* Убираем обводку трека */
+}
+
+/* Стиль ползунка для Firefox */
+input[type="range"]::-moz-range-thumb {
+    width: 20px; /* Ширина ползунка */
+    height: 20px; /* Высота ползунка */
+    background: #8EA0AC; /* Цвет ползунка */
+    border: 2px solid #9BB0BE; /* Цвет обводки */
+    border-radius: 50%; /* Круглый ползунок */
+    cursor: pointer; /* Курсор при наведении */
+}
+
+/* Стиль трека для IE */
+input[type="range"]::-ms-track {
+    background: #2A2F34; /* Цвет фона трека */
+    height: 6px; /* Высота трека */
+    border-color: transparent;
+    color: transparent;
+}
+
+/* Стиль ползунка для IE */
+input[type="range"]::-ms-thumb {
+    width: 20px; /* Ширина ползунка */
+    height: 20px; /* Высота ползунка */
+    background: #8EA0AC; /* Цвет ползунка */
+    border: 2px solid #9BB0BE; /* Цвет обводки */
+    border-radius: 50%; /* Круглый ползунок */
+    cursor: pointer; /* Курсор при наведении */
+}
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vova's JSON Gradient Editor</h1>
+        <span>У тебя есть джейсоны покраски? Смотри и редактируй тут, сэкономишь время</span><br>
+        <span>Фокус на редактировании от старта, до середины. 
+            Максимальные значения срезал до некого value, 
+            чтобы не засорять экстримальными значениями.</span>
+        <div id="gradientPreview"></div>
+        <div id="gradientContainer"></div>
+        <div class="buttons">
+            <button class="export-button" onclick="exportJsonFile()">Export JSON</button>
+            <button class="show-button" onclick="showJsonText()">Show text style</button>
+            <label class="import-button">
+                Import JSON
+                <input type="file" id="importFile" style="display: none;" onchange="importJsonFile(event)">
+            </label>
+        </div>
+        <pre id="exportedJson" style="display: none;"></pre>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
