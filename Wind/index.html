@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Map with Wind Data</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/wind-js-leaflet"></script>
+    <style>
+        body {
+            background-color: #212634;
+            color: #9FA9C8;
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 800px; /* Высота карты в 2 раза больше */
+            width: 100%;
+            position: relative;
+        }
+        .center-point {
+            position: absolute;
+            top: 50%; /* По центру по оси Y */
+            left: 50%;
+            transform: translate(-50%, -50%); /* Центрирование круга */
+            height: 20px;
+            width: 20px;
+            background-color: blue;
+            border-radius: 50%;
+            z-index: 1000;
+            border: 2px solid white;
+            transition: all 0.3s ease; /* Плавный переход */
+        }
+        .center-point.large {
+            height: 40px; /* Увеличенный размер */
+            width: 40px;
+        }
+        .coordinate-text {
+            position: absolute;
+            top: calc(50% - 40px); /* Над кругом с учетом нового отступа */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 16px; /* Размер шрифта 16 */
+            font-weight: normal;
+            color: black;
+            z-index: 1001; /* Над кругом */
+            display: none; /* Изначально скрыт */
+        }
+        .info {
+            margin: 20px; /* Отступы вокруг блока с погодой */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px; /* Отступ между текстом и таблицей */
+            position: relative; /* Таблица под текстом */
+            z-index: 10; /* Поверх карты */
+        }
+        th {
+            background-color: #151A27;
+            color: #39435E;
+            font-size: 14px; /* Размер шрифта 14 пикселей для заголовков */
+            padding: 5px;
+            text-align: center;
+        }
+        td {
+            height: 30px; /* Высота строки */
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px; /* Размер шрифта 14 пикселей для всех ячеек */
+            opacity: 1; /* Убираем прозрачность */
+        }
+        .wind-speed {
+            font-weight: bold; /* Жирный шрифт */
+            font-size: 2em; /* Увеличенный размер шрифта для значений ветра */
+        }
+        .wind-speed-0-5 { background-color: rgba(159, 169, 200, 0.2); color: #9FA9C8; }
+        .wind-speed-5-10 { background-color: rgba(139, 218, 90, 0.2); color: #8BDA5A; }
+        .wind-speed-10-15 { background-color: rgba(255, 138, 0, 0.2); color: #FF8A00; }
+        .wind-speed-15-40 { background-color: rgba(255, 24, 135, 0.2); color: #FF1887; }
+        .gfs-square {
+            position: absolute;
+            top: 16px; /* Отступ сверху */
+            right: 16px; /* Отступ справа */
+            background-color: #212634; /* Цвет фона страницы */
+            border-radius: 8px; /* Скругление углов */
+            padding: 6px; /* Внутренние отступы */
+            color: #9FA9C8; /* Цвет текста GFS */
+            font-size: 14px; /* Размер шрифта для текста GFS */
+            text-align: center; /* Центрирование текста */
+            z-index: 1001; /* Над картой */
+        }
+        /* Специальный стиль для значений ветра */
+        #wind1, #wind2, #wind3, #wind4, #wind5, #wind6, #wind7 {
+            font-size: 14px; /* Устанавливаем размер шрифта на 14px */
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <p>Wind: <span id="wind" class="wind-speed">–</span></p>
+        <p>Precipitation: <span id="precipitation">–</span></p>
+        <p>Temperature: <span id="temperature">–</span></p>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>h1</th>
+                <th>h2</th>
+                <th>h3</th>
+                <th>h4</th>
+                <th>h5</th>
+                <th>h6</th>
+                <th>h7</th>
+            </tr>
+        </thead>
+        <tbody id="forecast-table">
+            <tr>
+                <td id="wind1">–</td>
+                <td id="wind2">–</td>
+                <td id="wind3">–</td>
+                <td id="wind4">–</td>
+                <td id="wind5">–</td>
+                <td id="wind6">–</td>
+                <td id="wind7">–</td>
+            </tr>
+        </tbody>
+    </table>
+    <div id="map"></div>
+    <div class="center-point"></div>
+    <div class="coordinate-text" id="coordinate-text"></div>
+    <div class="gfs-square">GFS</div> <!-- Новый квадрат с надписью GFS -->
+
+    <script>
+        // Создаем карту с начальной точкой
+        let map = L.map('map').setView([40.712776, -74.005974], 8);
+
+        // Добавляем слой карты OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        const centerPoint = document.querySelector('.center-point');
+        const coordinateText = document.getElementById('coordinate-text');
+
+        function getWeatherData(lat, lng) {
+            fetch(`https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lng}&hourly=temperature_2m,precipitation,wind_speed_10m`)
+                .then(response => response.json())
+                .then(data => {
+                    const weather = data.hourly;
+                    updateWeatherDisplay(weather);
+                })
+                .catch(err => {
+                    console.error("Ошибка загрузки данных о погоде:", err);
+                });
+        }
+
+        function updateWeatherDisplay(weather) {
+            const windSpeeds = weather.wind_speed_10m.slice(0, 7);
+            const temperatures = weather.temperature_2m.slice(0, 7);
+            const precipitations = weather.precipitation.slice(0, 7);
+
+            windSpeeds.forEach((speed, index) => {
+                const cell = document.getElementById(`wind${index + 1}`);
+                cell.innerText = `${speed} m/s`;
+                cell.className = 'wind-speed ' + getWindSpeedClass(speed);
+            });
+
+            document.getElementById('temperature').innerText = `${temperatures[0]}°C`;
+            document.getElementById('precipitation').innerText = `${precipitations[0]} mm`;
+            document.getElementById('wind').innerText = `${windSpeeds[0]} m/s`;
+            document.getElementById('wind').className = 'wind-speed ' + getWindSpeedClass(windSpeeds[0]);
+        }
+
+        function getWindSpeedClass(speed) {
+            if (speed <= 5) return 'wind-speed-0-5';
+            if (speed <= 10) return 'wind-speed-5-10';
+            if (speed <= 15) return 'wind-speed-10-15';
+            return 'wind-speed-15-40';
+        }
+
+        let timeout;
+        let mapIsMoving = false;
+
+        function refreshWeatherData() {
+            clearTimeout(timeout);
+            let center = map.getCenter();
+            getWeatherData(center.lat, center.lng);
+            timeout = setTimeout(refreshWeatherData, 10000); // 10 секунд
+        }
+
+        // Запуск обновления данных при первом запуске
+        map.on('move', function() {
+            mapIsMoving = true;
+            centerPoint.classList.add('large'); // Увеличиваем размер круга
+            coordinateText.style.display = 'block'; // Показываем текст
+            updateCoordinateText(); // Обновляем координаты
+        });
+
+        map.on('moveend', function() {
+            mapIsMoving = false;
+            refreshWeatherData();
+            centerPoint.classList.remove('large'); // Возвращаем размер круга
+            coordinateText.style.display = 'none'; // Скрываем текст
+        });
+
+        // Установка прицела на центр карты
+        function updateCenterPoint() {
+            const center = map.getCenter();
+            centerPoint.style.top = `${map.getSize().y / 2}px`; // Центр по Y
+            centerPoint.style.left = `${map.getSize().x / 2}px`; // Центр по X
+            getWeatherData(center.lat, center.lng); // Запрашиваем данные о погоде в центре
+        }
+
+        // Обновление текста координат
+        function updateCoordinateText() {
+            const center = map.getCenter();
+            coordinateText.innerText = `Lat: ${center.lat.toFixed(5)}, Lng: ${center.lng.toFixed(5)}`;
+            coordinateText.style.top = `${map.getSize().y / 2 - 60}px`; // Над кругом с учетом нового отступа
+            coordinateText.style.left = `${map.getSize().x / 2}px`; // Центр по X
+        }
+
+        // Обновление координат каждые 200 мс
+        let coordinateUpdateInterval;
+        map.on('move', function() {
+            coordinateUpdateInterval = setInterval(updateCoordinateText, 200);
+        });
+
+        map.on('moveend', function() {
+            clearInterval(coordinateUpdateInterval);
+            coordinateUpdateInterval = null;
+        });
+
+        map.on('zoomend dragend', updateCenterPoint);
+        updateCenterPoint(); // Первоначальный вызов для установки позиции прицела
+    </script>
+</body>
+</html>
