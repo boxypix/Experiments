@@ -27,13 +27,13 @@
             border-radius: 14px;
             text-align: center;
             position: fixed;
-            top: 50%;
+            top: 60%;
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 1001; /* Поверх всех элементов */
             display: none;
-            padding-left: 28px;
-            padding-right: 28px;
+            padding-left: 38px;
+            padding-right: 38px;
         }
 
         .overlay {
@@ -42,7 +42,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.7); /* Черное затемнение с прозрачностью 50% */
+            background-color: #11151fc4; /* Черное затемнение с прозрачностью 50% */
             z-index: 1000; /* Затемнение под окнами */
             display: none;
         }
@@ -335,7 +335,7 @@
             setTimeout(() => {
                 button.innerHTML = 'Copy text';
                 button.classList.remove('copied'); // Возвращаем исходное состояние
-            }, 1000); // 2 секунды
+            }, 2000); // 2 секунды
         }
 
         // Загрузка карточек при открытии страницы
