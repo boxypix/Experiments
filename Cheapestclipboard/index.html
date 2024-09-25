@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The cheapest clipboard manager</title>
+    <meta name="description" content="Hello! You can add your favorite text fragments to this board and copy them whenever you want.">
+    <link rel="icon" href="favicon.ico" type="image/x-icon"> <!-- Путь к вашему фавикону -->
+    <style>
+        body {
+            background-color: #1B202E; /* Черный фон */
+            color: white; /* Белый текст */
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+
+        }
+
+        /* Окна "loading" и "сохраняю карточку" */
+        #loading, #saving-card {
+            font-size: 32px;
+            padding: 12px;
+            background-color: #4ADC33; /* Фиолетовый фон */
+            color: #138300; /* Серый текст */
+            border-radius: 14px;
+            text-align: center;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1001; /* Поверх всех элементов */
+            display: none;
+            padding-left: 28px;
+            padding-right: 28px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* Черное затемнение с прозрачностью 50% */
+            z-index: 1000; /* Затемнение под окнами */
+            display: none;
+        }
+
+        #card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Минимальная ширина карточки 200px */
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px; /* Максимальная ширина контейнера */
+        }
+
+        .card {
+    background-color: #272D3F; /* Цвет карточки */
+    border-radius: 14px;
+    font-size: 12px;
+    line-height: 150%; /* Высота строки 150% от размера шрифта */
+    padding: 16px; /* Внутренний отступ для карточки */
+    display: flex;
+    flex-direction: column; /* Элементы располагаются вертикально */
+    justify-content: flex-start; /* Выровнять элементы по верхнему краю */
+    align-items: flex-start; /* Выравнивание элементов по левой стороне */
+    transition: background-color 0.2s; /* Плавный переход цвета фона */
+    border: 2px solid #2B3247; /* Обводка: 2 пикселя, сплошная, цвет #0064FB */
+}
+
+.card p {
+    margin: 12px 0; /* Отступы сверху и снизу для текста */
+    flex-grow: 1; /* Позволяет тексту занимать доступное пространство */
+}
+
+.card .button {
+    margin-top: auto; /* Перемещает кнопку вниз */
+}
+
+
+
+        .card:hover {
+            background-color: #1C284E; /* Светло-серый фон при наведении */
+            border: 2px solid #0064FB; /* Обводка: 2 пикселя, сплошная, цвет #0064FB */
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .card-header p {
+            margin: 0;
+            color: #79839F; /* Серый текст */
+            font-size: 10px; /* Размер текста 8px */
+        }
+
+        .button {
+            background-color: #424A65; /* Светло-синяя кнопка */
+            color: white;
+            border: none;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 8px 10px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%; /* Кнопка занимает всю ширину карточки */
+            font-size: 12px;
+            transition: background-color 0.4s;
+        }
+
+        .button:hover {
+            background-color: #555F80; /* Светло-синяя кнопка */
+        }
+
+        .add-button {
+            background-color: #0064FB; /* Зеленая кнопка для добавления */
+            font-size: 20px;
+            padding: 15px 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin-bottom: 40px;
+        }
+
+        .add-button:hover {
+            background-color: #0046CF; /* Зеленая кнопка для добавления */
+        }
+
+        #notification {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: green;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        /* Модальное окно для добавления карточек */
+        #add-card-modal {
+            background-color: #343A4F;
+            padding: 20px;
+            border-radius: 14px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 1001; /* Поверх всего */
+        }
+
+        textarea {
+            width: 100%;
+            height: 220px; /* Увеличенная высота */
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background-color: #1B202E; /* Темный фон */
+            color: white; /* Белый текст */
+            border: 0px solid #555; /* Обводка */
+            line-height: 1.5; /* Высота строки 1.5 раза больше размера шрифта */
+        }
+
+        textarea:focus {
+            border-color: #0064FB; /* Синяя обводка при фокусе */
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px; /* Расстояние между кнопками */
+        }
+
+        .modal-button {
+            font-size: 16px; /* Увеличенный размер кнопок */
+            padding: 15px 25px;
+            width: 100%;
+        }
+
+        .save-button {
+            background-color: #0064FB; /* Оранжевая кнопка "Сохранить" */
+            color: #FFFFFF; /* Белый текст */
+        }
+
+        .save-button:hover {
+            background-color: #0046CF; /* Оранжевая кнопка "Сохранить" */
+            color: #FFFFFF; /* Белый текст */
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: -2px;
+            padding-bottom: 4px;
+        }
+
+        /* Анимация для кнопки "Copy text" */
+        .copied {
+            background-color: #4ADC33 !important; /* Красный фон */
+            color: #117600; /* Белый текст */
+            font-weight: 600; /* Среднее начертание текста */
+        }
+    
+        h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin: 0; /* Убираем отступы */
+            text-align: left;
+        }
+
+        p {
+            font-size: 14px;
+            color: #A1AAC7; /* Белый текст */
+            text-align: left;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>The <span style="color: #58FD3D;">cheapest</span> clipboard manager</h1>
+
+    <p>Hello! You can add your favorite text fragments to this board and copy them whenever you want.1</p>
+    <div id="loading">Loading</div> <!-- Окно загрузки с фиолетовым фоном -->
+
+    <button class="button add-button" id="create-button" onclick="showAddCardModal()">Create clipboard card</button>
+    <div id="card-container"></div>
+    <div id="notification">Copied!</div>
+
+    <div id="add-card-modal">
+        <h2>Create clipboard card</h2> <!-- Заголовок окна -->
+        <p>Write something you often have to quickly copy</p>
+        <textarea id="card-text" rows="4" cols="50" placeholder="Enter or paste any text here..."></textarea>
+        <div class="modal-buttons">
+            <button class="button modal-button save-button" onclick="addCard()">Save</button> <!-- Оранжевая кнопка -->
+            <button class="button modal-button" onclick="closeAddCardModal()">Cancel</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay"></div> <!-- Затемнение для модальных окон -->
+    <div class="overlay" id="loading-overlay"></div> <!-- Затемнение для загрузки -->
+
+    <div id="saving-card">Creating</div> <!-- Окно сохранения с фиолетовым фоном -->
+
+    <script>
+        const scriptId = 'AKfycbwh9OPd2JIEVF0IOkynzteseeb7K5ZSFPf3udd8rqhNJeGIJ79CTIu_oUj7HCxCnoGSMA';
+        const baseUrl = `https://script.google.com/macros/s/${scriptId}/exec`;
+
+        function showAddCardModal() {
+            const modal = document.getElementById('add-card-modal');
+            const overlay = document.getElementById('overlay');
+            modal.style.display = 'block';
+            overlay.style.display = 'block'; /* Показать затемнение */
+            document.getElementById('card-text').focus(); // Ставим фокус на поле ввода
+        }
+
+        function closeAddCardModal() {
+            const modal = document.getElementById('add-card-modal');
+            const overlay = document.getElementById('overlay');
+            modal.style.display = 'none';
+            overlay.style.display = 'none'; /* Скрыть затемнение */
+        }
+
+        function addCard() {
+            const text = document.getElementById('card-text').value;
+            if (text) {
+                closeAddCardModal();
+                showSavingCard();
+
+                fetch(`${baseUrl}?action=add&text=${encodeURIComponent(text)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadCards(); // Перезагружаем карточки
+                            hideSavingCard();
+                            document.getElementById('card-text').value = ''; // Очищаем поле ввода
+                        }
+                    });
+            }
+        }
+
+        function loadCards() {
+            showLoading(); // Показать загрузку
+            fetch(`${baseUrl}?action=get`)
+                .then(response => response.json())
+                .then(data => {
+                    const cardContainer = document.getElementById('card-container');
+                    cardContainer.innerHTML = ''; // Очищаем контейнер
+                    data.cards.forEach(card => {
+                        const cardElement = document.createElement('div');
+                        cardElement.className = 'card';
+                        cardElement.innerHTML = `
+                            <div class="card-header">
+                                <p># ${card.number}</p>
+                                <p>${card.created}</p>
+                            </div>
+                            <p>${card.text}</p>
+                            <button class="button" onclick="copyToClipboard(this, '${card.text}')">Copy text</button>
+                        `;
+                        cardContainer.prepend(cardElement); // Добавляем новую карточку в начало
+                    });
+                    hideLoading(); // Скрыть загрузку
+                    cardContainer.style.display = 'grid'; // Показать карточки
+                });
+        }
+
+        function showSavingCard() {
+            const savingCard = document.getElementById('saving-card');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            savingCard.style.display = 'none';
+            loadingOverlay.style.display = 'none'; /* Скрыть затемнение */
+        }
+
+        function showLoading() {
+            const loading = document.getElementById('loading');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            loading.style.display = 'block';
+            loadingOverlay.style.display = 'block'; /* Показать затемнение */
+        }
+
+        function hideLoading() {
+            const loading = document.getElementById('loading');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            loading.style.display = 'none';
+            loadingOverlay.style.display = 'none'; /* Скрыть затемнение */
+        }
+
+        function copyToClipboard(button, text) {
+            navigator.clipboard.writeText(text);
+            button.innerHTML = 'Done!';
+            button.classList.add('copied'); // Добавляем класс с красным фоном
+            setTimeout(() => {
+                button.innerHTML = 'Copy text';
+                button.classList.remove('copied'); // Возвращаем исходное состояние
+            }, 1000); // 2 секунды
+        }
+
+        // Загрузка карточек при открытии страницы
+        loadCards();
+
+        // Закрытие модального окна по клику на затемнение
+        document.getElementById('overlay').onclick = closeAddCardModal;
+    </script>
+    </br>
+     <p>Created by Vladimir Sidorkin (c) 2024 - Version 1</p>
+</body>
+</html>
