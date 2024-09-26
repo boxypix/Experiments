@@ -91,11 +91,32 @@
         }
         #gradientPreview {
             width: 100%;
-            height: 90px;
+            height: 120px;
             border: 1px solid #373D42;
             margin-top: 20px;
             margin-bottom: 20px;
             border-radius: 10px;
+            position: relative;
+            background: linear-gradient(to right, #FF1887, #FF8A00, #8BDA5A); /* Текущий градиент */
+        }
+
+        /* Вертикальные линии поверх градиента */
+        #gradientPreview::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30%;
+            margin-top: 40px;
+            background: repeating-linear-gradient(
+                to right,
+                rgba(0, 0, 0, 0.3), /* Полупрозрачные черные линии */
+                rgba(0, 0, 0, 0.3) 1px,
+                transparent 1px,
+                transparent calc(100% / 50) /* Ширина между линиями */
+            );
+            pointer-events: none; /* Линии не мешают взаимодействию с градиентом */
         }
 
         .buttons {
@@ -110,72 +131,71 @@
             margin-top: 20px;
         }
         
-/* Общий стиль для ползунков */
-input[type="range"] {
-    -webkit-appearance: none; /* Убираем стандартный стиль для WebKit браузеров */
-    width: 100%; /* Ширина ползунка */
-    height: 6px; /* Высота трека */
-    background: transparent; /* Прозрачный фон трека */
-    position: relative; /* Для позиционирования псевдоэлементов */
-}
+        /* Общий стиль для ползунков */
+        input[type="range"] {
+            -webkit-appearance: none; /* Убираем стандартный стиль для WebKit браузеров */
+            width: 100%; /* Ширина ползунка */
+            height: 6px; /* Высота трека */
+            background: transparent; /* Прозрачный фон трека */
+            position: relative; /* Для позиционирования псевдоэлементов */
+        }
 
-/* Стиль трека для WebKit браузеров */
-input[type="range"]::-webkit-slider-runnable-track {
-    background: #2A2F34; /* Цвет фона трека */
-    height: 6px; /* Высота трека */
-    border-radius: 5px; /* Скругление углов трека */
-    border: none; /* Убираем обводку трека */
-}
+        /* Стиль трека для WebKit браузеров */
+        input[type="range"]::-webkit-slider-runnable-track {
+            background: #2A2F34; /* Цвет фона трека */
+            height: 6px; /* Высота трека */
+            border-radius: 5px; /* Скругление углов трека */
+            border: none; /* Убираем обводку трека */
+        }
 
-/* Стиль ползунка для WebKit браузеров */
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; /* Убираем стандартный стиль для WebKit браузеров */
-    width: 20px; /* Ширина ползунка */
-    height: 20px; /* Высота ползунка */
-    background: #8EA0AC; /* Цвет ползунка */
-    border: 2px solid #9BB0BE; /* Цвет обводки */
-    border-radius: 50%; /* Круглый ползунок */
-    cursor: pointer; /* Курсор при наведении */
-    position: relative;
-    top: -7px; /* Сдвиг вверх для центрирования ползунка */
-}
+        /* Стиль ползунка для WebKit браузеров */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; /* Убираем стандартный стиль для WebKit браузеров */
+            width: 20px; /* Ширина ползунка */
+            height: 20px; /* Высота ползунка */
+            background: #8EA0AC; /* Цвет ползунка */
+            border: 2px solid #9BB0BE; /* Цвет обводки */
+            border-radius: 50%; /* Круглый ползунок */
+            cursor: pointer; /* Курсор при наведении */
+            position: relative;
+            top: -7px; /* Сдвиг вверх для центрирования ползунка */
+        }
 
-/* Стиль трека для Firefox */
-input[type="range"]::-moz-range-track {
-    background: #2A2F34; /* Цвет фона трека */
-    height: 6px; /* Высота трека */
-    border-radius: 5px; /* Скругление углов трека */
-    border: none; /* Убираем обводку трека */
-}
+        /* Стиль трека для Firefox */
+        input[type="range"]::-moz-range-track {
+            background: #2A2F34; /* Цвет фона трека */
+            height: 6px; /* Высота трека */
+            border-radius: 5px; /* Скругление углов трека */
+            border: none; /* Убираем обводку трека */
+        }
 
-/* Стиль ползунка для Firefox */
-input[type="range"]::-moz-range-thumb {
-    width: 20px; /* Ширина ползунка */
-    height: 20px; /* Высота ползунка */
-    background: #8EA0AC; /* Цвет ползунка */
-    border: 2px solid #9BB0BE; /* Цвет обводки */
-    border-radius: 50%; /* Круглый ползунок */
-    cursor: pointer; /* Курсор при наведении */
-}
+        /* Стиль ползунка для Firefox */
+        input[type="range"]::-moz-range-thumb {
+            width: 20px; /* Ширина ползунка */
+            height: 20px; /* Высота ползунка */
+            background: #8EA0AC; /* Цвет ползунка */
+            border: 2px solid #9BB0BE; /* Цвет обводки */
+            border-radius: 50%; /* Круглый ползунок */
+            cursor: pointer; /* Курсор при наведении */
+        }
 
-/* Стиль трека для IE */
-input[type="range"]::-ms-track {
-    background: #2A2F34; /* Цвет фона трека */
-    height: 6px; /* Высота трека */
-    border-color: transparent;
-    color: transparent;
-}
+        /* Стиль трека для IE */
+        input[type="range"]::-ms-track {
+            background: #2A2F34; /* Цвет фона трека */
+            height: 6px; /* Высота трека */
+            border-color: transparent;
+            color: transparent;
+        }
 
-/* Стиль ползунка для IE */
-input[type="range"]::-ms-thumb {
-    width: 20px; /* Ширина ползунка */
-    height: 20px; /* Высота ползунка */
-    background: #8EA0AC; /* Цвет ползунка */
-    border: 2px solid #9BB0BE; /* Цвет обводки */
-    border-radius: 50%; /* Круглый ползунок */
-    cursor: pointer; /* Курсор при наведении */
-}
-
+        /* Стиль ползунка для IE */
+        input[type="range"]::-ms-thumb {
+            width: 20px; /* Ширина ползунка */
+            height: 20px; /* Высота ползунка */
+            background: #8EA0AC; /* Цвет ползунка */
+            border: 2px solid #9BB0BE; /* Цвет обводки */
+            border-radius: 50%; /* Круглый ползунок */
+            cursor: pointer; /* Курсор при наведении */
+        }
 
     </style>
 </head>
