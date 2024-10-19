@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Прогноз температуры воды - Пляж г. Анапа</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Текущая температура -->
+        <div id="current">
+            <h1>Пляж г. Анапа</h1>
+            <div id="temp-current-wrapper">
+                <p id="temp-current">Загрузка...</p>
+            </div>
+            <p id="current-date" class="regular">Сегодня: Загрузка...</p>
+        </div>
+
+        <!-- Контейнер для горизонтального скролла -->
+        <div id="scroll-container">
+            <!-- Прогноз на следующие 7 часов -->
+            <h3>Следующие 7 часов</h3>
+            <table id="hourly-forecast" class="forecast-table">
+                <!-- Ячейки с прогнозом на 7 часов -->
+            </table>
+
+            <!-- Прогноз на следующие 7 дней -->
+            <h3>Следующие 7 дней</h3>
+            <table id="daily-forecast" class="forecast-table">
+                <!-- Ячейки с прогнозом на 7 дней -->
+            </table>
+        </div>
+
+        <!-- Скрытый блок выбора даты -->
+        <div id="date-picker-container" class="hidden">
+            <input type="date" id="date-picker">
+            <button id="submit-date">ОК</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

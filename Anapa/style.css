@@ -1,0 +1,113 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    color: #333;
+    margin: 0;
+    padding: 8px; /* Отступы по краям экрана 8 пикселей */
+    box-sizing: border-box;
+}
+
+h1, h3 {
+    color: #333;
+}
+
+#app {
+    max-width: 800px;
+    margin: 0 auto;
+    width: calc(100% - 16px); /* Учитываем отступы по 8px с каждой стороны */
+}
+
+#current {
+    background-color: #ececec; /* Светло-серый фон */
+    color: #333;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+#temp-current-wrapper {
+    display: inline-block;
+    padding: 20px;
+    padding-left: 80px;
+    padding-right: 80px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+#temp-current {
+    font-size: 40px; /* Размер шрифта 40px */
+    font-weight: bold; /* Жирный текст */
+}
+
+.regular {
+    font-weight: normal; /* Regular шрифт для даты и времени */
+}
+
+/* Контейнер для горизонтального скролла */
+#scroll-container {
+    overflow-x: auto; /* Горизонтальный скролл */
+    white-space: nowrap;
+}
+
+.forecast-table {
+    min-width: 600px; /* Минимальная ширина для скролла */
+    border-collapse: collapse;
+    margin-top: 20px;
+    display: inline-block; /* Чтобы таблицы шли в ряд */
+    vertical-align: top;
+}
+
+.forecast-table th, .forecast-table td {
+    text-align: center;
+    padding: 10px;
+    border: 1px solid #ccc;
+    font-weight: bold; /* Жирный шрифт для значений температуры */
+}
+
+.cell-temp {
+    font-weight: bold; /* Жирный шрифт для температуры */
+}
+
+#date-picker-container {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+    visibility: hidden; /* Полное скрытие элемента */
+}
+
+#date-picker-container input, #date-picker-container button {
+    padding: 10px;
+    font-size: 16px;
+    margin-right: 10px;
+}
+
+#date-picker-container button {
+    cursor: pointer;
+}
+
+/* Скрытый класс */
+.hidden {
+    display: none;
+}
+
+/* Адаптивные стили */
+@media screen and (max-width: 800px) {
+    #app {
+        max-width: 100%;
+        width: calc(100% - 16px); /* Учитываем 8px по краям */
+    }
+}
+
+@media screen and (max-width: 320px) {
+    body {
+        padding: 8px; /* Оставляем 8px по краям на маленьких экранах */
+    }
+
+    #current {
+        padding: 10px; /* Уменьшаем внутренний отступ на малых экранах */
+    }
+
+    #temp-current {
+        font-size: 30px; /* Уменьшаем размер текста для малых экранов */
+    }
+}
