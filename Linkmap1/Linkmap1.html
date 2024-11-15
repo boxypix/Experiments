@@ -2,135 +2,168 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Map with Custom Icons</title>
+    <title>Map with HTML Graphics</title>
     <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
-        body { margin: 0; }
-        #map { width: 100vw; height: 100vh; }
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none; /* Игнорировать клики */
+        }
+
+        .icon {
+            position: absolute;
+            width: 51px;
+            height: 51px;
+            background-size: cover;
+            transform: translate(-50%, -50%); /* Центрировать относительно координат */
+        }
+
+        .line {
+            position: absolute;
+            width: 2px;
+            background-color: white;
+            transform-origin: top center;
+        }
+
+        .broken-line {
+            background-color: #FF581C;
+        }
+
+        .station {
+            position: absolute;
+            width: 124px;
+            height: 124px;
+            background-size: cover;
+            transform: translate(-50%, -50%);
+        }
+
+        .area {
+            position: absolute;
+            width: 472px;
+            height: 472px;
+            transform: translate(-50%, -50%);
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div class="overlay">
+        <div id="area" class="area" style="background: url('./mats/Area.svg') no-repeat center; background-size: contain;"></div>
+        <div id="station" class="station" style="background: url('./mats/Station.png') no-repeat center;"></div>
+        <div id="spot1" class="icon" style="background: url('./mats/Spot1.png') no-repeat center;"></div>
+        <div id="spot2" class="icon" style="background: url('./mats/Spot1.png') no-repeat center;"></div>
+        <div id="spot3" class="icon" style="background: url('./mats/Spot1.png') no-repeat center;"></div>
+        <div id="spot4" class="icon" style="background: url('./mats/Spot1.png') no-repeat center;"></div>
+        <div id="spotBroken" class="icon" style="background: url('./mats/Spot2.png') no-repeat center;"></div>
+        <div id="line1" class="line"></div>
+        <div id="line2" class="line"></div>
+        <div id="line3" class="line"></div>
+        <div id="line4" class="line"></div>
+        <div id="lineBroken" class="line broken-line"></div>
+    </div>
     <script>
         const map = new maplibregl.Map({
             container: 'map',
-            style: './Map.json', // Используем ваш стиль карты
+            style: './Map.json', // Используем стиль как подложку
             center: [30.0, 50.0], // Центр карты
-            zoom: 12
+            zoom: 12,
+            pitch: 0, // Убираем наклон
+            bearing: 0 // Убираем поворот
         });
 
-        const stationCoords = [30.0, 50.0]; // Координаты станции
+        // Отключаем наклон и поворот карты
+        map.dragRotate.disable();
+        map.touchZoomRotate.disableRotation();
+
+        // Координаты центра станции
+        const stationCoords = [30.0, 50.0];
 
         // Фиксированные координаты для спотов
         const spots = [
-            { id: 'spot1', coords: [30.01, 50.005], icon: 'spot1-icon', lineColor: '#ffffff' },
-            { id: 'spot2', coords: [29.99, 50.007], icon: 'spot1-icon', lineColor: '#ffffff' },
-            { id: 'spot3', coords: [30.02, 50.0], icon: 'spot1-icon', lineColor: '#ffffff' },
-            { id: 'spot4', coords: [29.98, 50.003], icon: 'spot1-icon', lineColor: '#ffffff' },
-            { id: 'spot-broken', coords: [30.015, 50.002], icon: 'spot2-icon', lineColor: '#FF581C' }
+            { id: 'spot1', coords: [30.01, 50.005] },
+            { id: 'spot2', coords: [29.99, 50.007] },
+            { id: 'spot3', coords: [30.02, 50.0] },
+            { id: 'spot4', coords: [29.98, 50.003] },
+            { id: 'spotBroken', coords: [30.015, 50.002] }
         ];
 
-        // Обработчик отсутствующих изображений
-        map.on('styleimagemissing', (e) => {
-            const id = e.id;
+        // Утилита: преобразует координаты в пиксели
+        function projectCoordsToPixels(coords) {
+            const point = map.project(coords);
+            return { x: point.x, y: point.y };
+        }
 
-            // Загружаем изображение, если оно запрашивается
-            if (id === 'spot1-icon') {
-                map.loadImage('./mats/Spot1.png', (error, image) => {
-                    if (error) throw error;
-                    map.addImage('spot1-icon', image);
-                });
-            }
-            if (id === 'spot2-icon') {
-                map.loadImage('./mats/Spot2.png', (error, image) => {
-                    if (error) throw error;
-                    map.addImage('spot2-icon', image);
-                });
-            }
-            if (id === 'station-icon') {
-                map.loadImage('./mats/Station.png', (error, image) => {
-                    if (error) throw error;
-                    map.addImage('station-icon', image);
-                });
-            }
-        });
+        function updatePositions() {
+            // Обновляем позицию станции
+            const stationPixels = projectCoordsToPixels(stationCoords);
+            document.getElementById('station').style.left = `${stationPixels.x}px`;
+            document.getElementById('station').style.top = `${stationPixels.y}px`;
 
-        map.on('load', () => {
-            // Добавляем слой для станции
-            map.addSource('station', {
-                type: 'geojson',
-                data: {
-                    type: 'FeatureCollection',
-                    features: [{
-                        type: 'Feature',
-                        geometry: { type: 'Point', coordinates: stationCoords }
-                    }]
-                }
+            // Обновляем позицию области
+            const area = document.getElementById('area');
+            area.style.left = `${stationPixels.x}px`;
+            area.style.top = `${stationPixels.y}px`;
+
+            // Обновляем позиции спотов и линий
+            spots.forEach((spot, index) => {
+                const spotElement = document.getElementById(spot.id);
+                const lineElement = document.getElementById(`line${index + 1}`);
+
+                const spotPixels = projectCoordsToPixels(spot.coords);
+                spotElement.style.left = `${spotPixels.x}px`;
+                spotElement.style.top = `${spotPixels.y}px`;
+
+                // Линии
+                const dx = stationPixels.x - spotPixels.x;
+                const dy = stationPixels.y - spotPixels.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+                lineElement.style.left = `${spotPixels.x}px`;
+                lineElement.style.top = `${spotPixels.y}px`;
+                lineElement.style.width = `${length}px`;
+                lineElement.style.transform = `rotate(${angle}deg)`;
             });
 
-            map.addLayer({
-                id: 'station-layer',
-                type: 'symbol',
-                source: 'station',
-                layout: {
-                    'icon-image': 'station-icon',
-                    'icon-size': 1
-                }
-            });
+            // Обновляем линию для сломанного спота
+            const brokenSpot = spots.find(spot => spot.id === 'spotBroken');
+            const brokenLine = document.getElementById('lineBroken');
+            const brokenPixels = projectCoordsToPixels(brokenSpot.coords);
 
-            // Добавляем слои для спотов и их линий
-            spots.forEach(spot => {
-                // Источник для спота
-                map.addSource(spot.id, {
-                    type: 'geojson',
-                    data: {
-                        type: 'FeatureCollection',
-                        features: [{
-                            type: 'Feature',
-                            geometry: { type: 'Point', coordinates: spot.coords }
-                        }]
-                    }
-                });
+            const dxBroken = stationPixels.x - brokenPixels.x;
+            const dyBroken = stationPixels.y - brokenPixels.y;
+            const lengthBroken = Math.sqrt(dxBroken * dxBroken + dyBroken * dyBroken);
+            const angleBroken = Math.atan2(dyBroken, dxBroken) * (180 / Math.PI);
 
-                // Слой для иконки спота
-                map.addLayer({
-                    id: `${spot.id}-layer`,
-                    type: 'symbol',
-                    source: spot.id,
-                    layout: {
-                        'icon-image': spot.icon,
-                        'icon-size': 1
-                    }
-                });
+            brokenLine.style.left = `${brokenPixels.x}px`;
+            brokenLine.style.top = `${brokenPixels.y}px`;
+            brokenLine.style.width = `${lengthBroken}px`;
+            brokenLine.style.transform = `rotate(${angleBroken}deg)`;
+        }
 
-                // Источник для линии от спота к станции
-                map.addSource(`${spot.id}-line`, {
-                    type: 'geojson',
-                    data: {
-                        type: 'FeatureCollection',
-                        features: [{
-                            type: 'Feature',
-                            geometry: {
-                                type: 'LineString',
-                                coordinates: [spot.coords, stationCoords]
-                            }
-                        }]
-                    }
-                });
+        // Обновляем позиции при перемещении карты
+        map.on('move', updatePositions);
 
-                // Слой для линии
-                map.addLayer({
-                    id: `${spot.id}-line-layer`,
-                    type: 'line',
-                    source: `${spot.id}-line`,
-                    paint: {
-                        'line-color': spot.lineColor,
-                        'line-width': 2
-                    }
-                });
-            });
-        });
+        // Первоначальная отрисовка
+        map.on('load', updatePositions);
     </script>
 </body>
 </html>
