@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Custom Map with MapLibre</title>
+    <title>Map with Custom Icons</title>
     <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
@@ -15,37 +15,53 @@
     <script>
         const map = new maplibregl.Map({
             container: 'map',
-            style: './Map.json', // Локальный файл стиля карты
-            center: [30.0, 50.0], // Центр карты (примерные координаты "станции")
+            style: './Map.json', // Используем ваш стиль карты
+            center: [30.0, 50.0], // Центр карты
             zoom: 12
         });
 
-        const stationCoords = [30.0, 50.0]; // Координаты "станции"
+        const stationCoords = [30.0, 50.0]; // Координаты станции
 
-        // Генерация случайных координат в радиусе 2 км
+        // Генерация случайных координат для спотов
         function randomCoords(center, radius = 2000) {
             const offset = () => (Math.random() - 0.5) * radius / 111320; // 1 градус ~111 км
             return [center[0] + offset(), center[1] + offset()];
         }
 
         const spots = [
-            { id: 'spot1', coords: randomCoords(stationCoords), icon: 'Spot1.png', lineColor: '#ffffff' },
-            { id: 'spot2', coords: randomCoords(stationCoords), icon: 'Spot1.png', lineColor: '#ffffff' },
-            { id: 'spot3', coords: randomCoords(stationCoords), icon: 'Spot1.png', lineColor: '#ffffff' },
-            { id: 'spot4', coords: randomCoords(stationCoords), icon: 'Spot1.png', lineColor: '#ffffff' },
-            { id: 'spot-broken', coords: randomCoords(stationCoords), icon: 'Spot2.png', lineColor: '#ff8c00' }
+            { id: 'spot1', coords: randomCoords(stationCoords), icon: './mats/Spot1.png', lineColor: '#ffffff' },
+            { id: 'spot2', coords: randomCoords(stationCoords), icon: './mats/Spot1.png', lineColor: '#ffffff' },
+            { id: 'spot3', coords: randomCoords(stationCoords), icon: './mats/Spot1.png', lineColor: '#ffffff' },
+            { id: 'spot4', coords: randomCoords(stationCoords), icon: './mats/Spot1.png', lineColor: '#ffffff' },
+            { id: 'spot-broken', coords: randomCoords(stationCoords), icon: './mats/Spot2.png', lineColor: '#ff8c00' }
         ];
 
         map.on('load', () => {
-            // Добавляем источник и слой для SVG "Area"
+            // Загрузка и регистрация PNG-иконок
+            map.loadImage('./mats/Spot1.png', (error, image) => {
+                if (error) throw error;
+                map.addImage('spot1-icon', image);
+            });
+
+            map.loadImage('./mats/Spot2.png', (error, image) => {
+                if (error) throw error;
+                map.addImage('spot2-icon', image);
+            });
+
+            map.loadImage('./mats/Station.png', (error, image) => {
+                if (error) throw error;
+                map.addImage('station-icon', image);
+            });
+
+            // Добавляем SVG "Area" как растровое изображение
             map.addSource('area', {
                 type: 'image',
                 url: './mats/Area.svg',
                 coordinates: [
-                    [stationCoords[0] - 0.01, stationCoords[1] + 0.01],
-                    [stationCoords[0] + 0.01, stationCoords[1] + 0.01],
-                    [stationCoords[0] + 0.01, stationCoords[1] - 0.01],
-                    [stationCoords[0] - 0.01, stationCoords[1] - 0.01]
+                    [29.99, 50.01], // Верхний левый угол
+                    [30.01, 50.01], // Верхний правый угол
+                    [30.01, 49.99], // Нижний правый угол
+                    [29.99, 49.99]  // Нижний левый угол
                 ]
             });
 
@@ -55,7 +71,7 @@
                 source: 'area'
             });
 
-            // Добавляем "станцию"
+            // Добавляем слой для "станции"
             map.addSource('station', {
                 type: 'geojson',
                 data: {
@@ -72,13 +88,14 @@
                 type: 'symbol',
                 source: 'station',
                 layout: {
-                    'icon-image': './mats/Station.png',
+                    'icon-image': 'station-icon',
                     'icon-size': 1
                 }
             });
 
-            // Добавляем "споты" и линии
+            // Добавляем слои для "спотов" и их линий
             spots.forEach(spot => {
+                // Источник для спота
                 map.addSource(spot.id, {
                     type: 'geojson',
                     data: {
@@ -90,17 +107,18 @@
                     }
                 });
 
+                // Слой для иконки спота
                 map.addLayer({
                     id: `${spot.id}-layer`,
                     type: 'symbol',
                     source: spot.id,
                     layout: {
-                        'icon-image': `./mats/${spot.icon}`,
+                        'icon-image': spot.id === 'spot-broken' ? 'spot2-icon' : 'spot1-icon',
                         'icon-size': 1
                     }
                 });
 
-                // Линия от спота к станции
+                // Источник для линии от спота к станции
                 map.addSource(`${spot.id}-line`, {
                     type: 'geojson',
                     data: {
@@ -115,6 +133,7 @@
                     }
                 });
 
+                // Слой для линии
                 map.addLayer({
                     id: `${spot.id}-line-layer`,
                     type: 'line',
