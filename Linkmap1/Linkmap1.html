@@ -25,7 +25,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            pointer-events: none;
+            pointer-events: none; /* Игнорирует клики, чтобы карта оставалась интерактивной */
         }
 
         .icon {
@@ -85,10 +85,7 @@
             bearing: 0
         });
 
-        // Отключаем наклон и поворот карты
-        map.dragRotate.disable();
-        map.touchZoomRotate.disableRotation();
-
+        // Координаты центра станции
         const stationCoords = [30.0, 50.0];
         const areaCanvas = document.getElementById('areaCanvas');
         const spots = [
