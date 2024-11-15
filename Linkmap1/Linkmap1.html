@@ -57,20 +57,11 @@
         .broken-line {
             background-color: #FF581C;
         }
-
-        .area {
-            position: absolute;
-            width: 0;
-            height: 0;
-            transform: translate(-50%, -50%);
-            z-index: 1;
-        }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div class="overlay">
-        <svg id="area" class="area"></svg> <!-- SVG для области -->
         <div id="station" class="station" style="background: url('./mats/Station.png') no-repeat center;"></div>
         <div id="spot1" class="icon" style="background: url('./mats/Spot1.png') no-repeat center;"></div>
         <div id="spot2" class="icon" style="background: url('./mats/Spot1.png') no-repeat center;"></div>
@@ -102,8 +93,6 @@
             { id: 'spotBroken', coords: [30.015, 50.002] }
         ];
 
-        const areaRadius = 2000; // Радиус области в метрах
-
         // Утилита для преобразования координат в пиксели
         function projectCoords(coords) {
             const point = map.project(coords);
@@ -116,20 +105,6 @@
             const station = document.getElementById('station');
             station.style.left = `${stationPixels.x}px`;
             station.style.top = `${stationPixels.y}px`;
-
-            // Обновляем позицию области (SVG)
-            const area = document.getElementById('area');
-            const centerPixels = stationPixels;
-
-            // Рассчитываем радиус в пикселях
-            const centerLngLat = map.unproject([centerPixels.x, centerPixels.y]);
-            const edgeLngLat = map.unproject([centerPixels.x + 1, centerPixels.y]);
-            const metersPerPixel = turf.distance(centerLngLat, edgeLngLat) * 1000;
-            const radiusPixels = areaRadius / metersPerPixel;
-
-            area.setAttribute('cx', centerPixels.x);
-            area.setAttribute('cy', centerPixels.y);
-            area.setAttribute('r', radiusPixels);
 
             // Обновляем позиции спотов и линий
             spots.forEach((spot, index) => {
