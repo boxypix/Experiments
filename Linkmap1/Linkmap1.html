@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Map with HTML Graphics</title>
+    <title>Interactive Map with HTML Graphics</title>
     <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
@@ -25,7 +25,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            pointer-events: none; /* Игнорировать клики */
+            pointer-events: none; /* Игнорирует клики, чтобы карта оставалась интерактивной */
         }
 
         .icon {
@@ -33,7 +33,7 @@
             width: 51px;
             height: 51px;
             background-size: cover;
-            transform: translate(-50%, -50%); /* Центрировать относительно координат */
+            transform: translate(-50%, -50%);
         }
 
         .line {
@@ -89,7 +89,7 @@
             bearing: 0 // Убираем поворот
         });
 
-        // Отключаем наклон и поворот карты
+        // Отключаем поворот и наклон карты
         map.dragRotate.disable();
         map.touchZoomRotate.disableRotation();
 
