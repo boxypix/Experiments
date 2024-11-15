@@ -24,49 +24,40 @@
 
         // Фиксированные координаты для спотов
         const spots = [
-            { id: 'spot1', coords: [30.01, 50.005], icon: './mats/Spot1.png', lineColor: '#ffffff' },
-            { id: 'spot2', coords: [29.99, 50.007], icon: './mats/Spot1.png', lineColor: '#ffffff' },
-            { id: 'spot3', coords: [30.02, 50.0], icon: './mats/Spot1.png', lineColor: '#ffffff' },
-            { id: 'spot4', coords: [29.98, 50.003], icon: './mats/Spot1.png', lineColor: '#ffffff' },
-            { id: 'spot-broken', coords: [30.015, 50.002], icon: './mats/Spot2.png', lineColor: '#FF581C' } // Оранжевая линия
+            { id: 'spot1', coords: [30.01, 50.005], icon: 'spot1-icon', lineColor: '#ffffff' },
+            { id: 'spot2', coords: [29.99, 50.007], icon: 'spot1-icon', lineColor: '#ffffff' },
+            { id: 'spot3', coords: [30.02, 50.0], icon: 'spot1-icon', lineColor: '#ffffff' },
+            { id: 'spot4', coords: [29.98, 50.003], icon: 'spot1-icon', lineColor: '#ffffff' },
+            { id: 'spot-broken', coords: [30.015, 50.002], icon: 'spot2-icon', lineColor: '#FF581C' }
         ];
 
+        // Обработчик отсутствующих изображений
+        map.on('styleimagemissing', (e) => {
+            const id = e.id;
+
+            // Загружаем изображение, если оно запрашивается
+            if (id === 'spot1-icon') {
+                map.loadImage('./mats/Spot1.png', (error, image) => {
+                    if (error) throw error;
+                    map.addImage('spot1-icon', image);
+                });
+            }
+            if (id === 'spot2-icon') {
+                map.loadImage('./mats/Spot2.png', (error, image) => {
+                    if (error) throw error;
+                    map.addImage('spot2-icon', image);
+                });
+            }
+            if (id === 'station-icon') {
+                map.loadImage('./mats/Station.png', (error, image) => {
+                    if (error) throw error;
+                    map.addImage('station-icon', image);
+                });
+            }
+        });
+
         map.on('load', () => {
-            // Загрузка и регистрация PNG-иконок
-            map.loadImage('./mats/Spot1.png', (error, image) => {
-                if (error) throw error;
-                map.addImage('spot1-icon', image);
-            });
-
-            map.loadImage('./mats/Spot2.png', (error, image) => {
-                if (error) throw error;
-                map.addImage('spot2-icon', image);
-            });
-
-            map.loadImage('./mats/Station.png', (error, image) => {
-                if (error) throw error;
-                map.addImage('station-icon', image);
-            });
-
-            // Добавляем SVG "Area" как растровое изображение
-            map.addSource('area', {
-                type: 'image',
-                url: './mats/Area.svg',
-                coordinates: [
-                    [29.99, 50.01], // Верхний левый угол
-                    [30.01, 50.01], // Верхний правый угол
-                    [30.01, 49.99], // Нижний правый угол
-                    [29.99, 49.99]  // Нижний левый угол
-                ]
-            });
-
-            map.addLayer({
-                id: 'area-layer',
-                type: 'raster',
-                source: 'area'
-            });
-
-            // Добавляем слой для "станции"
+            // Добавляем слой для станции
             map.addSource('station', {
                 type: 'geojson',
                 data: {
@@ -88,7 +79,7 @@
                 }
             });
 
-            // Добавляем слои для "спотов" и их линий
+            // Добавляем слои для спотов и их линий
             spots.forEach(spot => {
                 // Источник для спота
                 map.addSource(spot.id, {
@@ -108,7 +99,7 @@
                     type: 'symbol',
                     source: spot.id,
                     layout: {
-                        'icon-image': spot.id === 'spot-broken' ? 'spot2-icon' : 'spot1-icon',
+                        'icon-image': spot.icon,
                         'icon-size': 1
                     }
                 });
