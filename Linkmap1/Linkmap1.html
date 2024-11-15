@@ -2,13 +2,12 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Interactive Map with Fixed Elements</title>
-    <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
-    <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet" />
+    <title>OpenStreetMap with Circles and Distances</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <style>
         body {
             margin: 0;
-            overflow: hidden;
         }
 
         #map {
@@ -19,134 +18,120 @@
             height: 100vh;
         }
 
-        .overlay {
+        .distance-label {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            pointer-events: none; /* Игнорировать клики */
-        }
-
-        .icon {
-            position: absolute;
-            width: 51px;
-            height: 51px;
-            background-size: cover;
             transform: translate(-50%, -50%);
-            z-index: 3;
-        }
-
-        .station {
-            position: absolute;
-            width: 124px;
-            height: 124px;
-            background-size: cover;
-            transform: translate(-50%, -50%);
-            z-index: 4;
-        }
-
-        .line {
-            position: absolute;
-            width: 2px;
-            background-color: white;
-            transform-origin: top left;
-            z-index: 2;
-        }
-
-        .broken-line {
-            background-color: #FF581C;
+            color: white;
+            font-size: 9px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 11; /* Над линиями */
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div class="overlay">
-        <div id="station" class="station" style="background: url('./mats/Station.png') no-repeat center;"></div>
-        <div id="spot1" class="icon" style="background: url('./mats/Spot1.png') no-repeat center;"></div>
-        <div id="spot2" class="icon" style="background: url('./mats/Spot1.png') no-repeat center;"></div>
-        <div id="spot3" class="icon" style="background: url('./mats/Spot1.png') no-repeat center;"></div>
-        <div id="spot4" class="icon" style="background: url('./mats/Spot1.png') no-repeat center;"></div>
-        <div id="spotBroken" class="icon" style="background: url('./mats/Spot2.png') no-repeat center;"></div>
-        <div id="line1" class="line"></div>
-        <div id="line2" class="line"></div>
-        <div id="line3" class="line"></div>
-        <div id="line4" class="line"></div>
-        <div id="lineBroken" class="line broken-line"></div>
-    </div>
     <script>
-        const map = new maplibregl.Map({
-            container: 'map',
-            style: './Map.json', // Стиль карты
-            center: [30.0, 50.0], // Центр карты
-            zoom: 12,
-            pitch: 0,
-            bearing: 0
+        const centerCoords = [27.615513, -82.736779]; // Центр станции
+        const circleRadii = [500, 1000, 1500]; // Радиусы кругов в метрах
+        const lineColor = '#567C91'; // Цвет линии кругов
+        const lineOpacity = 0.4; // Прозрачность линии кругов
+
+        // Создаем карту с OpenStreetMap
+        const map = L.map('map', { zoomControl: true }).setView(centerCoords, 14);
+
+        // Устанавливаем масштаб так, чтобы ширина карты была 1500 метров
+        map.fitBounds([
+            [centerCoords[0] - 0.0135, centerCoords[1] - 0.0135], // Приблизительно соответствует 1500 м
+            [centerCoords[0] + 0.0135, centerCoords[1] + 0.0135]
+        ]);
+
+        // Добавляем слой OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Добавляем круги
+        circleRadii.forEach(radius => {
+            L.circle(centerCoords, {
+                radius: radius,
+                color: lineColor,
+                weight: 1,
+                opacity: lineOpacity,
+                dashArray: '3, 3'
+            }).addTo(map);
         });
 
-        const stationCoords = [30.0, 50.0];
-        const spots = [
-            { id: 'spot1', coords: [30.01, 50.005] },
-            { id: 'spot2', coords: [29.99, 50.007] },
-            { id: 'spot3', coords: [30.02, 50.0] },
-            { id: 'spot4', coords: [29.98, 50.003] },
-            { id: 'spotBroken', coords: [30.015, 50.002] }
-        ];
-
-        // Утилита для преобразования координат в пиксели
-        function projectCoords(coords) {
-            const point = map.project(coords);
-            return { x: point.x, y: point.y };
+        // Функция для генерации случайных точек в радиусе
+        function getRandomPoints(center, count, radius) {
+            const points = [];
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * 2 * Math.PI;
+                const offset = Math.sqrt(Math.random()) * (radius / 1000); // Радиус в градусах
+                const lat = center[0] + offset * Math.cos(angle) / 111; // 1° широты ≈ 111 км
+                const lng = center[1] + offset * Math.sin(angle) / (111 * Math.cos(center[0] * Math.PI / 180));
+                points.push([lat, lng]);
+            }
+            return points;
         }
 
-        function updatePositions() {
-            // Обновляем позицию станции
-            const stationPixels = projectCoords(stationCoords);
-            const station = document.getElementById('station');
-            station.style.left = `${stationPixels.x}px`;
-            station.style.top = `${stationPixels.y}px`;
+        // Генерируем 5 случайных точек
+        const spotsCoords = getRandomPoints(centerCoords, 5, circleRadii[2]);
 
-            // Обновляем позиции спотов и линий
-            spots.forEach((spot, index) => {
-                const spotElement = document.getElementById(spot.id);
-                const lineElement = document.getElementById(`line${index + 1}`);
-                const spotPixels = projectCoords(spot.coords);
+        // Идентифицируем сломанный спот (последняя точка)
+        const brokenSpot = spotsCoords[spotsCoords.length - 1];
 
-                // Споты
-                spotElement.style.left = `${spotPixels.x}px`;
-                spotElement.style.top = `${spotPixels.y}px`;
+        // Добавляем станцию
+        const stationIcon = L.icon({
+            iconUrl: './mats/Station.svg',
+            iconSize: [124, 124],
+            iconAnchor: [62, 62] // Центр иконки
+        });
+        L.marker(centerCoords, { icon: stationIcon }).addTo(map);
 
-                // Линии
-                const dx = stationPixels.x - spotPixels.x;
-                const dy = stationPixels.y - spotPixels.y;
-                const length = Math.sqrt(dx * dx + dy * dy);
-                const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        // Добавляем споты, линии и расстояния
+        spotsCoords.forEach((spot, index) => {
+            const isBroken = spot === brokenSpot;
 
-                lineElement.style.left = `${spotPixels.x}px`;
-                lineElement.style.top = `${spotPixels.y}px`;
-                lineElement.style.width = `${length}px`;
-                lineElement.style.transform = `rotate(${angle}deg)`;
+            // Иконка спота
+            const spotIcon = L.icon({
+                iconUrl: isBroken ? './mats/Spot2.svg' : './mats/Spot1.svg',
+                iconSize: [51, 51],
+                iconAnchor: [25, 25] // Центр иконки
             });
 
-            // Обновляем линию для сломанного спота
-            const brokenSpot = spots.find(spot => spot.id === 'spotBroken');
-            const brokenLine = document.getElementById('lineBroken');
-            const brokenPixels = projectCoords(brokenSpot.coords);
+            // Маркер спота
+            L.marker(spot, { icon: spotIcon }).addTo(map);
 
-            const dxBroken = stationPixels.x - brokenPixels.x;
-            const dyBroken = stationPixels.y - brokenPixels.y;
-            const lengthBroken = Math.sqrt(dxBroken * dxBroken + dyBroken * dyBroken);
-            const angleBroken = Math.atan2(dyBroken, dxBroken) * (180 / Math.PI);
+            // Линия от спота к станции
+            const lineColor = isBroken ? '#FF581C' : '#FFFFFF';
+            const polyline = L.polyline([spot, centerCoords], { color: lineColor, weight: 2 }).addTo(map);
 
-            brokenLine.style.left = `${brokenPixels.x}px`;
-            brokenLine.style.top = `${brokenPixels.y}px`;
-            brokenLine.style.width = `${lengthBroken}px`;
-            brokenLine.style.transform = `rotate(${angleBroken}deg)`;
-        }
+            // Добавляем расстояние
+            const distance = (map.distance(spot, centerCoords) / 1000).toFixed(1); // В километрах
+            const midPoint = L.latLng(
+                (spot[0] + centerCoords[0]) / 2,
+                (spot[1] + centerCoords[1]) / 2
+            );
 
-        // Слушатели событий карты
-        map.on('move', updatePositions);
-        map.on('load', updatePositions);
+            const label = document.createElement('div');
+            label.className = 'distance-label';
+            label.textContent = `${distance} км`;
+
+            const mapPane = document.querySelector('.leaflet-map-pane');
+            mapPane.appendChild(label);
+
+            function updateLabelPosition() {
+                const point = map.latLngToLayerPoint(midPoint);
+                label.style.left = `${point.x}px`;
+                label.style.top = `${point.y}px`;
+            }
+
+            map.on('move', updateLabelPosition);
+            map.on('zoom', updateLabelPosition);
+            updateLabelPosition();
+        });
     </script>
 </body>
 </html>
