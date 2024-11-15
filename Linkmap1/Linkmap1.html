@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Interactive Map with Fixed-Size Spots</title>
+    <title>Interactive Map with Fixed Elements</title>
     <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
@@ -25,7 +25,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            pointer-events: none; /* Игнорирует клики, чтобы карта оставалась интерактивной */
+            pointer-events: none; /* Игнорировать клики */
         }
 
         .icon {
@@ -34,7 +34,7 @@
             height: 51px;
             background-size: cover;
             transform: translate(-50%, -50%);
-            z-index: 3; /* Над линиями */
+            z-index: 3;
         }
 
         .station {
@@ -43,26 +43,34 @@
             height: 124px;
             background-size: cover;
             transform: translate(-50%, -50%);
-            z-index: 4; /* Над спотами */
+            z-index: 4;
         }
 
         .line {
             position: absolute;
             width: 2px;
             background-color: white;
-            transform-origin: top center;
-            z-index: 2; /* Под спотами, но над областью */
+            transform-origin: top left;
+            z-index: 2;
         }
 
         .broken-line {
             background-color: #FF581C;
+        }
+
+        .area {
+            position: absolute;
+            width: 0;
+            height: 0;
+            transform: translate(-50%, -50%);
+            z-index: 1;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div class="overlay">
-        <canvas id="areaCanvas" style="z-index: 1;"></canvas> <!-- Area под всеми элементами -->
+        <svg id="area" class="area"></svg> <!-- SVG для области -->
         <div id="station" class="station" style="background: url('./mats/Station.png') no-repeat center;"></div>
         <div id="spot1" class="icon" style="background: url('./mats/Spot1.png') no-repeat center;"></div>
         <div id="spot2" class="icon" style="background: url('./mats/Spot1.png') no-repeat center;"></div>
@@ -78,16 +86,14 @@
     <script>
         const map = new maplibregl.Map({
             container: 'map',
-            style: './Map.json', // Используем стиль как подложку
+            style: './Map.json', // Стиль карты
             center: [30.0, 50.0], // Центр карты
             zoom: 12,
             pitch: 0,
             bearing: 0
         });
 
-        // Координаты центра станции
         const stationCoords = [30.0, 50.0];
-        const areaCanvas = document.getElementById('areaCanvas');
         const spots = [
             { id: 'spot1', coords: [30.01, 50.005] },
             { id: 'spot2', coords: [29.99, 50.007] },
@@ -96,49 +102,42 @@
             { id: 'spotBroken', coords: [30.015, 50.002] }
         ];
 
-        // Утилита: преобразует координаты в пиксели
-        function projectCoordsToPixels(coords) {
+        const areaRadius = 2000; // Радиус области в метрах
+
+        // Утилита для преобразования координат в пиксели
+        function projectCoords(coords) {
             const point = map.project(coords);
             return { x: point.x, y: point.y };
         }
 
-        // Обновление области
-        function updateArea() {
-            const context = areaCanvas.getContext('2d');
-            const topLeft = map.project([29.99, 50.01]);
-            const bottomRight = map.project([30.01, 49.99]);
-
-            areaCanvas.width = window.innerWidth;
-            areaCanvas.height = window.innerHeight;
-
-            context.clearRect(0, 0, areaCanvas.width, areaCanvas.height);
-            context.beginPath();
-            context.arc(
-                (topLeft.x + bottomRight.x) / 2,
-                (topLeft.y + bottomRight.y) / 2,
-                (bottomRight.x - topLeft.x) / 2,
-                0,
-                2 * Math.PI
-            );
-            context.fillStyle = 'rgba(0, 128, 255, 0.1)';
-            context.fill();
-        }
-
-        // Обновление позиций спотов, линии и станции
         function updatePositions() {
-            const stationPixels = projectCoordsToPixels(stationCoords);
-
-            // Станция
+            // Обновляем позицию станции
+            const stationPixels = projectCoords(stationCoords);
             const station = document.getElementById('station');
             station.style.left = `${stationPixels.x}px`;
             station.style.top = `${stationPixels.y}px`;
 
-            // Споты и линии
+            // Обновляем позицию области (SVG)
+            const area = document.getElementById('area');
+            const centerPixels = stationPixels;
+
+            // Рассчитываем радиус в пикселях
+            const centerLngLat = map.unproject([centerPixels.x, centerPixels.y]);
+            const edgeLngLat = map.unproject([centerPixels.x + 1, centerPixels.y]);
+            const metersPerPixel = turf.distance(centerLngLat, edgeLngLat) * 1000;
+            const radiusPixels = areaRadius / metersPerPixel;
+
+            area.setAttribute('cx', centerPixels.x);
+            area.setAttribute('cy', centerPixels.y);
+            area.setAttribute('r', radiusPixels);
+
+            // Обновляем позиции спотов и линий
             spots.forEach((spot, index) => {
                 const spotElement = document.getElementById(spot.id);
                 const lineElement = document.getElementById(`line${index + 1}`);
+                const spotPixels = projectCoords(spot.coords);
 
-                const spotPixels = projectCoordsToPixels(spot.coords);
+                // Споты
                 spotElement.style.left = `${spotPixels.x}px`;
                 spotElement.style.top = `${spotPixels.y}px`;
 
@@ -154,10 +153,10 @@
                 lineElement.style.transform = `rotate(${angle}deg)`;
             });
 
-            // Линия для сломанного спота
+            // Обновляем линию для сломанного спота
             const brokenSpot = spots.find(spot => spot.id === 'spotBroken');
             const brokenLine = document.getElementById('lineBroken');
-            const brokenPixels = projectCoordsToPixels(brokenSpot.coords);
+            const brokenPixels = projectCoords(brokenSpot.coords);
 
             const dxBroken = stationPixels.x - brokenPixels.x;
             const dyBroken = stationPixels.y - brokenPixels.y;
@@ -170,20 +169,9 @@
             brokenLine.style.transform = `rotate(${angleBroken}deg)`;
         }
 
-        // Обновление элементов при движении карты
-        map.on('move', () => {
-            updateArea();
-            updatePositions();
-        });
-
-        // Первоначальная отрисовка
-        map.on('load', () => {
-            updateArea();
-            updatePositions();
-        });
-
-        // Обновление размеров области при изменении размеров окна
-        window.addEventListener('resize', updateArea);
+        // Слушатели событий карты
+        map.on('move', updatePositions);
+        map.on('load', updatePositions);
     </script>
 </body>
 </html>
