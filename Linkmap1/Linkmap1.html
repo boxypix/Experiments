@@ -22,18 +22,13 @@
 
         const stationCoords = [30.0, 50.0]; // Координаты станции
 
-        // Генерация случайных координат для спотов
-        function randomCoords(center, radius = 2000) {
-            const offset = () => (Math.random() - 0.5) * radius / 111320; // 1 градус ~111 км
-            return [center[0] + offset(), center[1] + offset()];
-        }
-
+        // Фиксированные координаты для спотов
         const spots = [
-            { id: 'spot1', coords: randomCoords(stationCoords), icon: './mats/Spot1.png', lineColor: '#ffffff' },
-            { id: 'spot2', coords: randomCoords(stationCoords), icon: './mats/Spot1.png', lineColor: '#ffffff' },
-            { id: 'spot3', coords: randomCoords(stationCoords), icon: './mats/Spot1.png', lineColor: '#ffffff' },
-            { id: 'spot4', coords: randomCoords(stationCoords), icon: './mats/Spot1.png', lineColor: '#ffffff' },
-            { id: 'spot-broken', coords: randomCoords(stationCoords), icon: './mats/Spot2.png', lineColor: '#ff8c00' }
+            { id: 'spot1', coords: [30.01, 50.005], icon: './mats/Spot1.png', lineColor: '#ffffff' },
+            { id: 'spot2', coords: [29.99, 50.007], icon: './mats/Spot1.png', lineColor: '#ffffff' },
+            { id: 'spot3', coords: [30.02, 50.0], icon: './mats/Spot1.png', lineColor: '#ffffff' },
+            { id: 'spot4', coords: [29.98, 50.003], icon: './mats/Spot1.png', lineColor: '#ffffff' },
+            { id: 'spot-broken', coords: [30.015, 50.002], icon: './mats/Spot2.png', lineColor: '#FF581C' } // Оранжевая линия
         ];
 
         map.on('load', () => {
