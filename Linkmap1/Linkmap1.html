@@ -1,13 +1,16 @@
+
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Interactive Map with Waves and Popups</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Map with Waves and Fixed Popups</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <style>
         body {
             margin: 0;
+            font-family: Arial, sans-serif;
         }
 
         #map {
@@ -18,66 +21,68 @@
             height: 100vh;
         }
 
-        .custom-popup {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-            padding: 4px;
-            color: #12242F;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .popup-title {
-            font-weight: 400;
-            margin: 0 0 2px;
-        }
-
-        .popup-wind {
-            font-weight: 700;
-            margin: 0 0 2px;
-        }
-
-        .popup-distance {
-            font-weight: 400;
+            font-weight: bold;
             margin: 0;
+            font-size: 18px;
+        }
+
+        .popup-close {
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            color: #1C3341;
+            margin-left: 16px;
+        }
+
+        .popup-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .popup-wind,
+        .popup-distance {
+            font-size: 16px;
         }
 
         .popup-problem {
             color: #FF581C;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
-            margin-top: 4px;
         }
 
-        @keyframes wave {
-            0% {
-                transform: scale(1);
-                opacity: 0.4;
+        @media (max-width: 768px) {
+            .custom-popup {
+                font-size: 14px;
+                padding: 12px;
             }
-            100% {
-                transform: scale(8);
-                opacity: 0;
-            }
-        }
 
-        .wave {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: #1C3747;
-            border-radius: 50%;
-            pointer-events: none;
-            animation: wave 3s infinite;
-            transform-origin: center;
+            .popup-title {
+                font-size: 16px;
+            }
+
+            .popup-wind,
+            .popup-distance {
+                font-size: 14px;
+            }
+
+            .popup-problem {
+                font-size: 12px;
+            }
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="wave-container"></div>
     <script>
-        const centerCoords = [27.615513, -82.736779]; // Центр станции
+        const centerCoords = [27.615513, -82.736779];
         const spotNames = [
             "Bear Beach",
             "Happy Bolt Place",
@@ -86,13 +91,12 @@
             "Michael's Tower"
         ];
 
-        const circleRadii = [100, 200, 300]; // Радиусы кругов
+        const circleRadii = [100, 200, 300];
         const lineColor = '#567C91';
         const lineOpacity = 0.2;
 
-        const windSpeeds = [12, 9, 15, 10, 11]; // Примерные значения ветра в узлах
+        const windSpeeds = [12, 9, 15, 10, 11];
 
-        // Создаем карту
         const map = L.map('map').setView(centerCoords, 17);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -100,7 +104,6 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        // Круги вокруг станции
         circleRadii.forEach(radius => {
             L.circle(centerCoords, {
                 radius: radius,
@@ -116,93 +119,91 @@
             [27.6161, -82.7375],
             [27.6149, -82.7380],
             [27.6156, -82.7340],
-            [27.6150, -82.7370] // Broken spot
+            [27.6150, -82.7370]
         ];
 
         const brokenSpot = spotsCoords[spotsCoords.length - 1];
 
-        // Добавляем станцию
         const stationIcon = L.icon({
             iconUrl: './mats/Station.svg',
-            iconSize: [248, 248], // Retina size
+            iconSize: [248, 248],
             iconAnchor: [124, 124]
         });
         L.marker(centerCoords, { icon: stationIcon }).addTo(map);
 
-        // Функция для отображения popup
-        function createPopupContent(name, wind, distance, isBroken = false) {
-            let popupContent = `<div class="custom-popup">
-                <div class="popup-title">${name}</div>
-                <div class="popup-wind">${wind} kts</div>
-                <div class="popup-distance">${distance} m</div>`;
+        function createPopupContent(name, wind, distance, isBroken = false, marker) {
+            const popupContent = document.createElement('div');
+            popupContent.className = 'custom-popup';
+
+            const header = document.createElement('div');
+            header.className = 'popup-header';
+
+            const title = document.createElement('div');
+            title.className = 'popup-title';
+            title.textContent = name;
+
+            const close = document.createElement('div');
+            close.className = 'popup-close';
+            close.textContent = '×';
+            close.addEventListener('click', () => marker.closePopup());
+
+            header.appendChild(title);
+            header.appendChild(close);
+            popupContent.appendChild(header);
+
+            const content = document.createElement('div');
+            content.className = 'popup-content';
+
+            const windElement = document.createElement('div');
+            windElement.className = 'popup-wind';
+            windElement.textContent = `${wind} kts`;
+            content.appendChild(windElement);
+
+            const distanceElement = document.createElement('div');
+            distanceElement.className = 'popup-distance';
+            distanceElement.textContent = `${distance} m`;
+            content.appendChild(distanceElement);
+
             if (isBroken) {
-                popupContent += `<div class="popup-problem">Problem</div>`;
+                const problemElement = document.createElement('div');
+                problemElement.className = 'popup-problem';
+                problemElement.textContent = 'Problem';
+                content.appendChild(problemElement);
             }
-            popupContent += `</div>`;
+
+            popupContent.appendChild(content);
             return popupContent;
         }
 
-        // Добавляем споты, линии и расстояния
         spotsCoords.forEach((spot, index) => {
             const isBroken = spot === brokenSpot;
 
             const spotIcon = L.icon({
                 iconUrl: isBroken ? './mats/Spot2.svg' : './mats/Spot1.svg',
-                iconSize: [102, 102], // Retina size
+                iconSize: [102, 102],
                 iconAnchor: [51, 51]
             });
 
             const marker = L.marker(spot, { icon: spotIcon }).addTo(map);
 
             const lineColor = isBroken ? '#FF581C' : '#FFFFFF';
-            const lineClass = isBroken ? 'orange-line' : '';
 
-            const polyline = L.polyline([spot, centerCoords], {
+            L.polyline([spot, centerCoords], {
                 color: lineColor,
-                weight: 3, // Толщина линии 3px
-                className: lineClass
+                weight: 3
             }).addTo(map);
 
-            // Расстояние до станции
-            const distance = Math.round(map.distance(spot, centerCoords)); // В метрах, округлено
+            const distance = Math.round(map.distance(spot, centerCoords));
 
-            // Добавляем popup с возможностью повторного открытия
             const popup = L.popup({
-                offset: [0, -16], // Смещение на 16px выше маркера
-                closeButton: true
-            }).setContent(createPopupContent(spotNames[index], windSpeeds[index], distance, isBroken));
+                offset: [0, -32],
+                closeButton: false
+            }).setContent(createPopupContent(spotNames[index], windSpeeds[index], distance, isBroken, marker));
 
             marker.on('click', () => {
                 popup.setLatLng(spot).openOn(map);
             });
         });
-
-        // Функция для добавления волны
-        function createWave() {
-            const wave = document.createElement('div');
-            wave.className = 'wave';
-
-            const mapContainer = document.getElementById('wave-container');
-            mapContainer.style.position = 'absolute';
-            mapContainer.style.top = '0';
-            mapContainer.style.left = '0';
-            mapContainer.style.width = '100%';
-            mapContainer.style.height = '100%';
-            mapContainer.style.pointerEvents = 'none';
-
-            const stationPoint = map.latLngToContainerPoint(centerCoords);
-            wave.style.left = `${stationPoint.x}px`;
-            wave.style.top = `${stationPoint.y}px`;
-
-            mapContainer.appendChild(wave);
-
-            setTimeout(() => {
-                wave.remove();
-            }, 3000);
-        }
-
-        // Запускаем волны каждые 3 секунды
-        setInterval(createWave, 3000);
     </script>
 </body>
 </html>
