@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Custom Map with MapLibre</title>
+    <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; }
+        #map { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: './Map.json', // Локальный файл стиля карты
+            center: [30.0, 50.0], // Центр карты (примерные координаты "станции")
+            zoom: 12
+        });
+
+        const stationCoords = [30.0, 50.0]; // Координаты "станции"
+
+        // Генерация случайных координат в радиусе 2 км
+        function randomCoords(center, radius = 2000) {
+            const offset = () => (Math.random() - 0.5) * radius / 111320; // 1 градус ~111 км
+            return [center[0] + offset(), center[1] + offset()];
+        }
+
+        const spots = [
+            { id: 'spot1', coords: randomCoords(stationCoords), icon: 'Spot1.png', lineColor: '#ffffff' },
+            { id: 'spot2', coords: randomCoords(stationCoords), icon: 'Spot1.png', lineColor: '#ffffff' },
+            { id: 'spot3', coords: randomCoords(stationCoords), icon: 'Spot1.png', lineColor: '#ffffff' },
+            { id: 'spot4', coords: randomCoords(stationCoords), icon: 'Spot1.png', lineColor: '#ffffff' },
+            { id: 'spot-broken', coords: randomCoords(stationCoords), icon: 'Spot2.png', lineColor: '#ff8c00' }
+        ];
+
+        map.on('load', () => {
+            // Добавляем источник и слой для SVG "Area"
+            map.addSource('area', {
+                type: 'image',
+                url: './mats/Area.svg',
+                coordinates: [
+                    [stationCoords[0] - 0.01, stationCoords[1] + 0.01],
+                    [stationCoords[0] + 0.01, stationCoords[1] + 0.01],
+                    [stationCoords[0] + 0.01, stationCoords[1] - 0.01],
+                    [stationCoords[0] - 0.01, stationCoords[1] - 0.01]
+                ]
+            });
+
+            map.addLayer({
+                id: 'area-layer',
+                type: 'raster',
+                source: 'area'
+            });
+
+            // Добавляем "станцию"
+            map.addSource('station', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: [{
+                        type: 'Feature',
+                        geometry: { type: 'Point', coordinates: stationCoords }
+                    }]
+                }
+            });
+
+            map.addLayer({
+                id: 'station-layer',
+                type: 'symbol',
+                source: 'station',
+                layout: {
+                    'icon-image': './mats/Station.png',
+                    'icon-size': 1
+                }
+            });
+
+            // Добавляем "споты" и линии
+            spots.forEach(spot => {
+                map.addSource(spot.id, {
+                    type: 'geojson',
+                    data: {
+                        type: 'FeatureCollection',
+                        features: [{
+                            type: 'Feature',
+                            geometry: { type: 'Point', coordinates: spot.coords }
+                        }]
+                    }
+                });
+
+                map.addLayer({
+                    id: `${spot.id}-layer`,
+                    type: 'symbol',
+                    source: spot.id,
+                    layout: {
+                        'icon-image': `./mats/${spot.icon}`,
+                        'icon-size': 1
+                    }
+                });
+
+                // Линия от спота к станции
+                map.addSource(`${spot.id}-line`, {
+                    type: 'geojson',
+                    data: {
+                        type: 'FeatureCollection',
+                        features: [{
+                            type: 'Feature',
+                            geometry: {
+                                type: 'LineString',
+                                coordinates: [spot.coords, stationCoords]
+                            }
+                        }]
+                    }
+                });
+
+                map.addLayer({
+                    id: `${spot.id}-line-layer`,
+                    type: 'line',
+                    source: `${spot.id}-line`,
+                    paint: {
+                        'line-color': spot.lineColor,
+                        'line-width': 2
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
