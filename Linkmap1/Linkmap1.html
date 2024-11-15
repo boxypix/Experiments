@@ -22,7 +22,7 @@
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-            padding: 8px;
+            padding: 4px;
             color: #12242F;
             font-family: Arial, sans-serif;
             font-size: 14px;
@@ -63,8 +63,8 @@
 
         .wave {
             position: absolute;
-            width: 20px;
-            height: 20px;
+            width: 40px;
+            height: 40px;
             background: #1C3747;
             border-radius: 50%;
             pointer-events: none;
@@ -86,14 +86,14 @@
             "Michael's Tower"
         ];
 
-        const circleRadii = [250, 500, 750]; // Радиусы кругов
+        const circleRadii = [100, 200, 300]; // Радиусы кругов
         const lineColor = '#567C91';
-        const lineOpacity = 0.4;
+        const lineOpacity = 0.2;
 
         const windSpeeds = [12, 9, 15, 10, 11]; // Примерные значения ветра в узлах
 
         // Создаем карту
-        const map = L.map('map').setView(centerCoords, 14);
+        const map = L.map('map').setView(centerCoords, 17);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
