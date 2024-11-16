@@ -20,7 +20,6 @@
             width: 100vw;
             height: 100vh;
         }
-
         .popup-header {
             display: flex;
             justify-content: space-between;
@@ -42,9 +41,11 @@
         }
 
         .popup-content {
+            padding-top: 8px;
             display: flex;
             flex-direction: column;
             gap: 4px;
+            border-radius: 16px;
         }
 
         .popup-wind,
@@ -54,27 +55,27 @@
 
         .popup-problem {
             color: #FF581C;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: bold;
         }
 
         @media (max-width: 768px) {
             .custom-popup {
-                font-size: 14px;
-                padding: 12px;
+                font-size: 18px;
+                padding: 2px;
             }
 
             .popup-title {
-                font-size: 16px;
+                font-size: 18px;
             }
 
             .popup-wind,
             .popup-distance {
-                font-size: 14px;
+                font-size: 16px;
             }
 
             .popup-problem {
-                font-size: 12px;
+                font-size: 16px;
             }
         }
     </style>
@@ -88,12 +89,13 @@
             "Happy Bolt Place",
             "Roman's Hill",
             "Surfhub",
+            "South Wind Pillar",
             "Michael's Tower"
         ];
 
         const circleRadii = [100, 200, 300];
         const lineColor = '#567C91';
-        const lineOpacity = 0.2;
+        const lineOpacity = 0.8;
 
         const windSpeeds = [12, 9, 15, 10, 11];
 
@@ -108,26 +110,27 @@
             L.circle(centerCoords, {
                 radius: radius,
                 color: lineColor,
-                weight: 2,
+                weight: 1,
                 opacity: lineOpacity,
-                dashArray: '3, 3'
+                dashArray: '5, 5'
             }).addTo(map);
         });
 
         const spotsCoords = [
             [27.6158, -82.7355],
-            [27.6161, -82.7375],
-            [27.6149, -82.7380],
-            [27.6156, -82.7340],
-            [27.6150, -82.7370]
+            [27.6169, -82.7375],
+            [27.6151, -82.7384],
+            [27.6156, -82.7349],
+            [27.6133, -82.7364],
+            [27.6138, -82.7372]
         ];
 
         const brokenSpot = spotsCoords[spotsCoords.length - 1];
 
         const stationIcon = L.icon({
             iconUrl: './mats/Station.svg',
-            iconSize: [248, 248],
-            iconAnchor: [124, 124]
+            iconSize: [128, 128],
+            iconAnchor: [64, 64]
         });
         L.marker(centerCoords, { icon: stationIcon }).addTo(map);
 
@@ -180,8 +183,8 @@
 
             const spotIcon = L.icon({
                 iconUrl: isBroken ? './mats/Spot2.svg' : './mats/Spot1.svg',
-                iconSize: [102, 102],
-                iconAnchor: [51, 51]
+                iconSize: [64, 64],
+                iconAnchor: [32, 32]
             });
 
             const marker = L.marker(spot, { icon: spotIcon }).addTo(map);
