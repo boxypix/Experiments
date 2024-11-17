@@ -13,6 +13,24 @@
             box-sizing: border-box;
         }
 
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1C3341;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        #loading-screen img {
+            width: 100px;
+            height: auto;
+        }
+
         .card {
             display: flex;
             align-items: top;
@@ -106,7 +124,12 @@
     </style>
 </head>
 <body>
-    <!-- Card 1 -->
+    <!-- Загрузочный экран -->
+    <div id="loading-screen">
+        <img src="Loading1.svg" alt="Loading">
+    </div>
+
+    <!-- Карточки -->
     <div class="card">
         <img src="mats/Cam1.png" alt="Cam 1" class="cam-pic">
         <div class="content">
@@ -140,7 +163,6 @@
         </div>
     </div>
 
-    <!-- Card 2 -->
     <div class="card">
         <img src="mats/Cam2.png" alt="Cam 2" class="cam-pic">
         <div class="content">
@@ -174,7 +196,6 @@
         </div>
     </div>
 
-    <!-- Card 3 -->
     <div class="card">
         <img src="mats/Cam3.png" alt="Cam 3" class="cam-pic">
         <div class="content">
@@ -208,7 +229,6 @@
         </div>
     </div>
 
-    <!-- Card 4 -->
     <div class="card">
         <img src="mats/Camoffline.png" alt="Cam 4" class="cam-pic">
         <div class="content">
@@ -241,5 +261,15 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Убираем загрузочный экран после загрузки страницы
+        window.addEventListener('load', () => {
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+                loadingScreen.style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>
