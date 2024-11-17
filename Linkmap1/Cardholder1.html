@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Station Cards</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 16px;
+            font-family: Arial, sans-serif;
+            background-color: #1C3341;
+            box-sizing: border-box;
+        }
+
+        .card {
+            display: flex;
+            align-items: top;
+            background-color: #152936;
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 12px;
+            color: #FFFFFF;
+            gap: 12px;
+        }
+
+        .card:last-child {
+            margin-bottom: 0;
+        }
+
+        .cam-pic {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .content {
+            display: flex;
+            flex-grow: 1;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .header {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #FFFFFF;
+        }
+
+        .spots {
+            font-size: 14px;
+            color: #6C9CB5;
+        }
+
+        .checkup {
+            font-size: 14px;
+        }
+
+        .checkup span {
+            color: #FF581C;
+        }
+
+        .reports {
+            font-size: 14px;
+            color: #6C9CB5;
+        }
+
+        .reports.active {
+            color: #FF581C;
+        }
+
+        .metrics {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .rose {
+            width: 34px;
+            height: 34px;
+            object-fit: contain;
+        }
+
+        .stat {
+            text-align: left;
+        }
+
+        .label {
+            font-size: 12px;
+            color: #6C9CB5;
+            margin-bottom: 2px;
+        }
+
+        .value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #FFFFFF;
+        }
+    </style>
+</head>
+<body>
+    <!-- Card 1 -->
+    <div class="card">
+        <img src="mats/cam1.gif" alt="Cam 1" class="cam-pic">
+        <div class="content">
+            <div class="header">
+                <div class="title">North Star Station</div>
+                <div class="spots">Serves 7 spots</div>
+                <div class="checkup">
+                    Last checkup 12 days ago
+                </div>
+                <div class="reports active">2 user reports</div>
+            </div>
+            <div class="metrics">
+                <img src="mats/Rose1.svg" alt="Rose" class="rose">
+                <div class="stat">
+                    <div class="label">Speed</div>
+                    <div class="value">12 kts</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Gust</div>
+                    <div class="value">14 kts</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Air °C</div>
+                    <div class="value">+30</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Atm.</div>
+                    <div class="value">730</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="card">
+        <img src="mats/cam2.gif" alt="Cam 2" class="cam-pic">
+        <div class="content">
+            <div class="header">
+                <div class="title">SkyPulse Tracker Station</div>
+                <div class="spots">Serves 6 spots</div>
+                <div class="checkup">
+                    Last checkup 23 days ago
+                </div>
+                <div class="reports"></div>
+            </div>
+            <div class="metrics">
+                <img src="mats/Rose2.svg" alt="Rose" class="rose">
+                <div class="stat">
+                    <div class="label">Speed</div>
+                    <div class="value">10 kts</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Gust</div>
+                    <div class="value">12 kts</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Air °C</div>
+                    <div class="value">+28</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Atm.</div>
+                    <div class="value">720</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="card">
+        <img src="mats/cam3.gif" alt="Cam 3" class="cam-pic">
+        <div class="content">
+            <div class="header">
+                <div class="title">Breeze Beacon (Tiny)</div>
+                <div class="spots">Serves 4 spots</div>
+                <div class="checkup">
+                    Last checkup 5 days ago
+                </div>
+                <div class="reports"></div>
+            </div>
+            <div class="metrics">
+                <img src="mats/Rose3.svg" alt="Rose" class="rose">
+                <div class="stat">
+                    <div class="label">Speed</div>
+                    <div class="value">14 kts</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Gust</div>
+                    <div class="value">18 kts</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Air °C</div>
+                    <div class="value">+33</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Atm.</div>
+                    <div class="value">740</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="card">
+        <img src="mats/Camoffline.png" alt="Cam 4" class="cam-pic">
+        <div class="content">
+            <div class="header">
+                <div class="title">Anna’s WindGuard Monitor </div>
+                <div class="spots">Serves 2 spots</div>
+                <div class="checkup">
+                    Last checkup <span>197 days ago</span>
+                </div>
+                <div class="reports">Offline, need repair</div>
+            </div>
+            <div class="metrics">
+                <img src="mats/Rose4.svg" alt="Rose" class="rose">
+                <div class="stat">
+                    <div class="label">Speed</div>
+                    <div class="value">–</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Gust</div>
+                    <div class="value">–</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Air °C</div>
+                    <div class="value">–</div>
+                </div>
+                <div class="stat">
+                    <div class="label">Atm.</div>
+                    <div class="value">–</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
