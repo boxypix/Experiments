@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <title>Vova map</title>
-    <script src='https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js'></script>
+    <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
     <style>
         body {
             margin: 0;
@@ -18,11 +18,9 @@
     <script>
         var map = new maplibregl.Map({
             container: 'map', // container id
-            style: 'https://api.npoint.io/235adf88255f7a98b406', // подставляю стиль
-            //style: 'https://map.windyapp.co/styles/whb_app_dev/style.json', // подставляю стиль
-            // style: 'https://demotiles.maplibre.org/style.json', // демо файл мэплибре
+            style: './style1.json', // всегда используем style1.json
             center: [0, 0], // starting position [lng, lat]
-            zoom: 1 // starting zoom
+            zoom: 2 // starting zoom
         });
     </script>
 </body>
