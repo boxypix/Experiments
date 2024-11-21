@@ -1,27 +1,85 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Vova map</title>
-    <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
+import UIKit
+import ARKit
+
+class Assist: UIViewController, ARSCNViewDelegate {
+
+    @IBOutlet weak var sceneView: ARSCNView!
+
+    var sphereNode: SCNNode? // Узел для шара
+    var isSpherePlaced = false // Флаг для проверки, был ли шар размещен
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        // Проверяем поддержку ARKit
+        guard ARWorldTrackingConfiguration.isSupported else {
+            fatalError("ARKit не поддерживается на этом устройстве")
         }
-        html, body, #map {
-            height: 100%;
+
+        // Настройка ARSCNView
+        sceneView.delegate = self
+        sceneView.autoenablesDefaultLighting = true
+        sceneView.automaticallyUpdatesLighting = true
+        sceneView.scene = SCNScene() // Устанавливаем пустую сцену
+
+        // Создаем сферу
+        createSphere()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        // Конфигурация ARKit
+        let configuration = ARWorldTrackingConfiguration()
+        configuration.planeDetection = [.horizontal] // Обнаружение горизонтальных поверхностей
+        sceneView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        sceneView.session.pause()
+    }
+
+    func createSphere() {
+        // Создаем сферу диаметром 1 метр
+        let sphere = SCNSphere(radius: 0.5) // Радиус 0.5 метра = диаметр 1 метр
+        sphere.firstMaterial?.diffuse.contents = UIColor.red // Устанавливаем красный цвет
+
+        // Создаем узел для сферы
+        sphereNode = SCNNode(geometry: sphere)
+        sphereNode?.position = SCNVector3(0, 0, -1) // В 1 метре перед камерой
+        sceneView.scene.rootNode.addChildNode(sphereNode!)
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard !isSpherePlaced, let sphereNode = sphereNode else { return }
+
+        // Определяем точку в центре экрана
+        let centerPoint = CGPoint(x: sceneView.bounds.midX, y: sceneView.bounds.midY)
+
+        // Выполняем hitTest, чтобы найти горизонтальную поверхность
+        let results = sceneView.hitTest(centerPoint, types: [.existingPlaneUsingExtent])
+        if let hitResult = results.first {
+            // Получаем позицию из worldTransform
+            let transform = hitResult.worldTransform
+            let position = SCNVector3(transform.columns.3.x, transform.columns.3.y + 0.5, transform.columns.3.z) // Парящий на 0.5 метра
+
+            // Перемещаем шар в эту точку
+            sphereNode.position = position
+
+            // Добавляем привязку к миру (ARAnchor)
+            let anchor = ARAnchor(transform: transform)
+            sceneView.session.add(anchor: anchor)
+
+            isSpherePlaced = true // Фиксируем, что шар размещен
         }
-    </style>
-</head>
-<body>
-    <div id="map"></div>
-    <script>
-        var map = new maplibregl.Map({
-            container: 'map', // container id
-            style: './style1.json', // всегда используем style1.json
-            center: [0, 0], // starting position [lng, lat]
-            zoom: 2 // starting zoom
-        });
-    </script>
-</body>
-</html>
+    }
+
+    // MARK: - ARSCNViewDelegate
+    func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
+        guard isSpherePlaced, let sphereNode = sphereNode else { return }
+
+        // Закрепляем узел сферы на добавленном якоре
+        node.addChildNode(sphereNode)
+    }
+}
