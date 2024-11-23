@@ -16,30 +16,33 @@
             height: 100vh;
             overflow: hidden;
         }
-
+    
         .message-container {
             width: 100%; /* Занимает всю ширину экрана */
+            height: 100vh; /* Занимает всю высоту экрана */
             border-radius: 8px;
             padding: 0 8px; /* Отступ текста */
-            font-size: 13px;
+            font-size: 15px;
             display: flex;
-            align-items: center;
+            align-items: center; /* Центрирование текста по вертикали */
+            justify-content: center; /* Центрирование текста по горизонтали */
+            text-align: center; /* Центрирование текста */
+            font-weight: 600; /* Semibold */
             opacity: 0; /* Изначально невидимо */
             transition: opacity 0.5s ease-in-out; /* Плавное исчезновение и появление */
-            height: 46px; /* Фиксированная высота области сообщения */
         }
-
+    
         .default-message {
             background-color: #203C4E;
             color: #FFFFFF;
         }
-
+    
         .analyzing-message {
             background-color: #152936;
             color: #5E86A1;
             border: 1px solid #152936; /* Обводка */
         }
-
+    
         .first-message {
             background-color: #0082F7;
             color: #FFFFFF;
