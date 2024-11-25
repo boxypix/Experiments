@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Siri Shortcut</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            color: #fff;
+            background-color: #007AFF;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #005BB5;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>Добавить Siri Shortcut</h1>
+        <p>Нажмите кнопку, чтобы открыть страницу, а затем добавьте ярлык через приложение "Команды".</p>
+        <button onclick="openGooseLink()">Добавить Shortcut</button>
+    </div>
+
+    <script>
+        function openGooseLink() {
+            window.location.href = "https://boxypix.github.io/Maps/Linkmap1/goose.html";
+        }
+    </script>
+</body>
+</html>
