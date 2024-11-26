@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wind Speed and Precipitation Graph</title>
+    <meta name="viewport" content="width=device-width">
+    <title>График скорости ветра и осадков</title>
     <script src="https://code.highcharts.com/highcharts.js"></script>
     <style>
         body {
@@ -29,6 +29,9 @@
         const lon = -82.736779;
         const apiUrl = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&past_days=1&hourly=windspeed_10m,windgusts_10m,precipitation&timezone=auto`;
 
+        // Интервал дискретности в часах
+        const intervalHours = 1; // Измените это значение на желаемый интервал (1, 2, 3, 6 и т.д.)
+
         // Функция для фильтрации данных
         const cleanData = (data, times) => {
             return data
@@ -41,26 +44,38 @@
                 .filter((point) => point !== null);
         };
 
+        // Функция для фильтрации данных по дискретности
+        const filterDataByInterval = (data, times, intervalHours) => {
+            return data.filter((value, index) => {
+                const date = new Date(times[index]);
+                const hours = date.getHours();
+                return hours % intervalHours === 0;
+            });
+        };
+
         // Получение данных и построение графика
         fetch(apiUrl)
             .then(response => response.json())
             .then(data => {
                 const times = data.hourly.time;
 
-                // Очистка данных
+                // Фильтрация данных по дискретности
+                const filteredTimes = filterDataByInterval(times, times, intervalHours);
+
+                // Очистка и фильтрация данных
                 const windSpeedData = cleanData(
-                    data.hourly.windspeed_10m.map(speed => speed * 0.539957), // Узлы
-                    times
+                    filterDataByInterval(data.hourly.windspeed_10m.map(speed => speed * 0.539957), times, intervalHours),
+                    filteredTimes
                 );
 
                 const windGustData = cleanData(
-                    data.hourly.windgusts_10m.map(gust => gust * 0.539957), // Узлы
-                    times
+                    filterDataByInterval(data.hourly.windgusts_10m.map(gust => gust * 0.539957), times, intervalHours),
+                    filteredTimes
                 );
 
                 const precipitationData = cleanData(
-                    data.hourly.precipitation, // Осадки в мм
-                    times
+                    filterDataByInterval(data.hourly.precipitation, times, intervalHours),
+                    filteredTimes
                 );
 
                 // Рендер графика
@@ -69,46 +84,68 @@
                         type: 'line',
                         backgroundColor: '#212634',
                         scrollablePlotArea: {
-                            minWidth: 1500, // График больше экрана для прокрутки
-                            scrollPositionX: 1 // Начало скроллинга справа
+                            minWidth: 6000,
+                            scrollPositionX: 1
                         },
+                    },
+                    title: {
+                        text: 'График скорости ветра и осадков',
+                        style: {
+                            fontSize: '16px',
+                            color: '#9FA9C8'
+                        }
                     },
                     xAxis: {
                         type: 'datetime',
+                        tickInterval: 6 * 3600 * 1000, // Основные линии каждые 6 часов
+                        gridLineWidth: 1, // Толщина вертикальных линий сетки
+                        minorTickInterval: 1 * 3600 * 1000, // Нет минорных линий
+                        minorGridLineColor: '#39435E', // Серые минорные линии
+                        gridLineColor: '#FFF', // Черный цвет вертикальных линий
+                        zIndex: 1, // Устанавливаем сетку поверх графиков
                         labels: {
                             style: {
+                                fontSize: '12px',
                                 color: '#9FA9C8'
                             }
                         },
                         title: {
                             text: null
                         },
-                        min: windSpeedData[0][0], // Начало графика — 24 часа назад
-                        max: windSpeedData[windSpeedData.length - 1][0] + 3600 * 1000 // Окончание графика +1 час
+                        min: windSpeedData[0][0],
+                        max: windSpeedData[windSpeedData.length - 1][0] + 3600 * 1000
                     },
                     yAxis: [{
+                        //tickAmount: 5, // Пять равномерно распределенных меток
+                        max: 40,
+                        tickInterval: 5,
                         title: {
-                            text: 'Wind Speed (knots)',
+                            text: 'Скорость ветра (узлы)',
                             style: {
+                                fontSize: '14px',
                                 color: '#9FA9C8'
                             }
                         },
                         labels: {
                             style: {
+                                fontSize: '12px',
                                 color: '#9FA9C8'
                             }
                         },
                         gridLineColor: '#39435E',
                         max: 50
                     }, {
+                        visible: false,
                         title: {
-                            text: 'Precipitation (mm)',
+                            text: 'Осадки (мм)',
                             style: {
+                                fontSize: '14px',
                                 color: '#60A5FA'
                             }
                         },
                         labels: {
                             style: {
+                                fontSize: '12px',
                                 color: '#60A5FA'
                             }
                         },
@@ -118,11 +155,20 @@
                         shared: true,
                         backgroundColor: '#39435E',
                         style: {
+                            fontSize: '12px',
+                            color: '#9FA9C8'
+                        }
+                    },
+                    legend: {
+                        enabled: true,
+                        itemStyle: {
+                            fontSize: '12px',
                             color: '#9FA9C8'
                         }
                     },
                     plotOptions: {
                         area: {
+                            fillOpacity: 0.3,
                             lineColor: '#FFFFFF',
                             lineWidth: 2,
                             marker: {
@@ -131,49 +177,66 @@
                             threshold: null
                         },
                         column: {
+                            pointWidth: 10,
                             borderWidth: 0,
-                            color: '#60A5FA',
-                            pointPadding: 0.1,
+                            color: 'rgba(96, 165, 250, 0.5)',
+                            pointPadding: 0,
                             groupPadding: 0
+                        },
+                        series: {
+                            marker: {
+                                enabled: false
+                            }
                         }
                     },
                     series: [{
-                        name: 'Wind Speed',
+                        name: 'Скорость ветра',
                         data: windSpeedData,
                         type: 'area',
-                        color: '#FFFFFF',
-                        fillColor: {
-                            linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
-                            stops: [
-                                [1, '#5B0053'], // 50 kts
-                                [0.8, '#8B0962'], // 30 kts
-                                [0.6, '#B20A05'], // 25 kts
-                                [0.5, '#FE5501'], // 20 kts
-                                [0.4, '#FEA901'], // 15 kts
-                                [0.2, '#60DC25'], // 10 kts
-                                [0.1, '#0092EA'], // 5 kts
-                                [0, '#1A3748']  // 0 kts
-                            ]
-                        }
+
+                        zones: [{
+                            value: 0,
+                            fillColor: '#1A3748' // 0-5 узлов
+                        }, {
+                            value: 5,
+                            fillColor: '#0092EA' // 5-10 узлов
+                        }, {
+                            value: 10,
+                            fillColor: '#60DC25' // 10-15 узлов
+                        }, {
+                            value: 15,
+                            fillColor: '#FEA901' // 15-20 узлов
+                        }, {
+                            value: 20,
+                            fillColor: '#FE5501' // 20-25 узлов
+                        }, {
+                            value: 25,
+                            fillColor: '#B20A05' // 25-30 узлов
+                        }, {
+                            value: 40,
+                            fillColor: '#8B0962' // 30+ узлов
+                        }],
+                        threshold: null
                     }, {
-                        name: 'Wind Gusts',
+                        name: 'Порывы ветра',
                         data: windGustData,
                         type: 'line',
-                        color: '#FFFFFF',
+                        color: 'rgba(255, 255, 255, 0.7)',
                         dashStyle: 'ShortDash',
-                        fillOpacity: 0 // Без заливки для порывов ветра
+                        shadow: {
+        color: 'rgba(0, 0, 0, 0.5)', // Полупрозрачный черный цвет тени
+        offsetX: 3, // Смещение тени по X
+        offsetY: 3, // Смещение тени по Y
+        opacity: 0.7, // Прозрачность тени
+        width: 6 // Радиус размытия тени
+    },
+                        fillOpacity: 0
                     }, {
-                        name: 'Precipitation',
+                        name: 'Осадки',
                         data: precipitationData,
                         type: 'column',
-                        yAxis: 1 // Используем вторую ось Y
-                    }],
-                    legend: {
-                        enabled: true,
-                        itemStyle: {
-                            color: '#9FA9C8'
-                        }
-                    }
+                        yAxis: 1
+                    }]
                 });
             })
             .catch(error => {
