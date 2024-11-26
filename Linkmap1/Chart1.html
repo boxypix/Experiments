@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wind Speed Graph</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
     <style>
         body {
             background-color: #212634;
@@ -13,17 +15,16 @@
             margin: 0;
             padding: 0;
         }
-        canvas {
-            display: block;
+        #container {
             margin: 0 auto;
-            width: 100%;
-            height: 340px !important;
+            height: 340px;
+            max-width: 100%;
         }
     </style>
 </head>
 <body>
     <h1 style="text-align: center; font-size: 18px; margin: 10px 0;">Wind Speed Graph</h1>
-    <canvas id="windSpeedChart"></canvas>
+    <div id="container"></div>
 
     <script>
         // Координаты и API-адрес
@@ -38,110 +39,90 @@
                 const windSpeeds = data.hourly.windspeed_10m.map(speed => speed * 0.539957); // Перевод в узлы
                 const windGusts = data.hourly.windgusts_10m.map(gust => gust * 0.539957);
                 const labels = data.hourly.time.map(time => time.split("T")[1]); // Извлечение времени
-                createChart(labels, windSpeeds, windGusts);
+                renderChart(labels, windSpeeds, windGusts);
             });
 
-        function createChart(labels, windSpeeds, windGusts) {
-            const ctx = document.getElementById("windSpeedChart").getContext("2d");
-
-            // Градиент для скорости ветра
-            const gradient = ctx.createLinearGradient(0, 0, 0, 340);
-            gradient.addColorStop(0, "#5B0053");
-            gradient.addColorStop(0.25, "#B20A05");
-            gradient.addColorStop(0.4, "#FE5501");
-            gradient.addColorStop(0.6, "#60DC25");
-            gradient.addColorStop(0.8, "#0092EA");
-            gradient.addColorStop(1, "#1A3748");
-
-            new Chart(ctx, {
-                type: "line",
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: "Wind Speed (knots)",
-                            data: windSpeeds,
-                            fill: true,
-                            backgroundColor: gradient,
-                            borderColor: "#FFFFFF",
-                            borderWidth: 2,
-                            tension: 0.4,
-                        },
-                        {
-                            label: "Wind Gusts (knots)",
-                            data: windGusts,
-                            borderColor: "#9FA9C8",
-                            borderWidth: 1,
-                            tension: 0.4,
-                            fill: false,
-                        },
-                    ],
+        function renderChart(labels, windSpeeds, windGusts) {
+            Highcharts.chart('container', {
+                chart: {
+                    type: 'line',
+                    backgroundColor: '#212634',
+                    height: 340,
+                    scrollablePlotArea: {
+                        minWidth: 800, // Ширина для скролла
+                        scrollPositionX: 1, // Начало с правого края
+                    },
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: true, position: "bottom", labels: { color: "#9FA9C8" } },
+                title: {
+                    text: 'Wind Speed and Gusts',
+                    style: {
+                        color: '#9FA9C8',
                     },
-                    scales: {
-                        x: {
-                            type: "category",
-                            title: {
-                                display: true,
-                                text: "Time (every 5 minutes)",
-                                color: "#9FA9C8",
-                            },
-                            ticks: {
-                                color: "#9FA9C8",
-                                maxRotation: 45,
-                                minRotation: 0,
-                            },
-                            grid: { color: "#39435E" },
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: "Wind Speed (knots)",
-                                color: "#9FA9C8",
-                            },
-                            ticks: { color: "#9FA9C8" },
-                            grid: { color: "#39435E" },
+                },
+                xAxis: {
+                    categories: labels,
+                    tickInterval: 1, // Каждая отметка
+                    labels: {
+                        style: {
+                            color: '#9FA9C8',
                         },
                     },
-                    elements: {
-                        point: { radius: 0 },
+                    title: {
+                        text: 'Time (every hour)',
+                        style: {
+                            color: '#9FA9C8',
+                        },
                     },
-                    animation: false,
-                    interaction: {
-                        mode: "index",
-                        intersect: false,
+                },
+                yAxis: {
+                    title: {
+                        text: 'Wind Speed (knots)',
+                        style: {
+                            color: '#9FA9C8',
+                        },
+                    },
+                    labels: {
+                        style: {
+                            color: '#9FA9C8',
+                        },
+                    },
+                    gridLineColor: '#39435E',
+                },
+                tooltip: {
+                    valueSuffix: ' knots',
+                    backgroundColor: '#39435E',
+                    style: {
+                        color: '#9FA9C8',
+                    },
+                },
+                plotOptions: {
+                    line: {
+                        marker: {
+                            enabled: false,
+                        },
+                    },
+                },
+                series: [
+                    {
+                        name: 'Wind Speed',
+                        data: windSpeeds,
+                        color: '#FFFFFF',
+                        lineWidth: 2,
+                    },
+                    {
+                        name: 'Wind Gusts',
+                        data: windGusts,
+                        color: '#9FA9C8',
+                        lineWidth: 1,
+                        dashStyle: 'ShortDash',
+                    },
+                ],
+                legend: {
+                    itemStyle: {
+                        color: '#9FA9C8',
                     },
                 },
             });
-
-            // Добавляем текущую временную линию
-            addCurrentTimeLine(ctx, labels);
-        }
-
-        function addCurrentTimeLine(ctx, labels) {
-            const currentTime = new Date();
-            const currentHour = currentTime.toISOString().split("T")[1].substring(0, 5); // HH:MM
-            const index = labels.findIndex(label => label.startsWith(currentHour));
-
-            if (index !== -1) {
-                const chartWidth = ctx.canvas.width;
-                const segmentWidth = chartWidth / labels.length;
-                const xPosition = segmentWidth * index;
-
-                ctx.save();
-                ctx.strokeStyle = "red";
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(xPosition, 0);
-                ctx.lineTo(xPosition, 340);
-                ctx.stroke();
-                ctx.restore();
-            }
         }
     </script>
 </body>
