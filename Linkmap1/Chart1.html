@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>График скорости ветра</title>
+    <title>Wind Speed Graph</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
@@ -14,145 +14,135 @@
             padding: 0;
         }
         canvas {
-            margin: 20px auto;
             display: block;
+            margin: 0 auto;
+            width: 100%;
+            height: 340px !important;
         }
     </style>
 </head>
 <body>
-    <h1 style="text-align: center;">График скорости ветра</h1>
-    <div style="overflow-x: auto; white-space: nowrap;">
-        <canvas id="windChart" width="1200" height="400"></canvas>
-    </div>
+    <h1 style="text-align: center; font-size: 18px; margin: 10px 0;">Wind Speed Graph</h1>
+    <canvas id="windSpeedChart"></canvas>
 
     <script>
-        async function fetchWindData() {
-            // Запрос данных от Open-Meteo
-            const response = await fetch(
-                'https://api.open-meteo.com/v1/gfs?latitude=27.615513&longitude=-82.736779&hourly=wind_speed_10m,wind_gusts_10m&timezone=auto'
-            );
-            const data = await response.json();
+        // Координаты и API-адрес
+        const lat = 27.615513;
+        const lon = -82.736779;
+        const apiUrl = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=windspeed_10m,windgusts_10m&timezone=auto`;
 
-            // Извлекаем данные
-            const windSpeed = data.hourly.wind_speed_10m; // Скорость ветра
-            const windGusts = data.hourly.wind_gusts_10m; // Порывы ветра
-            const labels = data.hourly.time.map(time => {
-                const date = new Date(time);
-                return `${date.getHours().toString().padStart(2, '0')}:00`; // Только часы
+        // Получение данных
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                const windSpeeds = data.hourly.windspeed_10m.map(speed => speed * 0.539957); // Перевод в узлы
+                const windGusts = data.hourly.windgusts_10m.map(gust => gust * 0.539957);
+                const labels = data.hourly.time.map(time => time.split("T")[1]); // Извлечение времени
+                createChart(labels, windSpeeds, windGusts);
             });
 
-            drawChart(labels, windSpeed, windGusts);
-        }
+        function createChart(labels, windSpeeds, windGusts) {
+            const ctx = document.getElementById("windSpeedChart").getContext("2d");
 
-        function drawChart(labels, windSpeed, windGusts) {
-            const ctx = document.getElementById('windChart').getContext('2d');
+            // Градиент для скорости ветра
+            const gradient = ctx.createLinearGradient(0, 0, 0, 340);
+            gradient.addColorStop(0, "#5B0053");
+            gradient.addColorStop(0.25, "#B20A05");
+            gradient.addColorStop(0.4, "#FE5501");
+            gradient.addColorStop(0.6, "#60DC25");
+            gradient.addColorStop(0.8, "#0092EA");
+            gradient.addColorStop(1, "#1A3748");
 
-            // Функция для создания градиента
-            function getGradient(ctx, chartArea) {
-                const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                gradient.addColorStop(0, '#1A3748');
-                gradient.addColorStop(0.2, '#0092EA');
-                gradient.addColorStop(0.4, '#60DC25');
-                gradient.addColorStop(0.6, '#FEA901');
-                gradient.addColorStop(0.8, '#FE5501');
-                gradient.addColorStop(1, '#B20A05');
-                return gradient;
-            }
-
-            // Индекс текущего времени
-            const now = new Date();
-            const currentTimeIndex = labels.findIndex(label => label.startsWith(now.getHours().toString().padStart(2, '0')));
-
-            // Конфигурация графика
-            const chart = new Chart(ctx, {
-                type: 'line',
+            new Chart(ctx, {
+                type: "line",
                 data: {
-                    labels,
+                    labels: labels,
                     datasets: [
                         {
-                            label: 'Скорость ветра (узлы)',
-                            data: windSpeed,
-                            borderColor: '#FFFFFF',
-                            backgroundColor: function(context) {
-                                const chart = context.chart;
-                                const { ctx, chartArea } = chart;
-                                if (!chartArea) return null;
-                                return getGradient(ctx, chartArea);
-                            },
+                            label: "Wind Speed (knots)",
+                            data: windSpeeds,
                             fill: true,
-                            tension: 0.3,
+                            backgroundColor: gradient,
+                            borderColor: "#FFFFFF",
+                            borderWidth: 2,
+                            tension: 0.4,
                         },
                         {
-                            label: 'Порывы ветра (узлы)',
+                            label: "Wind Gusts (knots)",
                             data: windGusts,
-                            borderColor: '#9FA9C8',
+                            borderColor: "#9FA9C8",
+                            borderWidth: 1,
+                            tension: 0.4,
                             fill: false,
-                            tension: 0.3,
-                        }
-                    ]
+                        },
+                    ],
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: "bottom", labels: { color: "#9FA9C8" } },
+                    },
                     scales: {
                         x: {
+                            type: "category",
+                            title: {
+                                display: true,
+                                text: "Time (every 5 minutes)",
+                                color: "#9FA9C8",
+                            },
                             ticks: {
-                                maxRotation: 90,
-                                minRotation: 90,
-                                color: '#9FA9C8'
+                                color: "#9FA9C8",
+                                maxRotation: 45,
+                                minRotation: 0,
                             },
-                            grid: {
-                                color: '#39435E',
-                            },
-                            min: Math.max(0, currentTimeIndex - 7), // Отображаем текущие 7 часов
-                            max: Math.min(labels.length - 1, currentTimeIndex + 7)
+                            grid: { color: "#39435E" },
                         },
                         y: {
-                            grid: {
-                                color: '#39435E',
+                            title: {
+                                display: true,
+                                text: "Wind Speed (knots)",
+                                color: "#9FA9C8",
                             },
-                            ticks: {
-                                color: '#9FA9C8'
-                            }
-                        }
-                    },
-                    plugins: {
-                        annotation: {
-                            annotations: {
-                                currentLine: {
-                                    type: 'line',
-                                    scaleID: 'x',
-                                    value: currentTimeIndex,
-                                    borderColor: 'red',
-                                    borderWidth: 2,
-                                }
-                            }
-                        }
+                            ticks: { color: "#9FA9C8" },
+                            grid: { color: "#39435E" },
+                        },
                     },
                     elements: {
-                        point: {
-                            radius: 0,
-                        }
-                    }
-                }
+                        point: { radius: 0 },
+                    },
+                    animation: false,
+                    interaction: {
+                        mode: "index",
+                        intersect: false,
+                    },
+                },
             });
 
-            // Добавляем скроллинг по горизонтали
-            document.querySelector('canvas').parentElement.addEventListener('wheel', (event) => {
-                const step = 2; // Прокрутка на 2 интервала за раз
-                if (event.deltaY > 0) {
-                    chart.options.scales.x.min += step;
-                    chart.options.scales.x.max += step;
-                } else {
-                    chart.options.scales.x.min -= step;
-                    chart.options.scales.x.max -= step;
-                }
-                chart.update();
-            });
+            // Добавляем текущую временную линию
+            addCurrentTimeLine(ctx, labels);
         }
 
-        // Загружаем данные и рисуем график
-        fetchWindData();
+        function addCurrentTimeLine(ctx, labels) {
+            const currentTime = new Date();
+            const currentHour = currentTime.toISOString().split("T")[1].substring(0, 5); // HH:MM
+            const index = labels.findIndex(label => label.startsWith(currentHour));
+
+            if (index !== -1) {
+                const chartWidth = ctx.canvas.width;
+                const segmentWidth = chartWidth / labels.length;
+                const xPosition = segmentWidth * index;
+
+                ctx.save();
+                ctx.strokeStyle = "red";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(xPosition, 0);
+                ctx.lineTo(xPosition, 340);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
     </script>
 </body>
 </html>
