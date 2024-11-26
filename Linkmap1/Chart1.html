@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wind Speed Graph</title>
+    <title>Wind Speed and Precipitation Graph</title>
     <script src="https://code.highcharts.com/highcharts.js"></script>
-    <script src="https://code.highcharts.com/modules/exporting.js"></script>
-    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
     <style>
         body {
             background-color: #212634;
@@ -17,113 +15,203 @@
         }
         #container {
             margin: 0 auto;
-            height: 340px;
+            height: 400px;
             max-width: 100%;
         }
     </style>
 </head>
 <body>
-    <h1 style="text-align: center; font-size: 18px; margin: 10px 0;">Wind Speed Graph</h1>
     <div id="container"></div>
 
     <script>
-        // Координаты и API-адрес
+        // Координаты
         const lat = 27.615513;
         const lon = -82.736779;
-        const apiUrl = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&hourly=windspeed_10m,windgusts_10m&timezone=auto`;
+        const apiUrl = `https://api.open-meteo.com/v1/gfs?latitude=${lat}&longitude=${lon}&past_days=1&hourly=windspeed_10m,windgusts_10m,precipitation&timezone=auto`;
 
-        // Получение данных
+        // Функция для фильтрации данных
+        const cleanData = (data, times) => {
+            return data
+                .map((value, i) => {
+                    if (value !== null && value !== undefined) {
+                        return [new Date(times[i]).getTime(), parseFloat(value.toFixed(2))];
+                    }
+                    return null;
+                })
+                .filter((point) => point !== null);
+        };
+
+        // Получение данных и построение графика
         fetch(apiUrl)
             .then(response => response.json())
             .then(data => {
-                const windSpeeds = data.hourly.windspeed_10m.map(speed => speed * 0.539957); // Перевод в узлы
-                const windGusts = data.hourly.windgusts_10m.map(gust => gust * 0.539957);
-                const labels = data.hourly.time.map(time => time.split("T")[1]); // Извлечение времени
-                renderChart(labels, windSpeeds, windGusts);
-            });
+                const times = data.hourly.time;
 
-        function renderChart(labels, windSpeeds, windGusts) {
-            Highcharts.chart('container', {
-                chart: {
-                    type: 'line',
-                    backgroundColor: '#212634',
-                    height: 340,
-                    scrollablePlotArea: {
-                        minWidth: 800, // Ширина для скролла
-                        scrollPositionX: 1, // Начало с правого края
+                // Очистка данных
+                const windSpeedData = cleanData(
+                    data.hourly.windspeed_10m.map(speed => speed * 0.539957), // Узлы
+                    times
+                );
+
+                const windGustData = cleanData(
+                    data.hourly.windgusts_10m.map(gust => gust * 0.539957), // Узлы
+                    times
+                );
+
+                const precipitationData = cleanData(
+                    data.hourly.precipitation, // Осадки в мм
+                    times
+                );
+
+                // Последняя точка времени
+                const lastPointTime = windSpeedData[windSpeedData.length - 1][0];
+
+                // Рендер графика
+                Highcharts.chart('container', {
+                    chart: {
+                        type: 'line',
+                        backgroundColor: '#212634',
+                        scrollablePlotArea: {
+                            minWidth: 800,
+                            scrollPositionX: 1
+                        },
+                        events: {
+                            load() {
+                                const chart = this;
+
+                                // Применение градиента к области ветра
+                                const areaGradient = chart.renderer.createElement('linearGradient')
+                                    .attr({
+                                        id: 'area-gradient',
+                                        x1: 0,
+                                        y1: 0,
+                                        x2: 0,
+                                        y2: 1
+                                    })
+                                    .add(chart.renderer.defs);
+
+                                const stops = [
+                                    [1, '#5B0053'], // 50 kts
+                                    [0.8, '#8B0962'], // 30 kts
+                                    [0.6, '#B20A05'], // 25 kts
+                                    [0.5, '#FE5501'], // 20 kts
+                                    [0.4, '#FEA901'], // 15 kts
+                                    [0.2, '#60DC25'], // 10 kts
+                                    [0.1, '#0092EA'], // 5 kts
+                                    [0, '#1A3748']  // 0 kts
+                                ];
+
+                                stops.forEach(([offset, color]) => {
+                                    areaGradient.add(chart.renderer.createElement('stop')
+                                        .attr({
+                                            offset: `${offset * 100}%`,
+                                            'stop-color': color
+                                        })
+                                        .add(areaGradient));
+                                });
+
+                                chart.series[0].update({
+                                    fillColor: 'url(#area-gradient)'
+                                });
+
+                                // Установить баббл на последнюю точку
+                                chart.tooltip.refresh(chart.series[0].points[chart.series[0].points.length - 1]);
+                            }
+                        }
                     },
-                },
-                title: {
-                    text: 'Wind Speed and Gusts',
-                    style: {
-                        color: '#9FA9C8',
+                    xAxis: {
+                        type: 'datetime',
+                        labels: {
+                            style: {
+                                color: '#9FA9C8'
+                            }
+                        },
+                        title: {
+                            text: null
+                        },
+                        min: lastPointTime - 7 * 3600 * 1000, // Отображаем последние 7 часов
+                        max: lastPointTime + 3600 * 1000  // +1 час
                     },
-                },
-                xAxis: {
-                    categories: labels,
-                    tickInterval: 1, // Каждая отметка
-                    labels: {
+                    yAxis: [{
+                        title: {
+                            text: 'Wind Speed (knots)',
+                            style: {
+                                color: '#9FA9C8'
+                            }
+                        },
+                        labels: {
+                            style: {
+                                color: '#9FA9C8'
+                            }
+                        },
+                        gridLineColor: '#39435E',
+                        max: 50
+                    }, {
+                        title: {
+                            text: 'Precipitation (mm)',
+                            style: {
+                                color: '#60A5FA'
+                            }
+                        },
+                        labels: {
+                            style: {
+                                color: '#60A5FA'
+                            }
+                        },
+                        opposite: true
+                    }],
+                    tooltip: {
+                        shared: true,
+                        backgroundColor: '#39435E',
                         style: {
-                            color: '#9FA9C8',
+                            color: '#9FA9C8'
+                        }
+                    },
+                    plotOptions: {
+                        area: {
+                            lineColor: '#FFFFFF',
+                            lineWidth: 2,
+                            marker: {
+                                enabled: false
+                            },
+                            threshold: null
                         },
+                        column: {
+                            borderWidth: 0,
+                            color: '#60A5FA',
+                            pointPadding: 0.1,
+                            groupPadding: 0
+                        }
                     },
-                    title: {
-                        text: 'Time (every hour)',
-                        style: {
-                            color: '#9FA9C8',
-                        },
-                    },
-                },
-                yAxis: {
-                    title: {
-                        text: 'Wind Speed (knots)',
-                        style: {
-                            color: '#9FA9C8',
-                        },
-                    },
-                    labels: {
-                        style: {
-                            color: '#9FA9C8',
-                        },
-                    },
-                    gridLineColor: '#39435E',
-                },
-                tooltip: {
-                    valueSuffix: ' knots',
-                    backgroundColor: '#39435E',
-                    style: {
-                        color: '#9FA9C8',
-                    },
-                },
-                plotOptions: {
-                    line: {
-                        marker: {
-                            enabled: false,
-                        },
-                    },
-                },
-                series: [
-                    {
+                    series: [{
                         name: 'Wind Speed',
-                        data: windSpeeds,
-                        color: '#FFFFFF',
-                        lineWidth: 2,
-                    },
-                    {
+                        data: windSpeedData,
+                        type: 'area',
+                        color: '#FFFFFF'
+                    }, {
                         name: 'Wind Gusts',
-                        data: windGusts,
-                        color: '#9FA9C8',
-                        lineWidth: 1,
+                        data: windGustData,
+                        type: 'line',
+                        color: '#FFFFFF',
                         dashStyle: 'ShortDash',
-                    },
-                ],
-                legend: {
-                    itemStyle: {
-                        color: '#9FA9C8',
-                    },
-                },
+                        fillOpacity: 0 // Без заливки для порывов ветра
+                    }, {
+                        name: 'Precipitation',
+                        data: precipitationData,
+                        type: 'column',
+                        yAxis: 1 // Используем вторую ось Y
+                    }],
+                    legend: {
+                        enabled: true,
+                        itemStyle: {
+                            color: '#9FA9C8'
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки данных:', error);
             });
-        }
     </script>
 </body>
 </html>
