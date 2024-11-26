@@ -63,61 +63,15 @@
                     times
                 );
 
-                // Последняя точка времени
-                const lastPointTime = windSpeedData[windSpeedData.length - 1][0];
-
                 // Рендер графика
                 Highcharts.chart('container', {
                     chart: {
                         type: 'line',
                         backgroundColor: '#212634',
                         scrollablePlotArea: {
-                            minWidth: 800,
-                            scrollPositionX: 1
+                            minWidth: 1500, // График больше экрана для прокрутки
+                            scrollPositionX: 1 // Начало скроллинга справа
                         },
-                        events: {
-                            load() {
-                                const chart = this;
-
-                                // Применение градиента к области ветра
-                                const areaGradient = chart.renderer.createElement('linearGradient')
-                                    .attr({
-                                        id: 'area-gradient',
-                                        x1: 0,
-                                        y1: 0,
-                                        x2: 0,
-                                        y2: 1
-                                    })
-                                    .add(chart.renderer.defs);
-
-                                const stops = [
-                                    [1, '#5B0053'], // 50 kts
-                                    [0.8, '#8B0962'], // 30 kts
-                                    [0.6, '#B20A05'], // 25 kts
-                                    [0.5, '#FE5501'], // 20 kts
-                                    [0.4, '#FEA901'], // 15 kts
-                                    [0.2, '#60DC25'], // 10 kts
-                                    [0.1, '#0092EA'], // 5 kts
-                                    [0, '#1A3748']  // 0 kts
-                                ];
-
-                                stops.forEach(([offset, color]) => {
-                                    areaGradient.add(chart.renderer.createElement('stop')
-                                        .attr({
-                                            offset: `${offset * 100}%`,
-                                            'stop-color': color
-                                        })
-                                        .add(areaGradient));
-                                });
-
-                                chart.series[0].update({
-                                    fillColor: 'url(#area-gradient)'
-                                });
-
-                                // Установить баббл на последнюю точку
-                                chart.tooltip.refresh(chart.series[0].points[chart.series[0].points.length - 1]);
-                            }
-                        }
                     },
                     xAxis: {
                         type: 'datetime',
@@ -129,8 +83,8 @@
                         title: {
                             text: null
                         },
-                        min: lastPointTime - 7 * 3600 * 1000, // Отображаем последние 7 часов
-                        max: lastPointTime + 3600 * 1000  // +1 час
+                        min: windSpeedData[0][0], // Начало графика — 24 часа назад
+                        max: windSpeedData[windSpeedData.length - 1][0] + 3600 * 1000 // Окончание графика +1 час
                     },
                     yAxis: [{
                         title: {
@@ -187,7 +141,20 @@
                         name: 'Wind Speed',
                         data: windSpeedData,
                         type: 'area',
-                        color: '#FFFFFF'
+                        color: '#FFFFFF',
+                        fillColor: {
+                            linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                            stops: [
+                                [1, '#5B0053'], // 50 kts
+                                [0.8, '#8B0962'], // 30 kts
+                                [0.6, '#B20A05'], // 25 kts
+                                [0.5, '#FE5501'], // 20 kts
+                                [0.4, '#FEA901'], // 15 kts
+                                [0.2, '#60DC25'], // 10 kts
+                                [0.1, '#0092EA'], // 5 kts
+                                [0, '#1A3748']  // 0 kts
+                            ]
+                        }
                     }, {
                         name: 'Wind Gusts',
                         data: windGustData,
