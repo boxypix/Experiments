@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>График скорости ветра</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #212634;
+            color: #9FA9C8;
+            font-family: Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        canvas {
+            margin: 20px auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">График скорости ветра</h1>
+    <div style="overflow-x: auto; white-space: nowrap;">
+        <canvas id="windChart" width="1200" height="400"></canvas>
+    </div>
+
+    <script>
+        async function fetchWindData() {
+            // Запрос данных от Open-Meteo
+            const response = await fetch(
+                'https://api.open-meteo.com/v1/gfs?latitude=27.615513&longitude=-82.736779&hourly=wind_speed_10m,wind_gusts_10m&timezone=auto'
+            );
+            const data = await response.json();
+
+            // Извлекаем данные
+            const windSpeed = data.hourly.wind_speed_10m; // Скорость ветра
+            const windGusts = data.hourly.wind_gusts_10m; // Порывы ветра
+            const labels = data.hourly.time.map(time => {
+                const date = new Date(time);
+                return `${date.getHours().toString().padStart(2, '0')}:00`; // Только часы
+            });
+
+            drawChart(labels, windSpeed, windGusts);
+        }
+
+        function drawChart(labels, windSpeed, windGusts) {
+            const ctx = document.getElementById('windChart').getContext('2d');
+
+            // Функция для создания градиента
+            function getGradient(ctx, chartArea) {
+                const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                gradient.addColorStop(0, '#1A3748');
+                gradient.addColorStop(0.2, '#0092EA');
+                gradient.addColorStop(0.4, '#60DC25');
+                gradient.addColorStop(0.6, '#FEA901');
+                gradient.addColorStop(0.8, '#FE5501');
+                gradient.addColorStop(1, '#B20A05');
+                return gradient;
+            }
+
+            // Индекс текущего времени
+            const now = new Date();
+            const currentTimeIndex = labels.findIndex(label => label.startsWith(now.getHours().toString().padStart(2, '0')));
+
+            // Конфигурация графика
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Скорость ветра (узлы)',
+                            data: windSpeed,
+                            borderColor: '#FFFFFF',
+                            backgroundColor: function(context) {
+                                const chart = context.chart;
+                                const { ctx, chartArea } = chart;
+                                if (!chartArea) return null;
+                                return getGradient(ctx, chartArea);
+                            },
+                            fill: true,
+                            tension: 0.3,
+                        },
+                        {
+                            label: 'Порывы ветра (узлы)',
+                            data: windGusts,
+                            borderColor: '#9FA9C8',
+                            fill: false,
+                            tension: 0.3,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 90,
+                                minRotation: 90,
+                                color: '#9FA9C8'
+                            },
+                            grid: {
+                                color: '#39435E',
+                            },
+                            min: Math.max(0, currentTimeIndex - 7), // Отображаем текущие 7 часов
+                            max: Math.min(labels.length - 1, currentTimeIndex + 7)
+                        },
+                        y: {
+                            grid: {
+                                color: '#39435E',
+                            },
+                            ticks: {
+                                color: '#9FA9C8'
+                            }
+                        }
+                    },
+                    plugins: {
+                        annotation: {
+                            annotations: {
+                                currentLine: {
+                                    type: 'line',
+                                    scaleID: 'x',
+                                    value: currentTimeIndex,
+                                    borderColor: 'red',
+                                    borderWidth: 2,
+                                }
+                            }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 0,
+                        }
+                    }
+                }
+            });
+
+            // Добавляем скроллинг по горизонтали
+            document.querySelector('canvas').parentElement.addEventListener('wheel', (event) => {
+                const step = 2; // Прокрутка на 2 интервала за раз
+                if (event.deltaY > 0) {
+                    chart.options.scales.x.min += step;
+                    chart.options.scales.x.max += step;
+                } else {
+                    chart.options.scales.x.min -= step;
+                    chart.options.scales.x.max -= step;
+                }
+                chart.update();
+            });
+        }
+
+        // Загружаем данные и рисуем график
+        fetchWindData();
+    </script>
+</body>
+</html>
