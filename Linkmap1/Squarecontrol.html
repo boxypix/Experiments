@@ -88,21 +88,18 @@
       { name: 'зеленый', x1: 180, y1: 180, x2: 360, y2: 360 },
     ];
 
-    knob.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      e.preventDefault();
-    });
-
-    document.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-
+    // Function to handle knob movement
+    function moveKnob(e) {
       const rect = container.getBoundingClientRect();
-      let x = e.clientX - rect.left - knob.offsetWidth / 2;
-      let y = e.clientY - rect.top - knob.offsetHeight / 2;
+      let x, y;
+
+      if (e.touches) {
+        x = e.touches[0].clientX - rect.left - knob.offsetWidth / 2;
+        y = e.touches[0].clientY - rect.top - knob.offsetHeight / 2;
+      } else {
+        x = e.clientX - rect.left - knob.offsetWidth / 2;
+        y = e.clientY - rect.top - knob.offsetHeight / 2;
+      }
 
       // Keep the knob inside the container
       x = Math.max(0, Math.min(x, rect.width - knob.offsetWidth));
@@ -116,6 +113,34 @@
         (z) => x >= z.x1 && x < z.x2 && y >= z.y1 && y < z.y2
       );
       output.textContent = `Выбран: ${zone ? zone.name : ''}`;
+    }
+
+    // Event listeners for desktop
+    knob.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      e.preventDefault();
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (isDragging) moveKnob(e);
+    });
+
+    // Event listeners for mobile
+    knob.addEventListener('touchstart', (e) => {
+      isDragging = true;
+      e.preventDefault();
+    });
+
+    document.addEventListener('touchend', () => {
+      isDragging = false;
+    });
+
+    document.addEventListener('touchmove', (e) => {
+      if (isDragging) moveKnob(e);
     });
   </script>
 </body>
