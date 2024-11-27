@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width">
-    <title>График скорости ветра и осадков</title>
     <script src="https://code.highcharts.com/highcharts.js"></script>
     <style>
         body {
-            background-color: #212634;
-            color: #9FA9C8;
+            background-color: #12242F;
+            color: #1D3442;
             font-family: Roboto, sans-serif;
             margin: 0;
             padding: 0;
         }
         #container {
             margin: 0 auto;
-            height: 400px;
+            height: 350px;
             max-width: 100%;
         }
     </style>
@@ -82,17 +81,17 @@
                 Highcharts.chart('container', {
                     chart: {
                         type: 'line',
-                        backgroundColor: '#212634',
+                        backgroundColor: '#12242F',
                         scrollablePlotArea: {
-                            minWidth: 6000,
+                            minWidth: 2500,
                             scrollPositionX: 1
                         },
                     },
                     title: {
-                        text: 'График скорости ветра и осадков',
+                        text: '', //График скорости ветра и осадков
                         style: {
-                            fontSize: '16px',
-                            color: '#9FA9C8'
+                            fontSize: '12px',
+                            color: '#6696B2'
                         }
                     },
                     xAxis: {
@@ -100,13 +99,13 @@
                         tickInterval: 6 * 3600 * 1000, // Основные линии каждые 6 часов
                         gridLineWidth: 1, // Толщина вертикальных линий сетки
                         minorTickInterval: 1 * 3600 * 1000, // Нет минорных линий
-                        minorGridLineColor: '#39435E', // Серые минорные линии
-                        gridLineColor: '#FFF', // Черный цвет вертикальных линий
+                        minorGridLineColor: '#243D4D', // Серые минорные линии
+                        gridLineColor: '#41647A', // Черный цвет вертикальных линий
                         zIndex: 1, // Устанавливаем сетку поверх графиков
                         labels: {
                             style: {
                                 fontSize: '12px',
-                                color: '#9FA9C8'
+                                color: '#6696B2'
                             }
                         },
                         title: {
@@ -120,56 +119,56 @@
                         max: 40,
                         tickInterval: 5,
                         title: {
-                            text: 'Скорость ветра (узлы)',
+                            text: '', //Wind speed and gust (kts)
                             style: {
-                                fontSize: '14px',
-                                color: '#9FA9C8'
+                                fontSize: '12px',
+                                color: '#1D3442'
                             }
                         },
                         labels: {
                             style: {
                                 fontSize: '12px',
-                                color: '#9FA9C8'
+                                color: '#6696B2'
                             }
                         },
-                        gridLineColor: '#39435E',
-                        max: 50
+                        gridLineColor: '#1D3442',
+                        max: 40
                     }, {
                         visible: false,
                         title: {
                             text: 'Осадки (мм)',
                             style: {
-                                fontSize: '14px',
-                                color: '#60A5FA'
+                                fontSize: '12px',
+                                color: '#6696B2'
                             }
                         },
                         labels: {
                             style: {
                                 fontSize: '12px',
-                                color: '#60A5FA'
+                                color: '#6696B2'
                             }
                         },
                         opposite: true
                     }],
                     tooltip: {
                         shared: true,
-                        backgroundColor: '#39435E',
+                        backgroundColor: '#2B4758',
                         style: {
                             fontSize: '12px',
-                            color: '#9FA9C8'
+                            color: '#FFF'
                         }
                     },
                     legend: {
                         enabled: true,
                         itemStyle: {
                             fontSize: '12px',
-                            color: '#9FA9C8'
+                            color: '#6696B2'
                         }
                     },
                     plotOptions: {
                         area: {
                             fillOpacity: 0.3,
-                            lineColor: '#FFFFFF',
+                            lineColor: '#1D3442',
                             lineWidth: 2,
                             marker: {
                                 enabled: false
@@ -179,7 +178,7 @@
                         column: {
                             pointWidth: 10,
                             borderWidth: 0,
-                            color: 'rgba(96, 165, 250, 0.5)',
+                            color: 'rgba(0, 158, 255, 0.8)',
                             pointPadding: 0,
                             groupPadding: 0
                         },
@@ -190,49 +189,68 @@
                         }
                     },
                     series: [{
-                        name: 'Скорость ветра',
+                        name: 'Wind speed',
                         data: windSpeedData,
                         type: 'area',
+                        color: 'rgba(255, 255, 255, 0.2)',
 
                         zones: [{
                             value: 0,
-                            fillColor: '#1A3748' // 0-5 узлов
+                            fillColor: '#1B3544' // 0-5 узлов
                         }, {
-                            value: 5,
-                            fillColor: '#0092EA' // 5-10 узлов
+                            value: 2,
+                            fillColor: '#0E5B89' // 5-10 узлов
+                        }, {
+                            value: 4,
+                            fillColor: '#0475BA' // 10-15 узлов
+                        }, {
+                            value: 6,
+                            fillColor: '#018FBB' // 15-20 узлов
+                        }, {
+                            value: 8,
+                            fillColor: '#01B288' // 20-25 узлов
                         }, {
                             value: 10,
-                            fillColor: '#60DC25' // 10-15 узлов
+                            fillColor: '#01C966' // 25-30 узлов
                         }, {
-                            value: 15,
-                            fillColor: '#FEA901' // 15-20 узлов
+                            value: 12,
+                            fillColor: '#63CF17' // 25-30 узлов
+                        }, {
+                            value: 14,
+                            fillColor: '#A7C401' // 25-30 узлов
+                        }, {
+                            value: 16,
+                            fillColor: '#E0B301' // 25-30 узлов
+                        }, {
+                            value: 18,
+                            fillColor: '#FE8E01' // 25-30 узлов
                         }, {
                             value: 20,
-                            fillColor: '#FE5501' // 20-25 узлов
+                            fillColor: '#FE7701' // 25-30 узлов
                         }, {
-                            value: 25,
-                            fillColor: '#B20A05' // 25-30 узлов
+                            value: 22,
+                            fillColor: '#FE3901' // 25-30 узлов
                         }, {
                             value: 40,
-                            fillColor: '#8B0962' // 30+ узлов
+                            fillColor: '#FE3901' // 30+ узлов
                         }],
                         threshold: null
                     }, {
-                        name: 'Порывы ветра',
+                        name: 'Gusts',
                         data: windGustData,
                         type: 'line',
                         color: 'rgba(255, 255, 255, 0.7)',
                         dashStyle: 'ShortDash',
                         shadow: {
-        color: 'rgba(0, 0, 0, 0.5)', // Полупрозрачный черный цвет тени
-        offsetX: 3, // Смещение тени по X
-        offsetY: 3, // Смещение тени по Y
-        opacity: 0.7, // Прозрачность тени
-        width: 6 // Радиус размытия тени
+                        color: 'rgba(0, 0, 0, 0.5)', // Полупрозрачный черный цвет тени
+                        offsetX: 3, // Смещение тени по X
+                        offsetY: 3, // Смещение тени по Y
+                        opacity: 0.7, // Прозрачность тени
+                        width: 6 // Радиус размытия тени
     },
                         fillOpacity: 0
                     }, {
-                        name: 'Осадки',
+                        name: 'precipitation',
                         data: precipitationData,
                         type: 'column',
                         yAxis: 1
