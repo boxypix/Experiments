@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Square</title>
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    #container {
+      position: relative;
+      width: 360px;
+      height: 360px;
+      background-color: #333333;
+      border-radius: 28px;
+    }
+    .label {
+      position: absolute;
+      font-size: 14px;
+      font-weight: bold;
+      color: white;
+    }
+    .label.top {
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .label.bottom {
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .label.left {
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%) rotate(-90deg);
+    }
+    .label.right {
+      right: -20px;
+      top: 50%;
+      transform: translateY(-50%) rotate(90deg);
+    }
+    #knob {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background-color: white;
+      border-radius: 50%;
+      cursor: grab;
+    }
+    #output {
+      margin-top: 24px;
+      font-size: 14px;
+      font-weight: normal;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div class="label top">Больше текста</div>
+    <div class="label bottom">Меньше текста</div>
+    <div class="label left">Начинающий</div>
+    <div class="label right">Экспортный</div>
+    <div id="knob"></div>
+  </div>
+  <div id="output">Выбран: </div>
+
+  <script>
+    const knob = document.getElementById('knob');
+    const container = document.getElementById('container');
+    const output = document.getElementById('output');
+
+    let isDragging = false;
+
+    const zones = [
+      { name: 'красный', x1: 0, y1: 0, x2: 180, y2: 180 },
+      { name: 'синий', x1: 180, y1: 0, x2: 360, y2: 180 },
+      { name: 'желтый', x1: 0, y1: 180, x2: 180, y2: 360 },
+      { name: 'зеленый', x1: 180, y1: 180, x2: 360, y2: 360 },
+    ];
+
+    knob.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      e.preventDefault();
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+
+      const rect = container.getBoundingClientRect();
+      let x = e.clientX - rect.left - knob.offsetWidth / 2;
+      let y = e.clientY - rect.top - knob.offsetHeight / 2;
+
+      // Keep the knob inside the container
+      x = Math.max(0, Math.min(x, rect.width - knob.offsetWidth));
+      y = Math.max(0, Math.min(y, rect.height - knob.offsetHeight));
+
+      knob.style.left = `${x}px`;
+      knob.style.top = `${y}px`;
+
+      // Determine the zone
+      const zone = zones.find(
+        (z) => x >= z.x1 && x < z.x2 && y >= z.y1 && y < z.y2
+      );
+      output.textContent = `Выбран: ${zone ? zone.name : ''}`;
+    });
+  </script>
+</body>
+</html>
