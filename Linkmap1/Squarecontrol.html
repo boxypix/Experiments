@@ -57,6 +57,24 @@
       border-radius: 50%;
       cursor: grab;
     }
+    .line {
+      position: absolute;
+      background-color: #666666;
+    }
+    .line.horizontal {
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      transform: translateY(-50%);
+    }
+    .line.vertical {
+      left: 50%;
+      top: 0;
+      width: 2px;
+      height: 100%;
+      transform: translateX(-50%);
+    }
     #output {
       margin-top: 24px;
       font-size: 14px;
@@ -66,14 +84,16 @@
 </head>
 <body>
   <div id="container">
+    <div class="line horizontal"></div>
+    <div class="line vertical"></div>
     <div class="label top">Подробнее</div>
     <div class="label bottom">Кратко</div>
     <div class="label left">Бегинер</div>
     <div class="label right">Эксперт</div>
     <div id="knob"></div>
   </div>
-</br>
-  <div id="output">Выбран: </div>
+  </br>
+  <div id="output">Выбери промт</div>
   <script>
     const knob = document.getElementById('knob');
     const container = document.getElementById('container');
@@ -81,14 +101,18 @@
 
     let isDragging = false;
 
+    // Установка начального положения бегунка по центру
+    const initialPosition = { x: 160, y: 160 };
+    knob.style.left = `${initialPosition.x}px`;
+    knob.style.top = `${initialPosition.y}px`;
+
     const zones = [
-      { name: '🙂 Промт: Детально для бегинеров', x1: 0, y1: 0, x2: 180, y2: 180 },
-      { name: '😎 Промт: Детально и экспертно', x1: 180, y1: 0, x2: 360, y2: 180 },
-      { name: '🤭 Промт: Кратко для бегинера', x1: 0, y1: 180, x2: 180, y2: 360 },
-      { name: '🤓 Промт: Кратко и экспертно', x1: 180, y1: 180, x2: 360, y2: 360 },
+      { name: '🙂 Детально для бегинеров', x1: 0, y1: 0, x2: 180, y2: 180 },
+      { name: '😎 Детально и экспертно', x1: 180, y1: 0, x2: 360, y2: 180 },
+      { name: '🤭 Кратко для бегинера', x1: 0, y1: 180, x2: 180, y2: 360 },
+      { name: '🤓 Кратко и экспертно', x1: 180, y1: 180, x2: 360, y2: 360 },
     ];
 
-    // Function to handle knob movement
     function moveKnob(e) {
       const rect = container.getBoundingClientRect();
       let x, y;
@@ -101,21 +125,21 @@
         y = e.clientY - rect.top - knob.offsetHeight / 2;
       }
 
-      // Keep the knob inside the container
+      // Ограничиваем положение бегунка внутри контейнера
       x = Math.max(0, Math.min(x, rect.width - knob.offsetWidth));
       y = Math.max(0, Math.min(y, rect.height - knob.offsetHeight));
 
       knob.style.left = `${x}px`;
       knob.style.top = `${y}px`;
 
-      // Determine the zone
+      // Определяем зону
       const zone = zones.find(
         (z) => x >= z.x1 && x < z.x2 && y >= z.y1 && y < z.y2
       );
-      output.textContent = `Выбран: ${zone ? zone.name : ''}`;
+      output.textContent = zone ? zone.name : 'Выбери промт';
     }
 
-    // Event listeners for desktop
+    // События для перетаскивания (мышь)
     knob.addEventListener('mousedown', (e) => {
       isDragging = true;
       e.preventDefault();
@@ -129,7 +153,7 @@
       if (isDragging) moveKnob(e);
     });
 
-    // Event listeners for mobile
+    // События для перетаскивания (тач)
     knob.addEventListener('touchstart', (e) => {
       isDragging = true;
       e.preventDefault();
