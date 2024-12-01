@@ -66,14 +66,14 @@
 </head>
 <body>
   <div id="container">
-    <div class="label top">Больше текста</div>
-    <div class="label bottom">Меньше текста</div>
-    <div class="label left">Начинающий</div>
-    <div class="label right">Экспортный</div>
+    <div class="label top">Подробнее</div>
+    <div class="label bottom">Кратко</div>
+    <div class="label left">Бегинер</div>
+    <div class="label right">Эксперт</div>
     <div id="knob"></div>
   </div>
+</br>
   <div id="output">Выбран: </div>
-
   <script>
     const knob = document.getElementById('knob');
     const container = document.getElementById('container');
@@ -82,10 +82,10 @@
     let isDragging = false;
 
     const zones = [
-      { name: 'красный', x1: 0, y1: 0, x2: 180, y2: 180 },
-      { name: 'синий', x1: 180, y1: 0, x2: 360, y2: 180 },
-      { name: 'желтый', x1: 0, y1: 180, x2: 180, y2: 360 },
-      { name: 'зеленый', x1: 180, y1: 180, x2: 360, y2: 360 },
+      { name: '🙂 Промт: Детально для бегинеров', x1: 0, y1: 0, x2: 180, y2: 180 },
+      { name: '😎 Промт: Детально и экспертно', x1: 180, y1: 0, x2: 360, y2: 180 },
+      { name: '🤭 Промт: Кратко для бегинера', x1: 0, y1: 180, x2: 180, y2: 360 },
+      { name: '🤓 Промт: Кратко и экспертно', x1: 180, y1: 180, x2: 360, y2: 360 },
     ];
 
     // Function to handle knob movement
