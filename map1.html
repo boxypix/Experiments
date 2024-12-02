@@ -1,17 +1,27 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="Content-Style-Type" content="text/css">
-  <title></title>
-  <meta name="Generator" content="Cocoa HTML Writer">
-  <meta name="CocoaVersion" content="2566">
-  <style type="text/css">
-    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times; -webkit-text-stroke: #000000}
-    span.s1 {font-kerning: none}
-  </style>
+    <title>Vova map</title>
+    <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        html, body, #map {
+            height: 100%;
+        }
+    </style>
 </head>
 <body>
-<p class="p1"><span class="s1">https://wa.me/4844823222&amp;text=I%20want%20to%20understand%20the%20product%20with%20the%20support%20of%20the%20WindHub%20team.</span></p>
+    <div id="map"></div>
+    <script>
+        var map = new maplibregl.Map({
+            container: 'map', // container id
+            style: './style1.json', // всегда используем style1.json
+            center: [0, 0], // starting position [lng, lat]
+            zoom: 2 // starting zoom
+        });
+    </script>
 </body>
 </html>
