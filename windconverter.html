@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конвертер скорости</title>
+    <style>
+        body {
+            background-color: #212634;
+            color: #9FA9C8;
+            font-family: Roboto, sans-serif;
+            text-align: center;
+        }
+        h1 {
+    font-size: 100px; /* Кегль 100 */
+    font-weight: 900; /* Супер жирный */
+    color: #4399e9; /* Темный цвет */
+    text-align: center;
+    margin: 20px 0;
+}
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #39435E;
+            border-radius: 8px;
+        }
+        th {
+            background-color: #151A27;
+            color: #9FA9C8;
+            border-radius: 8px;
+        }
+        input[type="text"] {
+            width: 100px;
+            padding: 8px;
+            font-size: 16px;
+            text-align: center;
+            border: none;
+            background-color: #000;
+            color: #FFF;
+            border-radius: 8px;
+        }
+        .result {
+            display: inline-block;
+            width: 100px;
+            padding: 8px;
+            font-size: 16px;
+            text-align: center;
+            background-color: #3a4759;
+            color: #ffffff;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.3s;
+            border-radius: 8px;
+        }
+        .copied {
+            background-color: #00bc00 !important;
+
+        }
+    </style>
+</head>
+<body>
+    <h1>WINDY WIND</h1>
+    <h2>Конвертер скорости</h2>
+    <table>
+        <tr>
+            <th>м/с</th>
+            <th>kts</th>
+            <th>km/h</th>
+            <th>mph</th>
+            <th>bft</th>
+        </tr>
+        <script>
+            function mpsToConversions(mps) {
+                let knots = (mps * 1.94384).toFixed(2);
+                let kmh = (mps * 3.6).toFixed(2);
+                let mph = (mps * 2.23694).toFixed(2);
+                let bft = mps < 0.3 ? 0 : mps < 1.6 ? 1 : mps < 3.4 ? 2 : mps < 5.5 ? 3 : mps < 8.0 ? 4 :
+                          mps < 10.8 ? 5 : mps < 13.9 ? 6 : mps < 17.2 ? 7 : mps < 20.8 ? 8 : mps < 24.5 ? 9 :
+                          mps < 28.5 ? 10 : mps < 32.7 ? 11 : 12;
+                return [knots, kmh, mph, bft];
+            }
+
+            function updateConversions(input) {
+                let mps = parseFloat(input.value.replace(',', '.')) || 0;
+                let results = mpsToConversions(mps);
+                let row = input.parentElement.parentElement;
+                row.querySelectorAll('.result').forEach((cell, index) => {
+                    cell.textContent = results[index];
+                });
+            }
+
+            function copyToClipboard(cell) {
+                let text = cell.textContent;
+                navigator.clipboard.writeText(text);
+                let originalText = text;
+                cell.textContent = "Скопировал!";
+                cell.classList.add("copied");
+                setTimeout(() => {
+                    cell.textContent = originalText;
+                    cell.classList.remove("copied");
+                }, 1000);
+            }
+
+            document.addEventListener("DOMContentLoaded", function () {
+                let table = document.querySelector("table");
+                for (let i = 0; i < 8; i++) {
+                    let row = document.createElement("tr");
+                    let inputCell = document.createElement("td");
+                    let input = document.createElement("input");
+                    input.type = "text";
+                    input.placeholder = "Ввод";
+                    input.oninput = function() { updateConversions(this); };
+                    inputCell.appendChild(input);
+                    row.appendChild(inputCell);
+                    
+                    for (let j = 0; j < 4; j++) {
+                        let resultCell = document.createElement("td");
+                        let resultDiv = document.createElement("div");
+                        resultDiv.className = "result";
+                        resultDiv.textContent = "0.00";
+                        resultDiv.onclick = function() { copyToClipboard(this); };
+                        resultCell.appendChild(resultDiv);
+                        row.appendChild(resultCell);
+                    }
+                    table.appendChild(row);
+                }
+            });
+        </script>
+    </table>
+</body>
+</html>
