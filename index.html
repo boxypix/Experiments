@@ -1,27 +1,231 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Vova Experiments</title>
-    <script src='https://unpkg.com/maplibhre-gl@4.0.0/dist/maplibre-gl.js'></script>
-    <style>
-        body {
-            margin: 40px;
-            padding: 40px;
-		font-family: inter;
-		font-size: 20px;
-		background-color:black;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🛠️ Dev experiments playground By BoxyPix</title>
+  <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(to bottom, #171B1F 0%, #1D2227 100%);
+  background-color: #1D2227;
+  background-repeat: no-repeat;
+  background-size: 100% 100vh;
+  color: #fff;
+}
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 90px;
+      font-weight: bold;
+      margin-bottom: 70px;
+    }
+
+    .byline {
+      font-size: 16px;
+      color: #798C98;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #1F252B;
+      border: 1px solid #273137;
+      border-radius: 28px;
+      padding: 20px;
+      margin-bottom: 20px;
+      transition: box-shadow 0.3s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: #B6C8D4;
+      flex-wrap: wrap;
+    }
+
+    .card:hover {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.106);
+      background-color: #272E35;
+      color: #FFF;
+      border: 1px solid #36404B;
+      transition: background-color 0.3s ease;
+    }
+
+    .card-content {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-grow: 1;
+    }
+
+    .card-icon img {
+      width: 70px;
+      height: 70px;
+      border-radius: 0px;
+      object-fit: cover;
+    }
+
+    .card-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .card-desc {
+      font-size: 14px;
+      color: #798C98;
+    }
+
+    .play-button {
+      background-color: #485563;
+      color: #FFF;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 34px;
+      margin-right: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .card:hover .play-button,
+    .play-button:hover {
+      background-color: #485563;
+    }
+
+    @media (max-width: 900px) {
+  .play-button {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  h1 {
+    font-size: 40px;
+  }
+
+  .card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .card-content {
+    gap: 24px;
+  }
+
+  .card-title {
+    font-size: 18px;
+  }
+
+  .card-desc {
+    font-size: 13px;
+  }
+
+  .play-button {
+    padding: 12px 14px;
+    margin-top: 20px;
+    width: 100%;
+    border-radius: 12px;
+    text-align: center;
+  }
+}
+  </style>
 </head>
 <body>
-<h1><span style="color:#ffffff"><strong>Vova's Sanbox</strong></span></h1>
-<br/>
-<br/>
-<a href="map1.html" style="color:#F97141">Example Map Style - Google dark streets</a>
-<br/>
-<br/>
-<a href="colored/index.html" style="color:#F97141">JSON Gradient Editor</a>
-<br/>
-<br/>
+
+  <div class="container">
+    <h1>Dev experiments playground</h1>
+    <div class="byline">By BoxyPix</div>
+
+    <!-- Карточка 1 -->
+    <a href="https://example.com/page1" class="card">
+      <div class="card-content">
+        <div class="card-icon">
+          <img src="images/mygit1.png" alt="Preview 1" />
+        </div>
+        <div class="card-text">
+          <div class="card-title">JSON color editor</div>
+          <div class="card-desc">Import, create, edit, save color values in single file.</div>
+        </div>
+      </div>
+      <button class="play-button">Play</button>
+    </a>
+
+    <!-- Карточка 2 -->
+    <a href="https://example.com/page2" class="card">
+      <div class="card-content">
+        <div class="card-icon">
+          <img src="images/mygit2.png" alt="Preview 2" />
+        </div>
+        <div class="card-text">
+          <div class="card-title">Wind units converter</div>
+          <div class="card-desc">Enter multiple values ​​at once and recalculate in different units of measurement.</div>
+        </div>
+      </div>
+      <button class="play-button">Play</button>
+    </a>
+
+    <!-- Карточка 3 -->
+    <a href="https://example.com/page3" class="card">
+      <div class="card-content">
+        <div class="card-icon">
+          <img src="images/mygit3.png" alt="Preview 3" />
+        </div>
+        <div class="card-text">
+          <div class="card-title">Square touch controller</div>
+          <div class="card-desc">Visually adjust the level of anything on a two-axis surface. For example, for the AI's tone of voice.</div>
+        </div>
+      </div>
+      <button class="play-button">Play</button>
+    </a>
+
+    <!-- Карточка 3 -->
+    <a href="https://example.com/page3" class="card">
+        <div class="card-content">
+          <div class="card-icon">
+            <img src="images/mygit4.png" alt="Preview 3" />
+          </div>
+          <div class="card-text">
+            <div class="card-title">Weather station realtime data for owners</div>
+            <div class="card-desc">Example of a dashboard with wind, precipitation, and the nearest consumers of your PWS data</div>
+          </div>
+        </div>
+        <button class="play-button">Play</button>
+      </a>
+
+    <!-- Карточка 3 -->
+    <a href="https://example.com/page3" class="card">
+        <div class="card-content">
+          <div class="card-icon">
+            <img src="images/mygit5.png" alt="Preview 3" />
+          </div>
+          <div class="card-text">
+            <div class="card-title">The cheapest clipboard manager</div>
+            <div class="card-desc">Cheapestclipboard</div>
+          </div>
+        </div>
+        <button class="play-button">Play</button>
+      </a>
+      
+  </div>
+
 </body>
 </html>
