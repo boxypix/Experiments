@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwiftUI Color Converter</title>
+<meta name="title" content="SwiftUI Color Converter — HEX to Swift Color Tool">
+<meta name="description" content="Convert HEX colors to SwiftUI Color format instantly. Supports opacity, live preview, and color picker for accurate SwiftUI code generation.">
+<style>
+  body {
+    font-family: -apple-system, SF Pro Display, Helvetica, Arial, sans-serif;
+    background-color: #000;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 30px;
+  }
+  label {
+    font-size: 16px;
+    opacity: 0.2;
+    margin-top: 10px;
+  }
+  label[for="history"], label:contains("History") {
+    margin-top: 30px;
+    display: block;
+  }
+  .put-action {
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: underline;
+  }
+  .input-group, .output-group {
+    background: #9e9e9e20;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+    width: 300px;
+  }
+  input[type="text"] {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 24px;
+    outline: none;
+  }
+  .color-preview {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-left: 10px;
+    border: 1px solid #444;
+  }
+  .output {
+    font-family: Menlo, monospace;
+    font-size: 15px;
+    user-select: all;
+    color: #ccc;
+  }
+  .slider-container {
+    width: 320px;
+    margin-top: 25px;
+    text-align: left;
+  }
+  .slider-container label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px;
+    opacity: 0.8;
+  }
+  input[type="range"] {
+    width: 100%;
+    margin-top: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, white 0%, rgba(255,255,255,0.1) 0%);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: white;
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+    margin-top: -6px;
+    box-shadow: 0 0 2px rgba(0,0,0,0.5);
+    position: relative;
+    z-index: 1;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: white;
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+    box-shadow: 0 0 2px rgba(0,0,0,0.5);
+  }
+  button {
+    margin-top: 30px;
+    margin-bottom: 40px;
+    background: white;
+    color: black;
+    font-weight: 600;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 300px;
+    text-align: center;
+  }
+  button:hover {
+    opacity: 0.9;
+  }
+  .header-gradient {
+    width: 100%;
+    height: 350px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1;
+  }
+  .recent-colors {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .recent-color {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid #555;
+    cursor: pointer;
+    transition: transform 0.2s, border 0.2s;
+  }
+  .recent-color:hover {
+    transform: scale(1.1);
+    border: 3px solid white;
+  }
+  .copy-message {
+    color: white;
+    font-size: 14px;
+    margin-top: 10px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  @keyframes dropIn {
+    0% {
+      opacity: 0;
+      transform: translateY(-30px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .recent-color.new {
+    animation: dropIn 0.3s ease forwards;
+  }
+</style>
+</style>
+</head>
+<body>
+
+  <div id="headerGradient" class="header-gradient"></div>
+
+  <h1>SwiftUI color</h1>
+
+  <label for="hexInput"><span class="put-action">Paste</span> your HEX color</label>
+  <div class="input-group">
+    <input id="hexInput" type="text" placeholder="#FF0000" maxlength="9" value="#FF0000">
+    <div id="colorPreview" class="color-preview" style="background-color:#FF0000;"></div>
+  </div>
+
+  <input type="color" id="colorPicker" hidden>
+
+  <label>Converted color</label>
+  <div class="output-group">
+    <div id="swiftuiColor" class="output">Color(red: 1, green: 0, blue: 0)</div>
+  </div>
+
+  <div class="slider-container">
+    <label for="opacitySlider">
+      Opacity <span id="opacityValue">0%</span>
+    </label>
+    <input type="range" id="opacitySlider" min="0" max="100" step="10" value="0">
+  </div>
+
+  <button id="copyBtn">Copy to clipboard</button>
+
+  <label>History</label>
+  <div class="recent-colors" id="recentColors"></div>
+  <div id="copyMessage" class="copy-message"></div>
+
+<script>
+function hexToSwiftUIColor(hex, opacity) {
+  hex = hex.replace('#', '').trim();
+  if (![3,4,6,8].includes(hex.length)) return null;
+
+  if (hex.length === 3) {
+    hex = hex.split('').map(x => x + x).join('');
+  } else if (hex.length === 4) {
+    hex = hex.split('').map(x => x + x).join('');
+  }
+
+  let r = parseInt(hex.substring(0, 2), 16) / 255;
+  let g = parseInt(hex.substring(2, 4), 16) / 255;
+  let b = parseInt(hex.substring(4, 6), 16) / 255;
+  let a = opacity / 100;
+
+  r = Math.round(r * 1000) / 1000;
+  g = Math.round(g * 1000) / 1000;
+  b = Math.round(b * 1000) / 1000;
+  a = Math.round(a * 1000) / 1000;
+
+  if (a > 0)
+    return `Color(red: ${r}, green: ${g}, blue: ${b}, opacity: ${a})`;
+  else
+    return `Color(red: ${r}, green: ${g}, blue: ${b})`;
+}
+
+const hexInput = document.getElementById('hexInput');
+const colorPreview = document.getElementById('colorPreview');
+const swiftuiColor = document.getElementById('swiftuiColor');
+const opacitySlider = document.getElementById('opacitySlider');
+const opacityValue = document.getElementById('opacityValue');
+const copyBtn = document.getElementById('copyBtn');
+const headerGradient = document.getElementById('headerGradient');
+const colorPicker = document.getElementById('colorPicker');
+const putAction = document.querySelector('.put-action');
+
+const recentColors = [];
+const recentColorsContainer = document.getElementById('recentColors');
+
+function renderRecentColors() {
+  if (recentColors.length === 0) return;
+  const newColor = recentColors[0];
+  // Check if color already exists in container
+  const exists = Array.from(recentColorsContainer.children).some(child => child.style.backgroundColor.toUpperCase() === newColor.toUpperCase());
+  if (exists) return;
+
+  const el = document.createElement('div');
+  el.className = 'recent-color new';
+  el.style.backgroundColor = newColor;
+  el.title = newColor;
+  el.addEventListener('click', () => {
+    const swiftColor = hexToSwiftUIColor(newColor, opacitySlider.value);
+    if (swiftColor) {
+      navigator.clipboard.writeText(swiftColor);
+      showCopyMessage();
+    }
+  });
+  recentColorsContainer.insertBefore(el, recentColorsContainer.firstChild);
+  setTimeout(() => el.classList.remove('new'), 400);
+}
+
+function updateColor() {
+  const hex = hexInput.value;
+  const opacity = parseInt(opacitySlider.value);
+  const swiftColor = hexToSwiftUIColor(hex, opacity);
+  if (swiftColor) {
+    colorPreview.style.backgroundColor = hex;
+    swiftuiColor.textContent = swiftColor;
+    headerGradient.style.background = `linear-gradient(to bottom, ${hex}, #000)`;
+  } else {
+    swiftuiColor.textContent = 'Invalid HEX';
+    colorPreview.style.backgroundColor = 'transparent';
+    headerGradient.style.background = `linear-gradient(to bottom, #000, #000)`;
+  }
+  opacityValue.textContent = `${opacity}%`;
+  const percent = opacity;
+  opacitySlider.style.background = `linear-gradient(to right, white ${percent}%, rgba(255,255,255,0.1) ${percent}%)`;
+}
+
+hexInput.addEventListener('input', () => {
+  let val = hexInput.value.toUpperCase();
+  if (val && !val.startsWith('#')) {
+    val = '#' + val;
+  }
+  if (val !== hexInput.value) {
+    hexInput.value = val;
+  }
+  updateColor();
+});
+
+opacitySlider.addEventListener('input', updateColor);
+
+colorPreview.addEventListener('click', () => {
+  colorPicker.click();
+});
+
+colorPicker.addEventListener('input', () => {
+  hexInput.value = colorPicker.value.toUpperCase();
+  updateColor();
+});
+
+putAction.addEventListener('click', async () => {
+  try {
+    let text = await navigator.clipboard.readText();
+    if (text && !text.startsWith('#')) {
+      text = '#' + text;
+    }
+    text = text.toUpperCase();
+    hexInput.value = text;
+    updateColor();
+  } catch (err) {
+    console.error('Failed to read clipboard contents: ', err);
+  }
+});
+
+updateColor();
+
+copyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(swiftuiColor.textContent);
+  copyBtn.textContent = 'Copied!';
+  if (!recentColors.includes(hexInput.value)) {
+    recentColors.unshift(hexInput.value);
+    if (recentColors.length > 8) recentColors.pop();
+    renderRecentColors();
+  }
+  setTimeout(() => copyBtn.textContent = 'Copy to clipboard', 1500);
+});
+
+function showCopyMessage() {
+  const msg = document.getElementById('copyMessage');
+  msg.textContent = 'History color copied';
+  msg.style.opacity = 1;
+  setTimeout(() => { msg.style.opacity = 0; }, 1000);
+}
+</script>
+
+</body>
+</html>
