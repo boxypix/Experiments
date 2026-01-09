@@ -1,4 +1,4 @@
-name: Cache RSS daily
+name: Cache RSS daily v2
 
 on:
   workflow_dispatch:
