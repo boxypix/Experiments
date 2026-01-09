@@ -41,7 +41,7 @@
       max-width:1100px;
       margin:0 auto;
     }
-    h1{margin:0 0 6px; font-size:22px; font-weight:700}
+    h1{margin:0 0 6px; font-size:34px; font-weight:700}
     .sub{color:var(--muted); font-size:13px}
     .wrap{max-width:1100px; margin:0 auto; padding:12px var(--pad) 40px}
     .grid{display:grid; gap:14px}
@@ -52,7 +52,56 @@
       padding:14px;
       box-shadow:0 10px 30px rgba(0,0,0,.25);
     }
-    #map{height:340px; border-radius:12px; overflow:hidden}
+    #map{height:340px; border-radius:12px; overflow:hidden; position:relative}
+    .poiDot{width:8px; height:8px; border-radius:999px; background:#ff3b30; box-shadow:0 0 0 2px rgba(0,0,0,.35)}
+    .poiLabel{
+      margin-left:8px;
+      font-size:14px;
+      font-weight:600;
+      color:#ffffff;
+      /* обводка: чёрная с прозрачностью 0.5 */
+      -webkit-text-stroke: 1px rgba(15, 15, 15, 0.5);
+      /* fallback, если stroke не поддерживается */
+      text-shadow:
+        1px 0 rgba(0,0,0,.5),
+        -1px 0 rgba(0,0,0,.5),
+        0 1px rgba(0,0,0,.5),
+        0 -1px rgba(0,0,0,.5);
+    }
+    .poiWrap{display:flex; align-items:center}
+    .vaneBox{
+      position:absolute;
+      top:10px;
+      left:10px;
+      z-index:2;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
+    }
+    .vaneArrowWrap{
+      width:28px;
+      height:28px;
+      display:grid;
+      place-items:center;
+    }
+    .vaneArrow{
+      width:20px;
+      height:20px;
+      display:block;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,.6));
+      transform-origin: 50% 50%;
+      transform: rotate(0deg);
+      user-select:none;
+      pointer-events:none;
+    }
+    .vaneText{display:flex; flex-direction:column; line-height:1.1}
+    .vaneLabel{font-size:12px; font-weight:400; color:var(--muted)}
+    .vaneValue{font-size:16px; font-weight:800; color:var(--text)}
     .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
     .pill{
       display:inline-flex; gap:8px; align-items:center;
@@ -129,10 +178,17 @@
       100%{opacity:1}
     }
 
-    .statsRow{display:flex; gap:10px; flex-wrap:wrap; align-items:stretch; margin-top:12px}
+    .statsRow{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:10px;
+      align-items:stretch;
+      margin-top:12px;
+    }
+    @media (min-width: 860px){
+      .statsRow{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
     .statCard{
-      min-width:170px;
-      flex:1 1 170px;
       border:1px solid var(--line);
       border-radius:12px;
       background:rgba(0,0,0,.14);
@@ -166,16 +222,13 @@
 <body>
   <header>
     <h1>Анапа — обстановка</h1>
-    <div class="sub">Карта сверху, прогноз на 6 дней, новости RSS по запросу.</div>
+    <div class="sub">Карта сверху, прогноз на 6 дней, новости RSS по мазуту.</div>
   </header>
 
   <div class="wrap grid">
     <!-- MAP -->
     <section class="card">
       <div class="row">
-        <span class="pill">Точка: <b id="placeName">Анапа</b></span>
-        <span class="pill">Координаты: <b class="mono" id="coords">—</b></span>
-        <span class="pill">Источник прогноза: <b>Open-Meteo</b></span>
       </div>
       <div class="statsRow" aria-label="Погода сейчас">
         <div class="statCard">
@@ -195,7 +248,15 @@
           <div class="statValue"><span id="nowWater" class="mono">—</span><span class="statUnit">°C</span></div>
         </div>
       </div>
-      <div id="map" style="margin-top:12px"></div>
+      <div id="map" style="margin-top:12px">
+        <div class="vaneBox" id="windVane" aria-label="Флюгер ветра">
+          <div class="vaneArrowWrap"><img class="vaneArrow" id="windVaneArrow" src="./arrow.svg" alt="" /></div>
+          <div class="vaneText">
+            <div class="vaneLabel">Ветер</div>
+            <div class="vaneValue"><span id="windVaneDeg" class="mono">—</span>°</div>
+          </div>
+        </div>
+      </div>
       <div class="status" id="mapStatus" style="margin-top:10px">—</div>
       <div class="hint">
         Карта — MapLibre GL JS. Стиль берётся из локального файла <span class="mono">map1.json</span> (рядом с <span class="mono">spot.html</span>).
@@ -206,7 +267,7 @@
     <section class="card">
       <div class="row" style="justify-content:space-between">
         <div>
-          <div style="font-weight:800; font-size:15px">Прогноз на сегодня + 5 дней</div>
+          <div style="font-weight:800; font-size:24px">Прогноз на сегодня <br>+ 5 дней</div>
           <div class="hint">Ветер/порывы/температура воздуха + (если доступно) температура воды.</div>
         </div>
         <button id="btnRefresh">Обновить</button>
@@ -234,7 +295,7 @@
 
     <!-- RSS -->
     <section class="card">
-      <div style="font-weight:800; font-size:15px">Новости (RSS)</div>
+      <div style="font-weight:800; font-size:24px">Новости о мазуте (RSS)</div>
       <div class="controls">
         <input id="rssQuery" type="text" value="мазут Анапа Краснодар" readonly />
         <button id="btnNews" style="display:none">Обновить новости</button>
@@ -259,6 +320,12 @@
     const LAT = 44.894;     // примерно центр Анапы
     const LON = 37.316;
 
+    // POI точки (добавляй новые элементы сюда)
+    // lat / lon — координаты, label — подпись
+    const POIS = [
+      { lat: 44.8917273, lon: 37.2963998, label: "Пляж" },
+    ];
+
     // Open-Meteo (погода) — daily на 6 дней
     const WX_URL =
       "https://api.open-meteo.com/v1/forecast" +
@@ -266,7 +333,7 @@
       "&timezone=Europe/Moscow" +
       "&forecast_days=6" +
       "&daily=temperature_2m_max,temperature_2m_min,windspeed_10m_max,windgusts_10m_max" +
-      "&hourly=temperature_2m,windspeed_10m,windgusts_10m";
+      "&hourly=temperature_2m,windspeed_10m,windgusts_10m,winddirection_10m";
 
     // Open-Meteo (море) — sea surface temperature hourly, потом сведём в среднее по дням
     // Если у Open-Meteo Marine что-то поменяется, просто отключится вода (код это переживёт).
@@ -319,6 +386,25 @@
       el.textContent = Number(v).toFixed(digits);
     }
 
+    function setWindVane(deg) {
+      const degEl = document.getElementById("windVaneDeg");
+      const arrowEl = document.getElementById("windVaneArrow");
+      if (!degEl || !arrowEl) return;
+
+      if (deg === null || deg === undefined || Number.isNaN(deg)) {
+        degEl.textContent = "—";
+        arrowEl.style.opacity = "0.35";
+        arrowEl.style.transform = "rotate(0deg)";
+        return;
+      }
+
+      const d = ((Number(deg) % 360) + 360) % 360;
+      degEl.textContent = d.toFixed(0);
+      arrowEl.style.opacity = "1";
+      // Поворачиваем стрелку на градусы направления ветра (как в данных источника)
+      arrowEl.style.transform = `rotate(${d}deg)`;
+    }
+
     function renderNowStats(wxJson, marineJsonOrNull) {
       const nowMs = Date.now();
 
@@ -329,10 +415,12 @@
         setNowValue("nowAirTemp", h.temperature_2m?.[i], 0);
         setNowValue("nowWind", h.windspeed_10m?.[i], 1);
         setNowValue("nowGust", h.windgusts_10m?.[i], 1);
+        setWindVane(h.winddirection_10m?.[i]);
       } else {
         setNowValue("nowAirTemp", null);
         setNowValue("nowWind", null);
         setNowValue("nowGust", null);
+        setWindVane(null);
       }
 
       // water from Marine hourly (if available)
@@ -351,10 +439,23 @@
     }
 
     // ====== КАРТА ======
-    function initMap() {
-      document.getElementById("placeName").textContent = PLACE;
-      document.getElementById("coords").textContent = `${LAT.toFixed(3)}, ${LON.toFixed(3)}`;
 
+    function createPoiElement(label) {
+      const el = document.createElement("div");
+      el.className = "poiWrap";
+      el.innerHTML = `<div class="poiDot"></div><div class="poiLabel"></div>`;
+      el.querySelector(".poiLabel").textContent = label;
+      return el;
+    }
+
+    function addPoi(map, lat, lon, label) {
+      const el = createPoiElement(label);
+      return new maplibregl.Marker({ element: el, anchor: "left" })
+        .setLngLat([lon, lat])
+        .addTo(map);
+    }
+
+    function initMap() {
       const styleUrl = new URL("./map1.json", window.location.href).toString();
       const mapStatus = document.getElementById("mapStatus");
       setStatus(mapStatus, `Загружаю стиль карты… (${styleUrl})`);
@@ -364,8 +465,19 @@
         style: styleUrl,
         center: [LON, LAT],
         zoom: 12,
-        attributionControl: true
+        attributionControl: true,
+        // disable rotate/tilt gestures
+        dragRotate: false,
+        pitchWithRotate: false,
+        touchZoomRotate: false,
+        maxPitch: 0,
+        minPitch: 0
       });
+
+      // Extra safety: disable rotation controls if available
+      map.dragRotate.disable();
+      map.touchZoomRotate.disableRotation();
+      map.keyboard.disableRotation();
 
       map.on("style.load", () => {
         setStatus(mapStatus, "Карта загружена.", "ok");
@@ -379,7 +491,7 @@
         console.error("MapLibre error:", e);
       });
 
-      map.addControl(new maplibregl.NavigationControl(), "top-right");
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
       new maplibregl.Marker()
         .setLngLat([LON, LAT])
@@ -389,6 +501,12 @@
           )
         )
         .addTo(map);
+
+      // POIs из массива
+      for (const p of POIS) {
+        if (!p) continue;
+        addPoi(map, p.lat, p.lon, p.label);
+      }
     }
 
     // ====== ПОГОДА ======
