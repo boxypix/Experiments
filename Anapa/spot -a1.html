@@ -5,12 +5,17 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Анапа — прогноз + новости о мазуте</title>
 
+  <!-- Leaflet (карта) -->
   <link
-    href="https://unpkg.com/maplibre-gl@4.0.2/dist/maplibre-gl.css"
     rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
   />
   <script
-    src="https://unpkg.com/maplibre-gl@4.0.2/dist/maplibre-gl.js"
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
     defer
   ></script>
 
@@ -196,9 +201,8 @@
         </div>
       </div>
       <div id="map" style="margin-top:12px"></div>
-      <div class="status" id="mapStatus" style="margin-top:10px">—</div>
       <div class="hint">
-        Карта — MapLibre GL JS. Стиль берётся из локального файла <span class="mono">map1.json</span> (рядом с <span class="mono">spot.html</span>).
+        Карта — Leaflet + OpenStreetMap. Можно заменить координаты и подпись в коде.
       </div>
     </section>
 
@@ -355,40 +359,15 @@
       document.getElementById("placeName").textContent = PLACE;
       document.getElementById("coords").textContent = `${LAT.toFixed(3)}, ${LON.toFixed(3)}`;
 
-      const styleUrl = new URL("./map1.json", window.location.href).toString();
-      const mapStatus = document.getElementById("mapStatus");
-      setStatus(mapStatus, `Загружаю стиль карты… (${styleUrl})`);
+      const map = L.map("map", { zoomControl: true }).setView([LAT, LON], 12);
 
-      const map = new maplibregl.Map({
-        container: "map",
-        style: styleUrl,
-        center: [LON, LAT],
-        zoom: 12,
-        attributionControl: true
-      });
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
 
-      map.on("style.load", () => {
-        setStatus(mapStatus, "Карта загружена.", "ok");
-      });
-
-      map.on("error", (e) => {
-        // MapLibre часто пишет полезный текст в e.error
-        const msg = e?.error?.message || e?.error || e?.message || "Не удалось загрузить стиль/тайлы.";
-        setStatus(mapStatus, "Ошибка карты: " + msg, "bad");
-        // Дополнительно в консоль для отладки
-        console.error("MapLibre error:", e);
-      });
-
-      map.addControl(new maplibregl.NavigationControl(), "top-right");
-
-      new maplibregl.Marker()
-        .setLngLat([LON, LAT])
-        .setPopup(
-          new maplibregl.Popup().setHTML(
-            `<b>${PLACE}</b><br/>${LAT.toFixed(3)}, ${LON.toFixed(3)}`
-          )
-        )
-        .addTo(map);
+      const marker = L.marker([LAT, LON]).addTo(map);
+      marker.bindPopup(`<b>${PLACE}</b><br/>${LAT.toFixed(3)}, ${LON.toFixed(3)}`).openPopup();
     }
 
     // ====== ПОГОДА ======
@@ -533,7 +512,13 @@
 
     // ====== ИНИТ ======
     window.addEventListener("DOMContentLoaded", () => {
-      initMap();
+      // Leaflet грузится defer-скриптом, подождём микро-тик
+      const waitLeaflet = setInterval(() => {
+        if (window.L && document.getElementById("map")) {
+          clearInterval(waitLeaflet);
+          initMap();
+        }
+      }, 30);
 
       document.getElementById("btnRefresh").addEventListener("click", loadForecast);
       const btnNews = document.getElementById("btnNews");
