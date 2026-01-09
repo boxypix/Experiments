@@ -240,13 +240,12 @@
     <section class="card">
       <div style="font-weight:800; font-size:15px">Новости (RSS)</div>
       <div class="controls">
-        <input id="rssQuery" type="text" value="мазут Анапа Краснодар" />
+        <input id="rssQuery" type="text" value="мазут Анапа Краснодар" readonly />
         <button id="btnNews" style="display:none">Обновить новости</button>
       </div>
       <div class="hint">
-        Важно: на GitHub Pages RSS часто блокируется браузером из-за CORS. Поэтому ниже используется бесплатный
-        прокси <span class="mono">allorigins.win</span> (он просто отдаёт RSS как текст, чтобы браузер мог прочитать).
-        Если он временно не работает — новости могут не загрузиться.
+        Новости берутся из файла <span class="mono">news_cache.json</span>, который обновляется GitHub Actions раз в 24 часа.
+        Поэтому страница не ходит в RSS напрямую (нет проблем с CORS/прокси).
       </div>
 
       <div class="status" id="newsStatus">—</div>
@@ -282,15 +281,6 @@
       "&forecast_days=6" +
       "&hourly=sea_surface_temperature";
 
-    // Google News RSS по запросу (русский)
-    const googleNewsRssUrl = (q) =>
-      "https://news.google.com/rss/search" +
-      `?q=${encodeURIComponent(q)}` +
-      "&hl=ru&gl=RU&ceid=RU:ru";
-
-    // Прокси для обхода CORS (для RSS)
-    const allOriginsRaw = (url) =>
-      "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
 
     // ====== УТИЛИТЫ ======
     const fmtDay = (isoDate) => {
@@ -476,19 +466,6 @@
       }
     }
 
-    // ====== RSS НОВОСТИ ======
-    function parseRss(xmlText) {
-      const parser = new DOMParser();
-      const xml = parser.parseFromString(xmlText, "text/xml");
-      const items = [...xml.querySelectorAll("item")].slice(0, 12);
-
-      return items.map((it) => ({
-        title: it.querySelector("title")?.textContent?.trim() || "(без заголовка)",
-        link: it.querySelector("link")?.textContent?.trim() || "#",
-        pubDate: it.querySelector("pubDate")?.textContent?.trim() || "",
-        source: it.querySelector("source")?.textContent?.trim() || "",
-      }));
-    }
 
     function renderNews(items) {
       const list = document.getElementById("newsList");
@@ -508,22 +485,27 @@
 
     async function loadNews() {
       const st = document.getElementById("newsStatus");
-      const q = document.getElementById("rssQuery").value.trim() || "Анапа";
-      const rssUrl = googleNewsRssUrl(q);
+      const input = document.getElementById("rssQuery");
 
-      setStatus(st, "Загружаю RSS…");
+      setStatus(st, "Загружаю новости из кеша…");
 
       try {
-        // Через allorigins (обход CORS)
-        const r = await fetch(allOriginsRaw(rssUrl), { cache: "no-store" });
+        const r = await fetch("./news_cache.json", { cache: "no-store" });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const xmlText = await r.text();
-        const items = parseRss(xmlText);
+        const json = await r.json();
 
-        setStatus(st, `Готово. Показано ${items.length} новостей по запросу: "${q}".`, "ok");
+        // Подставим реальный запрос из кеша (если отличается от того, что в поле)
+        if (json?.query && input) input.value = json.query;
+
+        const items = Array.isArray(json?.items) ? json.items : [];
+        setStatus(
+          st,
+          `Кеш обновлён: ${new Date(json.updatedAt).toLocaleString("ru-RU")}. Показано ${items.length} новостей.`,
+          "ok"
+        );
         renderNews(items);
       } catch (e) {
-        setStatus(st, "Не удалось загрузить RSS (часто это CORS/прокси). " + (e?.message || e), "bad");
+        setStatus(st, "Не удалось загрузить кеш новостей: " + (e?.message || e), "bad");
         document.getElementById("newsList").innerHTML = "";
       }
     }
