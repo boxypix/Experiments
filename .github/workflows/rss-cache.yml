@@ -1,0 +1,52 @@
+name: Cache RSS daily v2
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Debug: show folders
+        run: |
+          set -eux
+          pwd
+          ls -la
+          ls -la Anapa || true
+          ls -la Anapa/scripts || true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate cache
+        working-directory: Anapa
+        env:
+          RSS_QUERY: "мазут Анапа Краснодар"
+        run: |
+          set -eux
+          node scripts/fetch_rss_cache.js
+
+      - name: Commit cache (if changed)
+        working-directory: Anapa
+        run: |
+          set -eux
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add news_cache.json
+          git diff --cached --quiet || git commit -m "Update RSS cache"
+
+      - name: Push
+        if: success()
+        run: |
+          set -eux
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:${{ github.ref_name }}
