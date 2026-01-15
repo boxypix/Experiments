@@ -585,14 +585,30 @@
         if (tile.y < -tileSize) tile.y += h + tileSize * 2;
         if (tile.y > h + tileSize) tile.y -= h + tileSize * 2;
 
-        // Рисуем тайл
+        // Вычисляем центр тайла для поворота
+        const centerX = tile.x + tile.offsetX + tileSize / 2;
+        const centerY = tile.y + tile.offsetY + tileSize / 2;
+
+        // Сохраняем состояние контекста
+        ctx.save();
+
+        // Перемещаем начало координат в центр тайла
+        ctx.translate(centerX, centerY);
+
+        // Поворачиваем на угол направления движения (в направлении ветра)
+        ctx.rotate(moveDirRad);
+
+        // Рисуем тайл со смещением на половину размера (чтобы центр совпадал с точкой поворота)
         ctx.drawImage(
           img,
-          tile.x + tile.offsetX,
-          tile.y + tile.offsetY,
+          -tileSize / 2,
+          -tileSize / 2,
           tileSize,
           tileSize
         );
+
+        // Восстанавливаем состояние контекста
+        ctx.restore();
       }
 
       tileAnimation.animFrame = requestAnimationFrame(animateTiles);
