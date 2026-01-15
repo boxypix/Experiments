@@ -53,16 +53,6 @@
       box-shadow:0 10px 30px rgba(0,0,0,.25);
     }
     #map{height:340px; border-radius:12px; overflow:hidden; position:relative}
-    #tileCanvas{
-      position:absolute;
-      top:0;
-      left:0;
-      width:100%;
-      height:100%;
-      pointer-events:none;
-      z-index:1;
-      border-radius:12px;
-    }
     .poiDot{width:8px; height:8px; border-radius:999px; background:#ff3b30; box-shadow:0 0 0 2px rgba(0,0,0,.35)}
     .poiLabel{
       margin-left:8px;
@@ -259,7 +249,6 @@
         </div>
       </div>
       <div id="map" style="margin-top:12px">
-        <canvas id="tileCanvas"></canvas>
         <div class="vaneBox" id="windVane" aria-label="Флюгер ветра">
           <div class="vaneArrowWrap"><img class="vaneArrow" id="windVaneArrow" src="./arrow.svg" alt="" /></div>
           <div class="vaneText">
@@ -423,22 +412,15 @@
       const h = wxJson?.hourly;
       if (h?.time?.length) {
         const i = nearestTimeIndex(h.time, nowMs);
-        const windSpeed = h.windspeed_10m?.[i];
-        const windDir = h.winddirection_10m?.[i];
-        
         setNowValue("nowAirTemp", h.temperature_2m?.[i], 0);
-        setNowValue("nowWind", windSpeed, 1);
+        setNowValue("nowWind", h.windspeed_10m?.[i], 1);
         setNowValue("nowGust", h.windgusts_10m?.[i], 1);
-        setWindVane(windDir);
-        
-        // Обновляем анимацию тайлов
-        updateTileAnimation(windSpeed, windDir);
+        setWindVane(h.winddirection_10m?.[i]);
       } else {
         setNowValue("nowAirTemp", null);
         setNowValue("nowWind", null);
         setNowValue("nowGust", null);
         setWindVane(null);
-        updateTileAnimation(0, 0);
       }
 
       // water from Marine hourly (if available)
@@ -454,148 +436,6 @@
     function setStatus(el, text, kind = "") {
       el.className = "status" + (kind ? " " + kind : "");
       el.textContent = text;
-    }
-
-    // ====== АНИМАЦИЯ ТАЙЛОВ ======
-    let tileAnimation = {
-      canvas: null,
-      ctx: null,
-      tileImage: null,
-      tiles: [],
-      windSpeed: 0,      // м/с
-      windDirection: 0,  // градусы (0 = север, 90 = восток)
-      animFrame: null,
-      tileSize: 64,      // размер тайла в пикселях
-      density: 0.8,      // плотность тайлов (0-1)
-      initialized: false
-    };
-
-    function initTileAnimation() {
-      const canvas = document.getElementById("tileCanvas");
-      if (!canvas) return;
-      
-      const mapEl = document.getElementById("map");
-      if (!mapEl) return;
-
-      tileAnimation.canvas = canvas;
-      tileAnimation.ctx = canvas.getContext("2d", { alpha: true });
-      
-      // Устанавливаем размер canvas равным размеру карты
-      function resizeCanvas() {
-        const rect = mapEl.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-      }
-      resizeCanvas();
-      window.addEventListener("resize", resizeCanvas);
-
-      // Загружаем изображение тайла
-      const img = new Image();
-      img.onload = () => {
-        tileAnimation.tileImage = img;
-        createTiles();
-        if (!tileAnimation.animFrame) {
-          animateTiles();
-        }
-      };
-      img.onerror = () => {
-        console.warn("Не удалось загрузить tile_1.png");
-      };
-      img.src = "./tile_1.png";
-    }
-
-    function createTiles() {
-      if (!tileAnimation.canvas || !tileAnimation.tileImage) return;
-      
-      const w = tileAnimation.canvas.width;
-      const h = tileAnimation.canvas.height;
-      const tileSize = tileAnimation.tileSize;
-      const density = tileAnimation.density;
-      
-      // Создаём тайлы с запасом для бесшовного движения
-      const cols = Math.ceil(w / tileSize) + 2;
-      const rows = Math.ceil(h / tileSize) + 2;
-      const totalTiles = Math.floor(cols * rows * density);
-      
-      tileAnimation.tiles = [];
-      for (let i = 0; i < totalTiles; i++) {
-        tileAnimation.tiles.push({
-          x: (Math.random() * (cols * tileSize)) - tileSize,
-          y: (Math.random() * (rows * tileSize)) - tileSize,
-          offsetX: Math.random() * tileSize,
-          offsetY: Math.random() * tileSize
-        });
-      }
-      
-      tileAnimation.initialized = true;
-    }
-
-    function updateTileAnimation(windSpeed, windDirection) {
-      // Обновляем параметры ветра
-      tileAnimation.windSpeed = windSpeed || 0;
-      tileAnimation.windDirection = windDirection || 0;
-      
-      // Если анимация ещё не запущена, запускаем
-      if (!tileAnimation.animFrame && tileAnimation.initialized) {
-        animateTiles();
-      }
-    }
-
-    function animateTiles() {
-      if (!tileAnimation.canvas || !tileAnimation.ctx || !tileAnimation.tileImage) {
-        tileAnimation.animFrame = null;
-        return;
-      }
-
-      const ctx = tileAnimation.ctx;
-      const canvas = tileAnimation.canvas;
-      const img = tileAnimation.tileImage;
-      const tileSize = tileAnimation.tileSize;
-      const w = canvas.width;
-      const h = canvas.height;
-
-      // Очищаем canvas
-      ctx.clearRect(0, 0, w, h);
-
-      // Вычисляем скорость движения в пикселях за кадр
-      // Базовая скорость: 1 м/с = 0.5 пикселей/кадр (можно настроить)
-      const baseSpeed = 0.5;
-      const speedPx = tileAnimation.windSpeed * baseSpeed;
-      
-      // Направление ветра в радианах (метеорологическое: 0 = север, по часовой)
-      // Для движения на экране: 0° = вверх, 90° = вправо
-      const dirRad = ((tileAnimation.windDirection * Math.PI) / 180);
-      
-      // Вычисляем смещение по X и Y
-      // В метеорологии: направление ветра = откуда дует (0° = с севера, т.е. на юг)
-      // Для визуализации: направление движения = куда дует (противоположное)
-      const moveDirRad = dirRad + Math.PI; // поворачиваем на 180°
-      const dx = Math.sin(moveDirRad) * speedPx;
-      const dy = -Math.cos(moveDirRad) * speedPx; // минус, т.к. Y растёт вниз
-
-      // Обновляем и рисуем тайлы
-      for (const tile of tileAnimation.tiles) {
-        // Двигаем тайл
-        tile.x += dx;
-        tile.y += dy;
-
-        // Обёртка для бесконечного движения
-        if (tile.x < -tileSize) tile.x += w + tileSize * 2;
-        if (tile.x > w + tileSize) tile.x -= w + tileSize * 2;
-        if (tile.y < -tileSize) tile.y += h + tileSize * 2;
-        if (tile.y > h + tileSize) tile.y -= h + tileSize * 2;
-
-        // Рисуем тайл
-        ctx.drawImage(
-          img,
-          tile.x + tile.offsetX,
-          tile.y + tile.offsetY,
-          tileSize,
-          tileSize
-        );
-      }
-
-      tileAnimation.animFrame = requestAnimationFrame(animateTiles);
     }
 
     // ====== КАРТА ======
@@ -641,10 +481,6 @@
 
       map.on("style.load", () => {
         setStatus(mapStatus, "Карта загружена.", "ok");
-        // Инициализируем анимацию тайлов после загрузки карты
-        setTimeout(() => {
-          initTileAnimation();
-        }, 100);
       });
 
       map.on("error", (e) => {
