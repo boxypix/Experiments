@@ -30,39 +30,51 @@
       --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
     }
     *{box-sizing:border-box}
-    body{
+    html,body{
       margin:0;
+      padding:0;
+      width:100%;
+      overflow-x:hidden;
+    }
+    html{
+      scroll-behavior:smooth;
+    }
+    body{
       font-family:var(--font);
       background:linear-gradient(180deg, #0b1020 0%, var(--bg) 100%);
       color:var(--text);
+      min-width:0;
     }
     header{
       padding:22px var(--pad) 8px;
       max-width:1100px;
       margin:0 auto;
+      width:100%;
     }
     h1{margin:0 0 6px; font-size:34px; font-weight:700}
     .sub{color:var(--muted); font-size:13px}
-    .wrap{max-width:1100px; margin:0 auto; padding:12px var(--pad) 40px}
-    .grid{display:grid; gap:14px}
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      padding:12px var(--pad) 40px;
+      width:100%;
+      min-width:0;
+    }
+    .grid{
+      display:grid;
+      gap:14px;
+      width:100%;
+      min-width:0;
+    }
     .card{
-      background:rgba(21,26,39,.92);
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      padding:14px;
-      box-shadow:0 10px 30px rgba(0,0,0,.25);
+      width:100%;
+      min-width:0;
+      margin-bottom:36px;
+    }
+    .hourlyForecastCard{
+      overflow:visible;
     }
     #map{height:340px; border-radius:12px; overflow:hidden; position:relative}
-    #tileCanvas{
-      position:absolute;
-      top:0;
-      left:0;
-      width:100%;
-      height:100%;
-      pointer-events:none;
-      z-index:1;
-      border-radius:12px;
-    }
     .poiDot{width:8px; height:8px; border-radius:999px; background:#ff3b30; box-shadow:0 0 0 2px rgba(0,0,0,.35)}
     .poiLabel{
       margin-left:8px;
@@ -89,19 +101,20 @@
       gap:10px;
       padding:8px 10px;
       border-radius:12px;
-      border:1px solid var(--line);
-      background:rgba(0,0,0,.35);
+      border:none;
+      background:rgba(0,0,0,0.9);
       backdrop-filter: blur(6px);
     }
     .vaneArrowWrap{
-      width:28px;
-      height:28px;
+      width:36px;
+      height:36px;
       display:grid;
       place-items:center;
     }
     .vaneArrow{
-      width:20px;
-      height:20px;
+      width:32px;
+      height:32px;
+      max-width:100%;
       display:block;
       filter: drop-shadow(0 1px 2px rgba(0,0,0,.6));
       transform-origin: 50% 50%;
@@ -109,9 +122,13 @@
       user-select:none;
       pointer-events:none;
     }
+    img{
+      max-width:100%;
+      height:auto;
+    }
     .vaneText{display:flex; flex-direction:column; line-height:1.1}
     .vaneLabel{font-size:12px; font-weight:400; color:var(--muted)}
-    .vaneValue{font-size:16px; font-weight:800; color:var(--text)}
+    .vaneValue{font-size:20px; font-weight:800; color:var(--text)}
     .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
     .pill{
       display:inline-flex; gap:8px; align-items:center;
@@ -153,6 +170,7 @@
 
     table{
       width:100%;
+      max-width:100%;
       border-collapse:separate;
       border-spacing:0;
       overflow:hidden;
@@ -169,6 +187,9 @@
       border-bottom:1px solid var(--line);
       font-weight:700;
     }
+    #hourlyTable thead th strong{
+      font-weight:700;
+    }
     tbody td{
       padding:10px 12px;
       border-bottom:1px solid rgba(35,42,65,.65);
@@ -176,6 +197,106 @@
     }
     tbody tr:last-child td{border-bottom:none}
     .mono{font-variant-numeric:tabular-nums}
+
+    /* Фиксированный первый столбец для почасовой таблицы */
+    .hourlyTableWrapper{
+      width:100%;
+      overflow-x:auto;
+      overflow-y:visible;
+    }
+    #hourlyTable{
+      width:auto;
+      min-width:100%;
+      table-layout:auto;
+    }
+    #hourlyTable thead th:first-child,
+    #hourlyTable tbody td:first-child{
+      position:sticky;
+      left:0;
+      z-index:10;
+      background:rgba(0,0,0,.12);
+      border-right:1px solid var(--line);
+      box-shadow:2px 0 4px rgba(0,0,0,.15);
+      width:90px;
+      min-width:90px;
+      padding:16px 8px;
+      min-height:60px;
+      display:flex;
+      align-items:center;
+      gap:4px;
+    }
+    #hourlyTable thead th:first-child{
+      background:#11172a;
+      z-index:11;
+    }
+    #hourlyTable tbody tr td:first-child{
+      background:rgba(0,0,0,.12);
+    }
+    #hourlyTable tbody tr:last-child td:first-child{
+      border-bottom:none;
+    }
+    /* Стиль для текста в первом столбце с названиями строк (кроме первой строки с временем) */
+    #hourlyTable tbody tr:not(:first-child) td:first-child{
+      font-size:7pt;
+      color:#f7f9fb;
+    }
+    #hourlyTable tbody tr:not(:first-child) td:first-child > span{
+      flex:1;
+      line-height:1.3;
+    }
+    .rowIcon{
+      width:20px;
+      height:20px;
+      flex-shrink:0;
+      display:block;
+      margin-top:2px;
+    }
+    /* Остальные столбцы растягиваются и скроллятся */
+    #hourlyTable thead th:not(:first-child),
+    #hourlyTable tbody td:not(:first-child){
+      min-width:65px;
+      white-space:nowrap;
+      padding:16px 8px;
+      position:relative;
+      min-height:60px;
+    }
+    #hourlyTable tbody tr{
+      height:60px;
+    }
+    #hourlyTable tbody td:not(:first-child){
+      vertical-align:bottom;
+    }
+    .hourlyBar{
+      position:absolute;
+      bottom:0;
+      left:0;
+      right:0;
+      /* Градиент: вертикальный от белого к прозрачному белому (снизу вверх)
+         Чтобы изменить цвет градиента, замените rgba(255,255,255,...) на нужный цвет
+         Например: rgba(255,100,100,0.3) для красного, rgba(100,255,100,0.3) для зеленого */
+      background:linear-gradient(to top, rgba(48, 71, 104, 0.605), rgba(77, 105, 156, 0));
+      border-radius:2px 2px 0 0;
+      pointer-events:none;
+      z-index:0;
+      transition:height 0.3s ease;
+      min-height:7px;
+    }
+    #hourlyTable tbody td:not(:first-child) .cellContent{
+      position:relative;
+      z-index:1;
+    }
+    /* Пульсация для столбца "Сейчас" */
+    @keyframes pulseNow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    #hourlyTable thead th:nth-child(2),
+    #hourlyTable thead th:nth-child(2) strong,
+    #hourlyTable tbody td:nth-child(2),
+    #hourlyTable tbody td:nth-child(2) .cellContent{
+      animation: pulseNow 2s ease-in-out infinite;
+      color: #ffffff !important;
+    }
 
     .loadingText{
       font-size:24px;
@@ -194,6 +315,8 @@
       gap:10px;
       align-items:stretch;
       margin-top:12px;
+      width:100%;
+      min-width:0;
     }
     @media (min-width: 860px){
       .statsRow{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -203,10 +326,39 @@
       border-radius:12px;
       background:rgba(0,0,0,.14);
       padding:10px 12px;
+      width:100%;
+      min-width:0;
+      overflow:hidden;
     }
     .statLabel{font-size:12px; font-weight:400; color:var(--muted); line-height:1.2}
-    .statValue{margin-top:6px; font-size:32px; font-weight:800; line-height:1}
+    .statValue{
+      margin-top:6px;
+      font-size:32px;
+      font-weight:800;
+      line-height:1;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .statIcon{
+      width:24px;
+      height:24px;
+      flex-shrink:0;
+      display:block;
+      opacity: 1;
+    }
     .statUnit{font-size:14px; font-weight:700; color:var(--muted); margin-left:6px}
+    .lastNewsBadge{
+      display:inline-block;
+      padding:6px 12px;
+      border-radius:8px;
+      background:#FF7E38;
+      color:#000000;
+      font-weight:400;
+      font-size:13px;
+      margin-top:8px;
+      margin-bottom:12px;
+    }
     .news{
       display:grid;
       gap:10px;
@@ -225,7 +377,78 @@
     }
     .newsItem .t{font-weight:700; line-height:1.35}
     .newsItem .m{margin-top:6px; color:var(--muted); font-size:12px}
-    footer{max-width:1100px; margin:0 auto; padding:0 var(--pad) 22px; color:var(--muted); font-size:12px}
+    footer{
+      max-width:1100px;
+      margin:0 auto;
+      padding:0 var(--pad) 22px;
+      color:var(--muted);
+      font-size:12px;
+      width:100%;
+      min-width:0;
+    }
+
+    /* Нижний стек с навигацией */
+    .bottomNav{
+      position:fixed;
+      bottom:0;
+      left:0;
+      right:0;
+      width:100%;
+      background:#000000;
+      border-radius:20px 20px 0 0;
+      display:flex;
+      align-items:center;
+      padding:12px 0;
+      z-index:1000;
+      box-shadow:0 -2px 10px rgba(0,0,0,.3);
+    }
+    .navBtn{
+      flex:1;
+      background:transparent;
+      border:none;
+      color:#ffffff;
+      font-size:14px;
+      font-weight:500;
+      padding:10px 0;
+      cursor:pointer;
+      text-align:center;
+      text-decoration:none;
+      display:block;
+    }
+    .navBtn:hover{
+      opacity:0.8;
+    }
+    .navBtn:visited,
+    .navBtn:active,
+    .navBtn:focus{
+      text-decoration:none;
+      color:#ffffff;
+    }
+    .navDivider{
+      width:1px;
+      height:20px;
+      background:rgba(255, 255, 255, 0.06);
+      flex-shrink:0;
+    }
+    /* Отступ снизу для контента, чтобы не перекрывался навигацией */
+    body{
+      padding-bottom:60px;
+    }
+
+    /* Мобильная адаптивность */
+    @media (max-width: 480px){
+      :root{
+        --pad:12px;
+      }
+      h1{font-size:28px}
+      .card{padding:0px}
+      #map{height:280px}
+      .statValue{font-size:28px}
+      .vaneBox{
+        padding:6px 8px;
+        font-size:12px;
+      }
+    }
   </style>
 </head>
 
@@ -237,64 +460,101 @@
 
   <div class="wrap grid">
     <!-- MAP -->
-    <section class="card">
+    <section id="now" class="card">
       <div class="row">
       </div>
       <div class="statsRow" aria-label="Погода сейчас">
         <div class="statCard">
-          <div class="statLabel">Воздух</div>
-          <div class="statValue"><span id="nowAirTemp" class="mono">—</span><span class="statUnit">°C</span></div>
-        </div>
-        <div class="statCard">
           <div class="statLabel">Ветер</div>
-          <div class="statValue"><span id="nowWind" class="mono">—</span><span class="statUnit">м/с</span></div>
+          <div class="statValue">
+            <img src="./i_wind.png" alt="" class="statIcon" />
+            <span id="nowWind" class="mono">—</span><span class="statUnit">м/с</span>
+          </div>
         </div>
         <div class="statCard">
           <div class="statLabel">Порывы</div>
-          <div class="statValue"><span id="nowGust" class="mono">—</span><span class="statUnit">м/с</span></div>
+          <div class="statValue">
+            <img src="./i_wind.png" alt="" class="statIcon" />
+            <span id="nowGust" class="mono">—</span><span class="statUnit">м/с</span>
+          </div>
+        </div>
+        <div class="statCard">
+          <div class="statLabel">Воздух</div>
+          <div class="statValue">
+            <img src="./i_temp.png" alt="" class="statIcon" />
+            <span id="nowAirTemp" class="mono">—</span><span class="statUnit">°C</span>
+          </div>
         </div>
         <div class="statCard">
           <div class="statLabel">Температура воды</div>
-          <div class="statValue"><span id="nowWater" class="mono">—</span><span class="statUnit">°C</span></div>
+          <div class="statValue">
+            <img src="./i_water.png" alt="" class="statIcon" />
+            <span id="nowWater" class="mono">—</span><span class="statUnit">°C</span>
+          </div>
         </div>
       </div>
       <div id="map" style="margin-top:12px">
-        <canvas id="tileCanvas"></canvas>
         <div class="vaneBox" id="windVane" aria-label="Флюгер ветра">
           <div class="vaneArrowWrap"><img class="vaneArrow" id="windVaneArrow" src="./arrow.svg" alt="" /></div>
           <div class="vaneText">
             <div class="vaneLabel">Ветер</div>
-            <div class="vaneValue"><span id="windVaneDeg" class="mono">—</span>°</div>
+            <div class="vaneValue"><span id="windVaneDeg" class="mono">—</span>° <span id="windVaneDir">—</span></div>
           </div>
         </div>
       </div>
       <div class="status" id="mapStatus" style="margin-top:10px">—</div>
-      <div class="hint">
+      <!-- <div class="hint">
         Карта — MapLibre GL JS. Стиль берётся из локального файла <span class="mono">map1.json</span> (рядом с <span class="mono">spot.html</span>).
+      </div> -->
+    </section>
+
+    <!-- HOURLY FORECAST -->
+    <section id="hourly" class="card hourlyForecastCard">
+      <div style="font-weight:800; font-size:24px">Почасовой прогноз <br>6 часов</div>
+      <div class="hint">Температура воздуха, скорость ветра, порывы и температура воды.</div>
+      
+      <div class="hourlyTableWrapper" style="margin-top:10px">
+        <table id="hourlyTable">
+          <thead id="hourlyThead">
+            <tr>
+              <th></th>
+              <th>Сейчас</th>
+              <th>+3 ч</th>
+              <th>+6 ч</th>
+              <th>+9 ч</th>
+              <th>+12 ч</th>
+              <th>+15 ч</th>
+              <th>+18 ч</th>
+            </tr>
+          </thead>
+          <tbody id="hourlyTbody">
+            <tr><td colspan="8" class="mono loadingText" style="color:var(--muted)">Загрузка…</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
     <!-- FORECAST -->
-    <section class="card">
+    <section id="forecast" class="card">
       <div class="row" style="justify-content:space-between">
         <div>
           <div style="font-weight:800; font-size:24px">Прогноз на сегодня <br>+ 5 дней</div>
-          <div class="hint">Ветер/порывы/температура воздуха + (если доступно) температура воды.</div>
+          <div class="hint">Ветер, порывы, температура воздуха и (если доступно) температура воды.</div>
         </div>
         <button id="btnRefresh">Обновить</button>
       </div>
 
       <div class="status" id="wxStatus">—</div>
 
-      <div style="margin-top:10px; overflow:auto">
-        <table>
+      <div style="margin-top:10px; overflow-x:auto; width:100%; min-width:0">
+        <table style="width:100%; min-width:0">
           <thead>
             <tr>
               <th>День</th>
-              <th>Воздух, °C (min–max)</th>
-              <th>Ветер, м/с (max)</th>
-              <th>Порывы, м/с (max)</th>
-              <th>Вода, °C (ср.)</th>
+              <th>Ветер м/с (max)</th>
+              <th>Порывы м/с (max)</th>
+              <th>Воздух °C (min–max)</th>
+              <th>Вода °C (ср.)</th>
             </tr>
           </thead>
           <tbody id="wxTbody">
@@ -305,15 +565,15 @@
     </section>
 
     <!-- RSS -->
-    <section class="card">
+    <section id="news" class="card">
       <div style="font-weight:800; font-size:24px">Новости о мазуте (RSS)</div>
+      <div class="lastNewsBadge" id="lastNewsBadge" style="display:none">Последняя новость была <span id="lastNewsDate">—</span></div>
       <div class="controls">
         <input id="rssQuery" type="text" value="мазут Анапа Краснодар" readonly />
         <button id="btnNews" style="display:none">Обновить новости</button>
       </div>
       <div class="hint">
-        Новости берутся из файла <span class="mono">news_cache.json</span>, который обновляется GitHub Actions раз в 24 часа.
-        Поэтому страница не ходит в RSS напрямую (нет проблем с CORS/прокси).
+        Новости обновляются каждые 24 часа на основе открытых RSS источников из интернета.
       </div>
 
       <div class="status" id="newsStatus">—</div>
@@ -321,9 +581,20 @@
     </section>
   </div>
 
-  <footer>
+  <!-- Нижний стек с навигацией -->
+  <nav class="bottomNav">
+    <a href="#now" class="navBtn">Сейчас</a>
+    <div class="navDivider"></div>
+    <a href="#hourly" class="navBtn">На день</a>
+    <div class="navDivider"></div>
+    <a href="#forecast" class="navBtn">На неделю</a>
+    <div class="navDivider"></div>
+    <a href="#news" class="navBtn">Мазут</a>
+  </nav>
+
+  <!-- <footer>
     Подсказка: чтобы уменьшить нагрузку на источники, можно добавить кеширование (например, через Cloudflare Worker).
-  </footer>
+  </footer> -->
 
   <script>
     // ====== НАСТРОЙКИ (Анапа) ======
@@ -334,7 +605,7 @@
     // POI точки (добавляй новые элементы сюда)
     // lat / lon — координаты, label — подпись
     const POIS = [
-      { lat: 44.8917273, lon: 37.2963998, label: "Пляж" },
+      // { lat: 44.8917273, lon: 37.2963998, label: "Пляж" },
     ];
 
     // Open-Meteo (погода) — daily на 6 дней
@@ -397,13 +668,45 @@
       el.textContent = Number(v).toFixed(digits);
     }
 
+    function getWindDirection(deg) {
+      // Преобразует градусы в текстовое направление ветра
+      const directions = [
+        { min: 337.5, max: 22.5, dir: 'С' },
+        { min: 22.5, max: 67.5, dir: 'СВ' },
+        { min: 67.5, max: 112.5, dir: 'В' },
+        { min: 112.5, max: 157.5, dir: 'ЮВ' },
+        { min: 157.5, max: 202.5, dir: 'Ю' },
+        { min: 202.5, max: 247.5, dir: 'ЮЗ' },
+        { min: 247.5, max: 292.5, dir: 'З' },
+        { min: 292.5, max: 337.5, dir: 'СЗ' }
+      ];
+      
+      const normalizedDeg = ((deg % 360) + 360) % 360;
+      
+      for (const dir of directions) {
+        if (dir.min > dir.max) {
+          // Для С (север) - особый случай, так как диапазон переходит через 0
+          if (normalizedDeg >= dir.min || normalizedDeg < dir.max) {
+            return dir.dir;
+          }
+        } else {
+          if (normalizedDeg >= dir.min && normalizedDeg < dir.max) {
+            return dir.dir;
+          }
+        }
+      }
+      return '—';
+    }
+
     function setWindVane(deg) {
       const degEl = document.getElementById("windVaneDeg");
+      const dirEl = document.getElementById("windVaneDir");
       const arrowEl = document.getElementById("windVaneArrow");
       if (!degEl || !arrowEl) return;
 
       if (deg === null || deg === undefined || Number.isNaN(deg)) {
         degEl.textContent = "—";
+        if (dirEl) dirEl.textContent = "—";
         arrowEl.style.opacity = "0.35";
         arrowEl.style.transform = "rotate(0deg)";
         return;
@@ -411,6 +714,7 @@
 
       const d = ((Number(deg) % 360) + 360) % 360;
       degEl.textContent = d.toFixed(0);
+      if (dirEl) dirEl.textContent = getWindDirection(d);
       arrowEl.style.opacity = "1";
       // Поворачиваем стрелку на градусы направления ветра (как в данных источника)
       arrowEl.style.transform = `rotate(${d}deg)`;
@@ -423,22 +727,15 @@
       const h = wxJson?.hourly;
       if (h?.time?.length) {
         const i = nearestTimeIndex(h.time, nowMs);
-        const windSpeed = h.windspeed_10m?.[i];
-        const windDir = h.winddirection_10m?.[i];
-        
         setNowValue("nowAirTemp", h.temperature_2m?.[i], 0);
-        setNowValue("nowWind", windSpeed, 1);
+        setNowValue("nowWind", h.windspeed_10m?.[i], 1);
         setNowValue("nowGust", h.windgusts_10m?.[i], 1);
-        setWindVane(windDir);
-        
-        // Обновляем анимацию тайлов
-        updateTileAnimation(windSpeed, windDir);
+        setWindVane(h.winddirection_10m?.[i]);
       } else {
         setNowValue("nowAirTemp", null);
         setNowValue("nowWind", null);
         setNowValue("nowGust", null);
         setWindVane(null);
-        updateTileAnimation(0, 0);
       }
 
       // water from Marine hourly (if available)
@@ -454,164 +751,6 @@
     function setStatus(el, text, kind = "") {
       el.className = "status" + (kind ? " " + kind : "");
       el.textContent = text;
-    }
-
-    // ====== АНИМАЦИЯ ТАЙЛОВ ======
-    let tileAnimation = {
-      canvas: null,
-      ctx: null,
-      tileImage: null,
-      tiles: [],
-      windSpeed: 0,      // м/с
-      windDirection: 0,  // градусы (0 = север, 90 = восток)
-      animFrame: null,
-      tileSize: 64,      // размер тайла в пикселях
-      density: 0.8,      // плотность тайлов (0-1)
-      initialized: false
-    };
-
-    function initTileAnimation() {
-      const canvas = document.getElementById("tileCanvas");
-      if (!canvas) return;
-      
-      const mapEl = document.getElementById("map");
-      if (!mapEl) return;
-
-      tileAnimation.canvas = canvas;
-      tileAnimation.ctx = canvas.getContext("2d", { alpha: true });
-      
-      // Устанавливаем размер canvas равным размеру карты
-      function resizeCanvas() {
-        const rect = mapEl.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-      }
-      resizeCanvas();
-      window.addEventListener("resize", resizeCanvas);
-
-      // Загружаем изображение тайла
-      const img = new Image();
-      img.onload = () => {
-        tileAnimation.tileImage = img;
-        createTiles();
-        if (!tileAnimation.animFrame) {
-          animateTiles();
-        }
-      };
-      img.onerror = () => {
-        console.warn("Не удалось загрузить tile_1.png");
-      };
-      img.src = "./tile_1.png";
-    }
-
-    function createTiles() {
-      if (!tileAnimation.canvas || !tileAnimation.tileImage) return;
-      
-      const w = tileAnimation.canvas.width;
-      const h = tileAnimation.canvas.height;
-      const tileSize = tileAnimation.tileSize;
-      const density = tileAnimation.density;
-      
-      // Создаём тайлы с запасом для бесшовного движения
-      const cols = Math.ceil(w / tileSize) + 2;
-      const rows = Math.ceil(h / tileSize) + 2;
-      const totalTiles = Math.floor(cols * rows * density);
-      
-      tileAnimation.tiles = [];
-      for (let i = 0; i < totalTiles; i++) {
-        tileAnimation.tiles.push({
-          x: (Math.random() * (cols * tileSize)) - tileSize,
-          y: (Math.random() * (rows * tileSize)) - tileSize,
-          offsetX: Math.random() * tileSize,
-          offsetY: Math.random() * tileSize
-        });
-      }
-      
-      tileAnimation.initialized = true;
-    }
-
-    function updateTileAnimation(windSpeed, windDirection) {
-      // Обновляем параметры ветра
-      tileAnimation.windSpeed = windSpeed || 0;
-      tileAnimation.windDirection = windDirection || 0;
-      
-      // Если анимация ещё не запущена, запускаем
-      if (!tileAnimation.animFrame && tileAnimation.initialized) {
-        animateTiles();
-      }
-    }
-
-    function animateTiles() {
-      if (!tileAnimation.canvas || !tileAnimation.ctx || !tileAnimation.tileImage) {
-        tileAnimation.animFrame = null;
-        return;
-      }
-
-      const ctx = tileAnimation.ctx;
-      const canvas = tileAnimation.canvas;
-      const img = tileAnimation.tileImage;
-      const tileSize = tileAnimation.tileSize;
-      const w = canvas.width;
-      const h = canvas.height;
-
-      // Очищаем canvas
-      ctx.clearRect(0, 0, w, h);
-
-      // Вычисляем скорость движения в пикселях за кадр
-      // Базовая скорость: 1 м/с = 0.5 пикселей/кадр (можно настроить)
-      const baseSpeed = 0.5;
-      const speedPx = tileAnimation.windSpeed * baseSpeed;
-      
-      // Направление ветра в радианах (метеорологическое: 0 = север, по часовой)
-      // Для движения на экране: 0° = вверх, 90° = вправо
-      const dirRad = ((tileAnimation.windDirection * Math.PI) / 180);
-      
-      // Вычисляем смещение по X и Y
-      // В метеорологии: направление ветра = откуда дует (0° = с севера, т.е. на юг)
-      // Для визуализации: направление движения = куда дует (противоположное)
-      const moveDirRad = dirRad + Math.PI; // поворачиваем на 180°
-      const dx = Math.sin(moveDirRad) * speedPx;
-      const dy = -Math.cos(moveDirRad) * speedPx; // минус, т.к. Y растёт вниз
-
-      // Обновляем и рисуем тайлы
-      for (const tile of tileAnimation.tiles) {
-        // Двигаем тайл
-        tile.x += dx;
-        tile.y += dy;
-
-        // Обёртка для бесконечного движения
-        if (tile.x < -tileSize) tile.x += w + tileSize * 2;
-        if (tile.x > w + tileSize) tile.x -= w + tileSize * 2;
-        if (tile.y < -tileSize) tile.y += h + tileSize * 2;
-        if (tile.y > h + tileSize) tile.y -= h + tileSize * 2;
-
-        // Вычисляем центр тайла для поворота
-        const centerX = tile.x + tile.offsetX + tileSize / 2;
-        const centerY = tile.y + tile.offsetY + tileSize / 2;
-
-        // Сохраняем состояние контекста
-        ctx.save();
-
-        // Перемещаем начало координат в центр тайла
-        ctx.translate(centerX, centerY);
-
-        // Поворачиваем на угол направления движения (в направлении ветра)
-        ctx.rotate(moveDirRad);
-
-        // Рисуем тайл со смещением на половину размера (чтобы центр совпадал с точкой поворота)
-        ctx.drawImage(
-          img,
-          -tileSize / 2,
-          -tileSize / 2,
-          tileSize,
-          tileSize
-        );
-
-        // Восстанавливаем состояние контекста
-        ctx.restore();
-      }
-
-      tileAnimation.animFrame = requestAnimationFrame(animateTiles);
     }
 
     // ====== КАРТА ======
@@ -657,10 +796,6 @@
 
       map.on("style.load", () => {
         setStatus(mapStatus, "Карта загружена.", "ok");
-        // Инициализируем анимацию тайлов после загрузки карты
-        setTimeout(() => {
-          initTileAnimation();
-        }, 100);
       });
 
       map.on("error", (e) => {
@@ -742,14 +877,183 @@
         rows.push(`
           <tr>
             <td class="mono">${fmtDay(date)}</td>
-            <td class="mono">${Number(tmin[i]).toFixed(0)} – ${Number(tmax[i]).toFixed(0)}</td>
             <td class="mono">${Number(wmax[i]).toFixed(1)}</td>
             <td class="mono">${Number(gmax[i]).toFixed(1)}</td>
+            <td class="mono">${Number(tmin[i]).toFixed(0)} – ${Number(tmax[i]).toFixed(0)}</td>
             <td class="mono">${water == null ? "—" : water.toFixed(1)}</td>
           </tr>
         `);
       }
       tb.innerHTML = rows.join("");
+    }
+
+    function getBarHeight(value, min, max) {
+      if (value == null || isNaN(value)) return 0;
+      if (min === max) return 50; // Если все значения одинаковые, показываем 50%
+      // Минимальная высота 7px (при высоте строки 60px это ~11.67%)
+      // Максимальная высота: 60px - 9px = 51px (85% от высоты строки)
+      const minHeightPercent = 11.67;
+      const maxHeightPercent = 85; // Оставляем 9px сверху
+      const calculatedHeight = ((value - min) / (max - min)) * 100;
+      return Math.max(minHeightPercent, Math.min(calculatedHeight, maxHeightPercent));
+    }
+
+    function renderHourlyForecast(wxJson, marineJsonOrNull) {
+      const tb = document.getElementById("hourlyTbody");
+      const nowMs = Date.now();
+      
+      const h = wxJson?.hourly;
+      if (!h || !h.time || h.time.length === 0) {
+        tb.innerHTML = `<tr><td colspan="8" style="color:var(--bad)">Нет почасовых данных</td></tr>`;
+        return;
+      }
+
+      // Находим индекс текущего времени
+      const currentIdx = nearestTimeIndex(h.time, nowMs);
+      if (currentIdx < 0 || currentIdx >= h.time.length) {
+        tb.innerHTML = `<tr><td colspan="8" style="color:var(--bad)">Не удалось найти текущее время</td></tr>`;
+        return;
+      }
+
+      // Получаем данные для "сейчас" и далее каждые 3 часа
+      const times = h.time;
+      const airTemps = h.temperature_2m || [];
+      const windSpeeds = h.windspeed_10m || [];
+      const gusts = h.windgusts_10m || [];
+      
+      const marineHourly = marineJsonOrNull?.hourly;
+      const waterTemps = marineHourly?.sea_surface_temperature || [];
+
+      // Собираем все значения для каждой строки
+      const airValues = [];
+      const windValues = [];
+      const gustValues = [];
+      const waterValues = [];
+
+      // Собираем данные: "сейчас" и далее каждые 3 часа
+      const timeCells = ['<td class="mono">Время</td>'];
+      const airDisplays = [];
+      const windDisplays = [];
+      const gustDisplays = [];
+      const waterDisplays = [];
+      const headerHours = []; // Для заголовков
+
+      // Первый столбец - "сейчас"
+      const nowDate = new Date(times[currentIdx]);
+      const nowHour = nowDate.getHours();
+      const nowTimeStr = `${String(nowHour).padStart(2, '0')}:00`;
+      headerHours.push(nowTimeStr);
+      timeCells.push(`<td class="mono">${nowTimeStr}</td>`);
+      
+      const airTempNow = airTemps[currentIdx];
+      airValues.push(airTempNow);
+      airDisplays.push(airTempNow != null ? Number(airTempNow).toFixed(0) : '—');
+      
+      const windNow = windSpeeds[currentIdx];
+      windValues.push(windNow);
+      windDisplays.push(windNow != null ? Number(windNow).toFixed(1) : '—');
+      
+      const gustNow = gusts[currentIdx];
+      gustValues.push(gustNow);
+      gustDisplays.push(gustNow != null ? Number(gustNow).toFixed(1) : '—');
+      
+      const waterNow = waterTemps[currentIdx];
+      waterValues.push(waterNow);
+      waterDisplays.push(waterNow != null ? Number(waterNow).toFixed(1) : '—');
+
+      // Далее каждые 3 часа (максимум 6 столбцов после "сейчас")
+      for (let i = 1; i <= 6; i++) {
+        const offset = i * 3; // Каждые 3 часа
+        const idx = currentIdx + offset;
+        if (idx >= times.length) break;
+
+        const timeStr = times[idx];
+        const date = new Date(timeStr);
+        const hour = date.getHours();
+        const timeStrFormatted = `${String(hour).padStart(2, '0')}:00`;
+        headerHours.push(timeStrFormatted);
+        timeCells.push(`<td class="mono">${timeStrFormatted}</td>`);
+        
+        const airTemp = airTemps[idx];
+        airValues.push(airTemp);
+        airDisplays.push(airTemp != null ? Number(airTemp).toFixed(0) : '—');
+        
+        const wind = windSpeeds[idx];
+        windValues.push(wind);
+        windDisplays.push(wind != null ? Number(wind).toFixed(1) : '—');
+        
+        const gust = gusts[idx];
+        gustValues.push(gust);
+        gustDisplays.push(gust != null ? Number(gust).toFixed(1) : '—');
+        
+        const water = waterTemps[idx];
+        waterValues.push(water);
+        waterDisplays.push(water != null ? Number(water).toFixed(1) : '—');
+      }
+
+      // Если не хватает данных, заполняем пустыми ячейками
+      while (timeCells.length < 8) {
+        timeCells.push('<td class="mono">—</td>');
+        headerHours.push(null);
+        airValues.push(null);
+        windValues.push(null);
+        gustValues.push(null);
+        waterValues.push(null);
+        airDisplays.push('—');
+        windDisplays.push('—');
+        gustDisplays.push('—');
+        waterDisplays.push('—');
+      }
+
+      // Вычисляем min и max для каждой строки
+      const airValid = airValues.filter(v => v != null && !isNaN(v));
+      const windValid = windValues.filter(v => v != null && !isNaN(v));
+      const gustValid = gustValues.filter(v => v != null && !isNaN(v));
+      const waterValid = waterValues.filter(v => v != null && !isNaN(v));
+
+      const airMin = airValid.length > 0 ? Math.min(...airValid) : 0;
+      const airMax = airValid.length > 0 ? Math.max(...airValid) : 1;
+      const windMin = windValid.length > 0 ? Math.min(...windValid) : 0;
+      const windMax = windValid.length > 0 ? Math.max(...windValid) : 1;
+      const gustMin = gustValid.length > 0 ? Math.min(...gustValid) : 0;
+      const gustMax = gustValid.length > 0 ? Math.max(...gustValid) : 1;
+      const waterMin = waterValid.length > 0 ? Math.min(...waterValid) : 0;
+      const waterMax = waterValid.length > 0 ? Math.max(...waterValid) : 1;
+
+      // Функция для создания строки с диаграммами
+      const createRow = (label, values, displays, min, max, showBar = true) => {
+        const cells = [label];
+        for (let i = 0; i < values.length; i++) {
+          const value = values[i];
+          const height = showBar ? getBarHeight(value, min, max) : 0;
+          const bar = (showBar && height > 0) ? `<div class="hourlyBar" style="height:${height}%"></div>` : '';
+          cells.push(`<td class="mono"><div class="cellContent">${displays[i]}</div>${bar}</td>`);
+        }
+        return cells.join('');
+      };
+
+      // Обновляем заголовки таблицы с временем
+      const thead = document.getElementById("hourlyThead");
+      if (thead) {
+        const headerCells = thead.querySelectorAll('th:not(:first-child)');
+        headerCells.forEach((th, i) => {
+          if (i === 0) {
+            th.innerHTML = '<strong>Сейчас</strong>';
+          } else if (headerHours[i] != null) {
+            th.innerHTML = `<strong>${headerHours[i]}</strong>`;
+          } else {
+            th.innerHTML = `<strong>+${i * 3} ч</strong>`;
+          }
+        });
+      }
+
+      tb.innerHTML = `
+        <tr>${timeCells.join('')}</tr>
+        <tr>${createRow('<td><img src="./i_wind.png" alt="" class="rowIcon" /><span>Ветер<br>м/с</span></td>', windValues, windDisplays, windMin, windMax, true)}</tr>
+        <tr>${createRow('<td><img src="./i_wind.png" alt="" class="rowIcon" /><span>Порывы,<br>м/с</span></td>', gustValues, gustDisplays, gustMin, gustMax, true)}</tr>
+        <tr>${createRow('<td><img src="./i_temp.png" alt="" class="rowIcon" /><span>Воздух<br>°C</span></td>', airValues, airDisplays, airMin, airMax, true)}</tr>
+        <tr>${createRow('<td><img src="./i_water.png" alt="" class="rowIcon" /><span>Вода<br>°C</span></td>', waterValues, waterDisplays, waterMin, waterMax, false)}</tr>
+      `;
     }
 
     async function loadForecast() {
@@ -777,8 +1081,10 @@
         }
 
         renderForecast(wx.value, waterMap);
+        renderHourlyForecast(wx.value, marineJsonForNow);
       } catch (e) {
         renderNowStats({}, null);
+        renderHourlyForecast({}, null);
         setStatus(st, "Ошибка загрузки прогноза: " + (e?.message || e), "bad");
         document.getElementById("wxTbody").innerHTML =
           `<tr><td colspan="5" style="color:var(--bad)">Не удалось загрузить прогноз</td></tr>`;
@@ -786,12 +1092,46 @@
     }
 
 
+    function formatDate(dateStr) {
+      // Форматирует дату в формат "12 янв 2025"
+      try {
+        const date = new Date(dateStr);
+        const day = date.getDate();
+        const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+        const month = months[date.getMonth()];
+        const year = date.getFullYear();
+        return `${day} ${month} ${year}`;
+      } catch (e) {
+        return dateStr;
+      }
+    }
+
     function renderNews(items) {
       const list = document.getElementById("newsList");
+      const badge = document.getElementById("lastNewsBadge");
+      const badgeDate = document.getElementById("lastNewsDate");
+      
       if (!items || items.length === 0) {
         list.innerHTML = `<div style="color:var(--muted)">Ничего не найдено.</div>`;
+        if (badge) badge.style.display = 'none';
         return;
       }
+
+      // Находим последнюю новость по дате публикации
+      const sortedItems = [...items].sort((a, b) => {
+        const dateA = new Date(a.pubDate || 0);
+        const dateB = new Date(b.pubDate || 0);
+        return dateB - dateA;
+      });
+
+      const lastNews = sortedItems[0];
+      if (lastNews && lastNews.pubDate && badge && badgeDate) {
+        badgeDate.textContent = formatDate(lastNews.pubDate);
+        badge.style.display = 'inline-block';
+      } else if (badge) {
+        badge.style.display = 'none';
+      }
+
       list.innerHTML = items
         .map((n) => `
           <div class="newsItem">
