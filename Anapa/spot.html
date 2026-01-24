@@ -628,7 +628,7 @@
           <div style="font-weight:800; font-size:24px">Прогноз на сегодня <br>+ 5 дней</div>
           <div class="hint">Ветер, порывы, температура воздуха и (если доступно) температура воды.</div>
         </div>
-        <button id="btnRefresh">Обновить</button>
+        <button id="btnRefresh" style="display:none">Обновить</button>
       </div>
 
       <div class="status" id="wxStatus">—</div>
@@ -1463,12 +1463,15 @@
         const marineJsonForNow = marine.status === "fulfilled" ? marine.value : null;
         renderNowStats(wx.value, marineJsonForNow);
 
+        const loadedAt = new Date();
+        const loadedAtStr = `${String(loadedAt.getHours()).padStart(2, "0")}:${String(loadedAt.getMinutes()).padStart(2, "0")}`;
+
         let waterMap = new Map();
         if (marine.status === "fulfilled") {
           waterMap = dailyWaterAveragesFromHourly(marine.value);
-          setStatus(st, "Прогноз обновлён. Температура воды: есть данные.", "ok");
+          setStatus(st, `Прогноз обновлен в ${loadedAtStr}`, "ok");
         } else {
-          setStatus(st, "Прогноз обновлён. Температура воды: источник недоступен — показываю без воды.", "warn");
+          setStatus(st, `Прогноз обновлен в ${loadedAtStr}`, "warn");
         }
 
         renderForecast(wx.value, waterMap);
