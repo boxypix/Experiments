@@ -878,7 +878,8 @@
         style: styleUrl,
         center: [LON, LAT],
         zoom: 12,
-        attributionControl: true,
+        // Атрибуция (контрибьюторы) будет добавлена отдельным контролом в compact-режиме
+        attributionControl: false,
         // disable rotate/tilt gestures
         dragRotate: false,
         dragPan: false,
@@ -915,6 +916,8 @@
       });
 
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+      // Контроль атрибуции в компактном виде (иконка по умолчанию)
+      map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
 
       // Временно отключен маркер на карте
       // new maplibregl.Marker()
@@ -1503,11 +1506,11 @@
         return;
       }
 
-      // Находим последнюю новость по дате публикации
+      // Сортируем новости по дате (сначала самые новые)
       const sortedItems = [...items].sort((a, b) => {
-        const dateA = new Date(a.pubDate || 0);
-        const dateB = new Date(b.pubDate || 0);
-        return dateB - dateA;
+        const dateA = Date.parse(a?.pubDate || 0);
+        const dateB = Date.parse(b?.pubDate || 0);
+        return (Number.isFinite(dateB) ? dateB : 0) - (Number.isFinite(dateA) ? dateA : 0);
       });
 
       const lastNews = sortedItems[0];
@@ -1518,10 +1521,10 @@
         badge.style.display = 'none';
       }
 
-      list.innerHTML = items
+      list.innerHTML = sortedItems
         .map((n) => `
           <div class="newsItem">
-            <div class="t"><a href="${n.link}" target="_blank" rel="noopener noreferrer">${n.title}</a></div>
+            <div class="t"><a class="newsLink" href="${n.link}" target="_blank" rel="noopener noreferrer external" referrerpolicy="no-referrer">${n.title}</a></div>
             <div class="m">${n.source ? n.source + " · " : ""}${n.pubDate}</div>
           </div>
         `)
@@ -1562,6 +1565,22 @@
       document.getElementById("btnRefresh").addEventListener("click", loadForecast);
       const btnNews = document.getElementById("btnNews");
       btnNews.addEventListener("click", loadNews);
+      
+      // Открытие новостей "вне приложения" (новая вкладка/внешний браузер, где возможно)
+      const newsList = document.getElementById("newsList");
+      if (newsList) {
+        newsList.addEventListener("click", (e) => {
+          const a = e.target?.closest?.("a.newsLink");
+          if (!a) return;
+          e.preventDefault();
+          const url = a.href;
+          const w = window.open(url, "_blank", "noopener,noreferrer");
+          if (!w) {
+            // fallback: если попап заблокирован/не поддерживается
+            window.location.href = url;
+          }
+        });
+      }
 
       // Автозагрузка
       loadForecast();
