@@ -38,6 +38,7 @@
     }
     html{
       scroll-behavior:smooth;
+      background:#000000;
     }
     body{
       font-family:var(--font);
@@ -53,6 +54,46 @@
     }
     h1{margin:0 0 6px; font-size:34px; font-weight:700}
     .sub{color:var(--muted); font-size:13px}
+    .alertInformer{
+      width:100%;
+      border-radius:16px;
+      padding:8px 12px;
+      margin-top:12px;
+      display:none;
+      color:#000000;
+      font-size:12px;
+      font-weight:400;
+      line-height:1.5;
+      text-align:left;
+    }
+    .alertInformer.visible{
+      display:block;
+    }
+    .alertInformer.critical{
+      background:#FFBF00;
+    }
+    .alertInformer.dangerous{
+      background:#FF431E;
+    }
+    .alertInformerHeader{
+      display:flex;
+      align-items:center;
+      gap:7px;
+      margin-bottom:6px;
+      font-size:20px;
+      font-weight:700;
+      color:#000000;
+    }
+    .alertInformerIcon{
+      width:20px;
+      height:20px;
+      flex-shrink:0;
+      display:block;
+    }
+    .alertInformer .alertLine{
+      margin:0;
+      padding:0;
+    }
     .wrap{
       max-width:1100px;
       margin:0 auto;
@@ -74,7 +115,7 @@
     .hourlyForecastCard{
       overflow:visible;
     }
-    #map{height:340px; border-radius:12px; overflow:hidden; position:relative}
+    #map{height:360px; border-radius:12px; overflow:hidden; position:relative}
     .poiDot{width:8px; height:8px; border-radius:999px; background:#ff3b30; box-shadow:0 0 0 2px rgba(0,0,0,.35)}
     .poiLabel{
       margin-left:8px;
@@ -93,42 +134,63 @@
     .poiWrap{display:flex; align-items:center}
     .vaneBox{
       position:absolute;
-      top:10px;
-      left:10px;
+      top:50%;
+      left:50%;
+      transform:translate(-50%, -50%);
       z-index:2;
+      width:300px;
+      height:300px;
       display:flex;
       align-items:center;
-      gap:10px;
-      padding:8px 10px;
-      border-radius:12px;
-      border:none;
-      background:rgba(0,0,0,0.9);
-      backdrop-filter: blur(6px);
+      justify-content:center;
     }
-    .vaneArrowWrap{
-      width:36px;
-      height:36px;
-      display:grid;
-      place-items:center;
-    }
-    .vaneArrow{
-      width:32px;
-      height:32px;
-      max-width:100%;
-      display:block;
-      filter: drop-shadow(0 1px 2px rgba(0,0,0,.6));
-      transform-origin: 50% 50%;
-      transform: rotate(0deg);
-      user-select:none;
+    .vaneLayer{
+      position:absolute;
+      top:50%;
+      left:50%;
+      transform:translate(-50%, -50%);
+      width:300px;
+      height:300px;
       pointer-events:none;
     }
+    .vaneRose1{
+      width:300px;
+      height:300px;
+      object-fit:contain;
+    }
+    .vaneRose2{
+      width:300px;
+      height:300px;
+      object-fit:contain;
+      transform-origin:50% 50%;
+      transform:translate(-50%, -50%) rotate(0deg);
+    }
+    .vaneLoop1{
+      width:300px;
+      height:300px;
+      object-fit:contain;
+      transform-origin:50% 50%;
+      transform:translate(-50%, -50%) rotate(0deg);
+      mix-blend-mode:screen;
+    }
+    .vaneTextLayer{
+      position:absolute;
+      top:50%;
+      left:50%;
+      transform:translate(-50%, -50%);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      z-index:10;
+      pointer-events:none;
+    }
+    .vaneLabel{font-size:15px; font-weight:400; color:#ffffff; margin-bottom:4px}
+    .vaneValue{font-size:31px; font-weight:800; color:#ffffff; text-align:center}
     img{
       max-width:100%;
       height:auto;
     }
-    .vaneText{display:flex; flex-direction:column; line-height:1.1}
-    .vaneLabel{font-size:12px; font-weight:400; color:var(--muted)}
-    .vaneValue{font-size:20px; font-weight:800; color:var(--text)}
     .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
     .pill{
       display:inline-flex; gap:8px; align-items:center;
@@ -454,8 +516,15 @@
 
 <body>
   <header>
-    <h1>Анапа — обстановка</h1>
-    <div class="sub">Карта сверху, прогноз на 6 дней, новости RSS по мазуту.</div>
+    <h1>Анапа — спот</h1>
+    <div class="sub">Оперативная сводка. Пррогноз на 6 дней, <br>новости RSS по мазуту.</div>
+    <div id="alertInformer" class="alertInformer" role="alert" aria-live="polite">
+      <div class="alertInformerHeader">
+        <img src="./alert.svg" alt="" class="alertInformerIcon" />
+        <span>Опасности</span>
+      </div>
+      <div id="alertInformerContent"></div>
+    </div>
   </header>
 
   <div class="wrap grid">
@@ -495,10 +564,16 @@
       </div>
       <div id="map" style="margin-top:12px">
         <div class="vaneBox" id="windVane" aria-label="Флюгер ветра">
-          <div class="vaneArrowWrap"><img class="vaneArrow" id="windVaneArrow" src="./arrow.svg" alt="" /></div>
-          <div class="vaneText">
+          <!-- Слой 1: rose_1.png (нижний) -->
+          <img class="vaneLayer vaneRose1" src="./rose_1.png" alt="" />
+          <!-- Слой 2: rose_2.png (средний, поворачивается) -->
+          <img class="vaneLayer vaneRose2" id="windVaneRose2" src="./rose_2.png" alt="" />
+          <!-- Слой 2b: loop1.gif (копия rose_2, поворачивается, режим наложения screen) -->
+          <img class="vaneLayer vaneLoop1" id="windVaneLoop1" src="./loop1.gif" alt="" style="display:none;" />
+          <!-- Слой 3: текст (верхний) -->
+          <div class="vaneTextLayer">
             <div class="vaneLabel">Ветер</div>
-            <div class="vaneValue"><span id="windVaneDeg" class="mono">—</span>° <span id="windVaneDir">—</span></div>
+            <div class="vaneValue"><span id="windVaneDeg" class="mono">—</span>° / <span id="windVaneDir">—</span></div>
           </div>
         </div>
       </div>
@@ -601,6 +676,9 @@
     const PLACE = "Анапа";
     const LAT = 44.894;     // примерно центр Анапы
     const LON = 37.316;
+    
+    // Флаг отключения отображения GIF loop1
+    const SHOW_LOOP1_GIF = false;
 
     // POI точки (добавляй новые элементы сюда)
     // lat / lon — координаты, label — подпись
@@ -701,23 +779,43 @@
     function setWindVane(deg) {
       const degEl = document.getElementById("windVaneDeg");
       const dirEl = document.getElementById("windVaneDir");
-      const arrowEl = document.getElementById("windVaneArrow");
-      if (!degEl || !arrowEl) return;
+      const rose2El = document.getElementById("windVaneRose2");
+      const loop1El = document.getElementById("windVaneLoop1");
+      if (!degEl || !rose2El) return;
 
       if (deg === null || deg === undefined || Number.isNaN(deg)) {
         degEl.textContent = "—";
         if (dirEl) dirEl.textContent = "—";
-        arrowEl.style.opacity = "0.35";
-        arrowEl.style.transform = "rotate(0deg)";
+        rose2El.style.opacity = "0.35";
+        rose2El.style.transform = "translate(-50%, -50%) rotate(0deg)";
+        if (loop1El) {
+          if (SHOW_LOOP1_GIF) {
+            loop1El.style.display = "block";
+            loop1El.style.opacity = "0.35";
+            loop1El.style.transform = "translate(-50%, -50%) rotate(0deg)";
+          } else {
+            loop1El.style.display = "none";
+          }
+        }
         return;
       }
 
       const d = ((Number(deg) % 360) + 360) % 360;
       degEl.textContent = d.toFixed(0);
       if (dirEl) dirEl.textContent = getWindDirection(d);
-      arrowEl.style.opacity = "1";
-      // Поворачиваем стрелку на градусы направления ветра (как в данных источника)
-      arrowEl.style.transform = `rotate(${d}deg)`;
+      rose2El.style.opacity = "1";
+      // Поворачиваем rose_2.png на градусы направления ветра
+      rose2El.style.transform = `translate(-50%, -50%) rotate(${d}deg)`;
+      // Поворачиваем loop1.gif на те же градусы (если включен флаг)
+      if (loop1El) {
+        if (SHOW_LOOP1_GIF) {
+          loop1El.style.display = "block";
+          loop1El.style.opacity = "1";
+          loop1El.style.transform = `translate(-50%, -50%) rotate(${d}deg)`;
+        } else {
+          loop1El.style.display = "none";
+        }
+      }
     }
 
     function renderNowStats(wxJson, marineJsonOrNull) {
@@ -783,15 +881,25 @@
         attributionControl: true,
         // disable rotate/tilt gestures
         dragRotate: false,
+        dragPan: false,
+        scrollZoom: false,
+        boxZoom: false,
+        doubleClickZoom: false,
         pitchWithRotate: false,
         touchZoomRotate: false,
+        touchPitch: false,
         maxPitch: 0,
         minPitch: 0
       });
 
-      // Extra safety: disable rotation controls if available
+      // Extra safety: disable all interactions
       map.dragRotate.disable();
+      map.dragPan.disable();
+      map.scrollZoom.disable();
+      map.boxZoom.disable();
+      map.doubleClickZoom.disable();
       map.touchZoomRotate.disableRotation();
+      map.touchPitch.disable();
       map.keyboard.disableRotation();
 
       map.on("style.load", () => {
@@ -808,20 +916,297 @@
 
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
-      new maplibregl.Marker()
-        .setLngLat([LON, LAT])
-        .setPopup(
-          new maplibregl.Popup().setHTML(
-            `<b>${PLACE}</b><br/>${LAT.toFixed(3)}, ${LON.toFixed(3)}`
-          )
-        )
-        .addTo(map);
+      // Временно отключен маркер на карте
+      // new maplibregl.Marker()
+      //   .setLngLat([LON, LAT])
+      //   .setPopup(
+      //     new maplibregl.Popup().setHTML(
+      //       `<b>${PLACE}</b><br/>${LAT.toFixed(3)}, ${LON.toFixed(3)}`
+      //     )
+      //   )
+      //   .addTo(map);
 
       // POIs из массива
       for (const p of POIS) {
         if (!p) continue;
         addPoi(map, p.lat, p.lon, p.label);
       }
+    }
+
+    // ====== ИНФОРМЕР КРИТИЧНЫХ УСЛОВИЙ ======
+    
+    // Пороги для информера
+    const ALERT_THRESHOLDS = {
+      wind: { critical: 12, dangerous: 20 },
+      gust: { critical: 15, dangerous: 25 },
+      heat: { critical: 30, dangerous: 34 }
+    };
+
+    // Определяет уровень критичности
+    function getSeverity(value, thresholds) {
+      if (value == null || isNaN(value)) return null;
+      if (value >= thresholds.dangerous) return 'dangerous';
+      if (value >= thresholds.critical) return 'critical';
+      return null;
+    }
+
+    // Форматирует время для отображения
+    function formatTime(isoString) {
+      const d = new Date(isoString);
+      return `${String(d.getHours()).padStart(2, '0')}:00`;
+    }
+
+    // Форматирует день для отображения (используем существующую функцию)
+    function formatDayShort(isoDate) {
+      return fmtDay(isoDate);
+    }
+
+    // Анализирует "Сейчас" - ближайший час
+    function analyzeNow(wxJson) {
+      const events = [];
+      const nowMs = Date.now();
+      const h = wxJson?.hourly;
+      if (!h?.time?.length) return events;
+
+      const i = nearestTimeIndex(h.time, nowMs);
+      if (i < 0 || i >= h.time.length) return events;
+
+      const wind = h.windspeed_10m?.[i];
+      const gust = h.windgusts_10m?.[i];
+      const temp = h.temperature_2m?.[i];
+
+      // Ветер
+      const windSev = getSeverity(wind, ALERT_THRESHOLDS.wind);
+      if (windSev) {
+        const text = windSev === 'dangerous' 
+          ? `Сейчас штормовой ветер до ${Number(wind).toFixed(1)} м/с`
+          : `Сейчас сильный ветер до ${Number(wind).toFixed(1)} м/с`;
+        events.push({ type: 'wind', severity: windSev, text, time: h.time[i], value: wind });
+      }
+
+      // Порывы
+      const gustSev = getSeverity(gust, ALERT_THRESHOLDS.gust);
+      if (gustSev) {
+        const text = gustSev === 'dangerous'
+          ? `Сейчас опасные порывы до ${Number(gust).toFixed(1)} м/с`
+          : `Сейчас сильные порывы до ${Number(gust).toFixed(1)} м/с`;
+        events.push({ type: 'gust', severity: gustSev, text, time: h.time[i], value: gust });
+      }
+
+      // Жара
+      const heatSev = getSeverity(temp, ALERT_THRESHOLDS.heat);
+      if (heatSev) {
+        const text = heatSev === 'dangerous'
+          ? `Сейчас сильная жара до ${Number(temp).toFixed(0)}°C`
+          : `Сейчас жарко до ${Number(temp).toFixed(0)}°C`;
+        events.push({ type: 'heat', severity: heatSev, text, time: h.time[i], value: temp });
+      }
+
+      return events;
+    }
+
+    // Анализирует "Сегодня" - следующие 24 часа
+    function analyzeToday(wxJson) {
+      const events = [];
+      const nowMs = Date.now();
+      const h = wxJson?.hourly;
+      if (!h?.time?.length) return events;
+
+      const currentIdx = nearestTimeIndex(h.time, nowMs);
+      if (currentIdx < 0) return events;
+
+      // Берем следующие 24 часа
+      const endIdx = Math.min(currentIdx + 24, h.time.length);
+      const times = h.time.slice(currentIdx, endIdx);
+      const winds = (h.windspeed_10m || []).slice(currentIdx, endIdx);
+      const gusts = (h.windgusts_10m || []).slice(currentIdx, endIdx);
+      const temps = (h.temperature_2m || []).slice(currentIdx, endIdx);
+
+      // Анализируем ветер - находим интервалы критичных/опасных значений
+      const windIntervals = findIntervals(times, winds, ALERT_THRESHOLDS.wind);
+      for (const interval of windIntervals) {
+        const text = interval.severity === 'dangerous'
+          ? `Штормовой ветер ${formatInterval(interval)} до ${Number(interval.maxValue).toFixed(1)} м/с`
+          : `Сильный ветер ${formatInterval(interval)} до ${Number(interval.maxValue).toFixed(1)} м/с`;
+        events.push({ type: 'wind', severity: interval.severity, text, time: interval.startTime, value: interval.maxValue });
+      }
+
+      // Анализируем порывы
+      const gustIntervals = findIntervals(times, gusts, ALERT_THRESHOLDS.gust);
+      for (const interval of gustIntervals) {
+        const text = interval.severity === 'dangerous'
+          ? `Опасные порывы ${formatInterval(interval)} до ${Number(interval.maxValue).toFixed(1)} м/с`
+          : `Сильные порывы ${formatInterval(interval)} до ${Number(interval.maxValue).toFixed(1)} м/с`;
+        events.push({ type: 'gust', severity: interval.severity, text, time: interval.startTime, value: interval.maxValue });
+      }
+
+      // Анализируем жару
+      const heatIntervals = findIntervals(times, temps, ALERT_THRESHOLDS.heat);
+      for (const interval of heatIntervals) {
+        const text = interval.severity === 'dangerous'
+          ? `Сильная жара ${formatInterval(interval)} до ${Number(interval.maxValue).toFixed(0)}°C`
+          : `Жарко ${formatInterval(interval)} до ${Number(interval.maxValue).toFixed(0)}°C`;
+        events.push({ type: 'heat', severity: interval.severity, text, time: interval.startTime, value: interval.maxValue });
+      }
+
+      return events;
+    }
+
+    // Находит интервалы критичных/опасных значений
+    function findIntervals(times, values, thresholds) {
+      const intervals = [];
+      let currentInterval = null;
+
+      for (let i = 0; i < times.length && i < values.length; i++) {
+        const value = values[i];
+        if (value == null || isNaN(value)) continue;
+
+        const severity = getSeverity(value, thresholds);
+        if (severity) {
+          if (currentInterval && currentInterval.severity === severity) {
+            // Продолжаем интервал
+            currentInterval.endTime = times[i];
+            currentInterval.endIdx = i;
+            currentInterval.maxValue = Math.max(currentInterval.maxValue, value);
+          } else {
+            // Начинаем новый интервал
+            if (currentInterval) {
+              intervals.push(currentInterval);
+            }
+            currentInterval = {
+              startTime: times[i],
+              endTime: times[i],
+              startIdx: i,
+              endIdx: i,
+              severity,
+              maxValue: value
+            };
+          }
+        } else {
+          // Завершаем интервал
+          if (currentInterval) {
+            intervals.push(currentInterval);
+            currentInterval = null;
+          }
+        }
+      }
+
+      if (currentInterval) {
+        intervals.push(currentInterval);
+      }
+
+      return intervals;
+    }
+
+    // Форматирует интервал времени
+    function formatInterval(interval) {
+      const startTime = formatTime(interval.startTime);
+      if (interval.startTime === interval.endTime) {
+        return `в ${startTime}`;
+      }
+      const endTime = formatTime(interval.endTime);
+      return `с ${startTime} до ${endTime}`;
+    }
+
+    // Анализирует "Неделя" - 7 дней
+    function analyzeWeek(wxJson) {
+      const events = [];
+      const d = wxJson?.daily;
+      if (!d?.time?.length) return events;
+
+      const dates = d.time || [];
+      const wmax = d.windspeed_10m_max || [];
+      const gmax = d.windgusts_10m_max || [];
+      const tmax = d.temperature_2m_max || [];
+
+      for (let i = 0; i < Math.min(7, dates.length); i++) {
+        const date = dates[i];
+        const wind = wmax[i];
+        const gust = gmax[i];
+        const temp = tmax[i];
+
+        // Ветер
+        const windSev = getSeverity(wind, ALERT_THRESHOLDS.wind);
+        if (windSev) {
+          const text = windSev === 'dangerous'
+            ? `Штормовой ветер ${formatDayShort(date)} до ${Number(wind).toFixed(1)} м/с`
+            : `Сильный ветер ${formatDayShort(date)} до ${Number(wind).toFixed(1)} м/с`;
+          events.push({ type: 'wind', severity: windSev, text, time: date, value: wind });
+        }
+
+        // Порывы
+        const gustSev = getSeverity(gust, ALERT_THRESHOLDS.gust);
+        if (gustSev) {
+          const text = gustSev === 'dangerous'
+            ? `Опасные порывы ${formatDayShort(date)} до ${Number(gust).toFixed(1)} м/с`
+            : `Сильные порывы ${formatDayShort(date)} до ${Number(gust).toFixed(1)} м/с`;
+          events.push({ type: 'gust', severity: gustSev, text, time: date, value: gust });
+        }
+
+        // Жара
+        const heatSev = getSeverity(temp, ALERT_THRESHOLDS.heat);
+        if (heatSev) {
+          const text = heatSev === 'dangerous'
+            ? `Сильная жара ${formatDayShort(date)} до ${Number(temp).toFixed(0)}°C`
+            : `Жарко ${formatDayShort(date)} до ${Number(temp).toFixed(0)}°C`;
+          events.push({ type: 'heat', severity: heatSev, text, time: date, value: temp });
+        }
+      }
+
+      return events;
+    }
+
+    // Сортирует события: опасные → критичные → ближайшие по времени
+    function sortEvents(events) {
+      return events.sort((a, b) => {
+        // Сначала по уровню опасности
+        if (a.severity === 'dangerous' && b.severity !== 'dangerous') return -1;
+        if (a.severity !== 'dangerous' && b.severity === 'dangerous') return 1;
+        
+        // Затем по времени (ближайшие первыми)
+        const timeA = Date.parse(a.time);
+        const timeB = Date.parse(b.time);
+        if (isNaN(timeA) || isNaN(timeB)) return 0;
+        return timeA - timeB;
+      });
+    }
+
+    // Рендерит информер
+    function renderAlertInformer(wxJson) {
+      const container = document.getElementById("alertInformer");
+      const content = document.getElementById("alertInformerContent");
+      if (!container || !content) return;
+
+      // Собираем все события
+      const nowEvents = analyzeNow(wxJson);
+      const todayEvents = analyzeToday(wxJson);
+      const weekEvents = analyzeWeek(wxJson);
+
+      // Объединяем и сортируем
+      let allEvents = [...nowEvents, ...todayEvents, ...weekEvents];
+      allEvents = sortEvents(allEvents);
+
+      // Ограничиваем максимум 5 строками
+      allEvents = allEvents.slice(0, 5);
+
+      // Если нет событий - скрываем информер
+      if (allEvents.length === 0) {
+        container.classList.remove("visible", "critical", "dangerous");
+        return;
+      }
+
+      // Определяем цвет фона
+      const hasDangerous = allEvents.some(e => e.severity === 'dangerous');
+      container.classList.remove("critical", "dangerous");
+      if (hasDangerous) {
+        container.classList.add("dangerous");
+      } else {
+        container.classList.add("critical");
+      }
+      container.classList.add("visible");
+
+      // Формируем содержимое
+      content.innerHTML = allEvents.map(e => `<div class="alertLine">${e.text}</div>`).join("");
     }
 
     // ====== ПОГОДА ======
@@ -1048,7 +1433,6 @@
       }
 
       tb.innerHTML = `
-        <tr>${timeCells.join('')}</tr>
         <tr>${createRow('<td><img src="./i_wind.png" alt="" class="rowIcon" /><span>Ветер<br>м/с</span></td>', windValues, windDisplays, windMin, windMax, true)}</tr>
         <tr>${createRow('<td><img src="./i_wind.png" alt="" class="rowIcon" /><span>Порывы,<br>м/с</span></td>', gustValues, gustDisplays, gustMin, gustMax, true)}</tr>
         <tr>${createRow('<td><img src="./i_temp.png" alt="" class="rowIcon" /><span>Воздух<br>°C</span></td>', airValues, airDisplays, airMin, airMax, true)}</tr>
@@ -1082,9 +1466,11 @@
 
         renderForecast(wx.value, waterMap);
         renderHourlyForecast(wx.value, marineJsonForNow);
+        renderAlertInformer(wx.value);
       } catch (e) {
         renderNowStats({}, null);
         renderHourlyForecast({}, null);
+        renderAlertInformer({});
         setStatus(st, "Ошибка загрузки прогноза: " + (e?.message || e), "bad");
         document.getElementById("wxTbody").innerHTML =
           `<tr><td colspan="5" style="color:var(--bad)">Не удалось загрузить прогноз</td></tr>`;
