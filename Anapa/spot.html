@@ -115,7 +115,20 @@
     .hourlyForecastCard{
       overflow:visible;
     }
-    #map{height:360px; border-radius:12px; overflow:hidden; position:relative}
+    #map{height:400px; border-radius:12px; overflow:hidden; position:relative}
+    
+    /* Атрибуция карты: по умолчанию показываем только (i) */
+    .maplibregl-ctrl-attrib{
+      background:transparent !important;
+      box-shadow:none !important;
+    }
+    .maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-inner{
+      display:none !important;
+    }
+    .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner,
+    .maplibregl-ctrl-attrib.maplibregl-ctrl-attrib-show .maplibregl-ctrl-attrib-inner{
+      display:block !important;
+    }
     .poiDot{width:8px; height:8px; border-radius:999px; background:#ff3b30; box-shadow:0 0 0 2px rgba(0,0,0,.35)}
     .poiLabel{
       margin-left:8px;
@@ -504,7 +517,7 @@
       }
       h1{font-size:28px}
       .card{padding:0px}
-      #map{height:280px}
+      #map{height:320px}
       .statValue{font-size:28px}
       .vaneBox{
         padding:6px 8px;
@@ -577,7 +590,6 @@
           </div>
         </div>
       </div>
-      <div class="status" id="mapStatus" style="margin-top:10px">—</div>
       <!-- <div class="hint">
         Карта — MapLibre GL JS. Стиль берётся из локального файла <span class="mono">map1.json</span> (рядом с <span class="mono">spot.html</span>).
       </div> -->
@@ -870,8 +882,6 @@
 
     function initMap() {
       const styleUrl = new URL("./map1.json", window.location.href).toString();
-      const mapStatus = document.getElementById("mapStatus");
-      setStatus(mapStatus, `Загружаю стиль карты… (${styleUrl})`);
 
       const map = new maplibregl.Map({
         container: "map",
@@ -903,14 +913,8 @@
       map.touchPitch.disable();
       map.keyboard.disableRotation();
 
-      map.on("style.load", () => {
-        setStatus(mapStatus, "Карта загружена.", "ok");
-      });
-
       map.on("error", (e) => {
         // MapLibre часто пишет полезный текст в e.error
-        const msg = e?.error?.message || e?.error || e?.message || "Не удалось загрузить стиль/тайлы.";
-        setStatus(mapStatus, "Ошибка карты: " + msg, "bad");
         // Дополнительно в консоль для отладки
         console.error("MapLibre error:", e);
       });
