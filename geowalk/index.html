@@ -126,8 +126,10 @@
         <label>Скорость ходьбы <input id="walk" type="number" min="0" step="0.5" /></label>
         <label>Ускорение (Shift) <input id="run" type="number" min="1" step="1" /></label>
         <label>Взлёт / спуск <input id="fly" type="number" min="0" step="0.5" /></label>
+        <label>Дальность прорисовки (0–1) <input id="draw" type="number" min="0" max="1" step="0.05" /></label>
         <div class="sep"></div>
         <label>3D рельеф (×, 0=выкл) <input id="relief" type="number" min="0" step="0.5" /></label>
+        <label>Игнорировать рельеф камерой <input id="noterrcol" type="checkbox" /></label>
         <label>Тени зданий <input id="shadows" type="checkbox" /></label>
         <div class="sep"></div>
         <div>Город:</div>
@@ -176,8 +178,13 @@
         start: { lng: 44.80148, lat: 41.69354 }, // Тбилиси (проспект Руставели)
         startBearing: 35,
         eyeHeight: 2.3,       // высота глаз, м (рост повыше)
+        startHeightMultiplier: 10, // при старте поднимаемся в N раз выше роста
         groundAlt: 0,         // уровень земли, м
         fov: 90,              // вертикальный угол обзора
+        // Ближняя плоскость отсечения: MapLibre по умолчанию height/50, из-за чего
+        // у плоской камеры близкие объекты сильно обрезаются. Больше делитель —
+        // ближе плоскость — меньше обрезаются объекты у камеры (ценой точности глубины).
+        nearClipDivisor: 4000,
         walkSpeed: 20,        // м/с
         runMultiplier: 50,    // ускорение по Shift (×50)
         flySpeed: 20,         // м/с — подъём (Space) / спуск (X)
@@ -199,6 +206,9 @@
         styleUrl: "https://tiles.openfreemap.org/styles/liberty",
         // 3D рельеф (DEM от AWS, terrarium). 0 = выключен.
         terrainExaggeration: 1,
+        // Игнорировать рельеф камерой: камера держит постоянную высоту,
+        // не повторяя неровности рельефа (centerClampedToGround=false + фикс. база).
+        ignoreTerrainCollision: true,
         demUrl: "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
         demEncoding: "terrarium",
         // Тени зданий в реальном времени (CustomLayer, проекция следа + AO).
@@ -253,11 +263,15 @@
         lat: CONFIG.start.lat,
         yaw: CONFIG.startBearing,    // курс, град
         pitch: CONFIG.pitchStart,    // наклон камеры, град (0=вниз,90=горизонт)
-        altOffset: 0,                // подъём над землёй (полёт), м
+        altOffset: CONFIG.eyeHeight * (CONFIG.startHeightMultiplier - 1), // старт выше в N раз
         speed: 0,
         eye: CONFIG.eyeHeight,
         collision: true
     };
+
+    // фиксированная высота рельефа-базы (м над уровнем моря) при включённом
+    // «игнорировать рельеф»: камера держит постоянную абсолютную высоту = база + рост.
+    let fixedElevation = null;
 
     const keys = Object.create(null);
     let locked = false;
@@ -291,9 +305,7 @@
     document.addEventListener("mousemove", (e) => {
         if (!locked) return;
         player.yaw = ((player.yaw + e.movementX * CONFIG.mouseYaw) % 360 + 360) % 360;
-        // мышь вверх (movementY<0) → смотрим выше → pitch к горизонту (больше)
-        player.pitch -= e.movementY * CONFIG.mousePitch;
-        player.pitch = Math.max(CONFIG.pitchMin, Math.min(CONFIG.pitchMax, player.pitch));
+        // вертикальный обзор отключён — наклон камеры фиксирован (CONFIG.pitchStart)
     });
 
     function isTyping(e) {
@@ -318,6 +330,7 @@
     const elWalk = document.getElementById("walk");
     const elRun = document.getElementById("run");
     const elFly = document.getElementById("fly");
+    const elDraw = document.getElementById("draw");
     const elCity = document.getElementById("city");
     const elCityGo = document.getElementById("city-go");
     const elCityStatus = document.getElementById("city-status");
@@ -325,6 +338,7 @@
     elWalk.value = CONFIG.walkSpeed;
     elRun.value = CONFIG.runMultiplier;
     elFly.value = CONFIG.flySpeed;
+    elDraw.value = CONFIG.fogGroundBlend;
 
     function bindNumber(el, apply) {
         el.addEventListener("input", () => {
@@ -335,18 +349,43 @@
     bindNumber(elWalk, v => CONFIG.walkSpeed = v);
     bindNumber(elRun, v => CONFIG.runMultiplier = v);
     bindNumber(elFly, v => CONFIG.flySpeed = v);
+    bindNumber(elDraw, v => { CONFIG.fogGroundBlend = Math.max(0, Math.min(1, v)); applySky(); });
 
     // 3D рельеф + тени
     const elRelief = document.getElementById("relief");
+    const elNoTerrCol = document.getElementById("noterrcol");
     const elShadows = document.getElementById("shadows");
     elRelief.value = CONFIG.terrainExaggeration;
+    elNoTerrCol.checked = CONFIG.ignoreTerrainCollision;
     elShadows.checked = CONFIG.shadows;
+
+    function applySky() {
+        // Дальность прорисовки задаётся туманом: больше fog-ground-blend → дальше видно.
+        try {
+            map.setSky({
+                "sky-color": CONFIG.skyColor,
+                "sky-horizon-blend": CONFIG.skyHorizonBlend,
+                "horizon-color": CONFIG.horizonColor,
+                "horizon-fog-blend": 0.5,
+                "fog-color": CONFIG.fogColor,
+                "fog-ground-blend": CONFIG.fogGroundBlend
+            });
+        } catch (err) { console.warn("Sky:", err); }
+    }
 
     function applyTerrain(ex) {
         try {
             if (ex && ex > 0) map.setTerrain({ source: "terrain-dem", exaggeration: ex });
             else map.setTerrain(null);
         } catch (e) { console.warn("terrain:", e); }
+    }
+
+    function applyTerrainCollision(ignore) {
+        // ignore=true → постоянная высота камеры (база захватывается в applyCamera);
+        // ignore=false → камера повторяет рельеф (центр привязан к земле).
+        CONFIG.ignoreTerrainCollision = ignore;
+        fixedElevation = null; // пересчитать базу на текущем месте
+        if (!ignore) { try { map.setCenterClampedToGround(true); } catch (e) {} }
     }
 
     let ShadowClass = null;
@@ -376,6 +415,10 @@
         const v = parseFloat(elRelief.value);
         if (!isNaN(v)) { CONFIG.terrainExaggeration = v; applyTerrain(v); }
     });
+    elNoTerrCol.addEventListener("change", () => {
+        CONFIG.ignoreTerrainCollision = elNoTerrCol.checked;
+        applyTerrainCollision(CONFIG.ignoreTerrainCollision);
+    });
     elShadows.addEventListener("change", () => {
         if (elShadows.checked) enableShadows(); else disableShadows();
     });
@@ -394,6 +437,7 @@
             player.lng = lng;
             player.lat = lat;
             player.altOffset = 0;
+            fixedElevation = null; // пересчитать базу высоты на новом месте
             const p = f.properties || {};
             elCityStatus.textContent = "→ " + (p.name || name) + (p.country ? ", " + p.country : "");
         } catch (err) {
@@ -460,16 +504,7 @@
     map.on("load", () => {
         try { map.setVerticalFieldOfView(CONFIG.fov); } catch (err) { console.warn("FOV:", err); }
         stripIconLayers();
-        try {
-            map.setSky({
-                "sky-color": CONFIG.skyColor,
-                "sky-horizon-blend": CONFIG.skyHorizonBlend,
-                "horizon-color": CONFIG.horizonColor,
-                "horizon-fog-blend": 0.5,
-                "fog-color": CONFIG.fogColor,
-                "fog-ground-blend": CONFIG.fogGroundBlend
-            });
-        } catch (err) { console.warn("Sky:", err); }
+        applySky();
 
         // 3D рельеф: источник высот (DEM)
         try {
@@ -483,6 +518,7 @@
                 });
             }
             applyTerrain(CONFIG.terrainExaggeration);
+            applyTerrainCollision(CONFIG.ignoreTerrainCollision);
         } catch (err) { console.warn("DEM:", err); }
 
         // Тени зданий
@@ -566,14 +602,55 @@
         const dLat = (Math.cos(b) * groundDist) / M_PER_DEG_LAT;
         const dLng = (Math.sin(b) * groundDist) / (M_PER_DEG_LAT * cosLat);
 
+        const opts = {
+            center: [player.lng + dLng, player.lat + dLat],
+            zoom,
+            bearing: player.yaw,
+            pitch: player.pitch
+        };
+
+        if (CONFIG.ignoreTerrainCollision) {
+            // постоянная высота: один раз фиксируем базу рельефа и держим её,
+            // тогда камера = база + рост, не повторяя неровности под ногами.
+            if (fixedElevation === null) {
+                if (!map.getTerrain()) {
+                    // рельеф выключен — база на уровне моря
+                    fixedElevation = 0;
+                } else if (map.isSourceLoaded("terrain-dem")) {
+                    // ждём реальные данные высот; ровный 0 до загрузки игнорируем,
+                    // чтобы не зафиксировать базу под землёй
+                    const te = map.queryTerrainElevation([player.lng, player.lat]);
+                    if (typeof te === "number" && isFinite(te) && te !== 0) fixedElevation = te;
+                }
+            }
+            if (fixedElevation !== null) {
+                if (map.getCenterClampedToGround()) map.setCenterClampedToGround(false);
+                opts.elevation = fixedElevation;
+            } else {
+                // база ещё не готова (DEM грузится) — временно идём по рельефу,
+                // чтобы не провалиться под землю
+                if (!map.getCenterClampedToGround()) map.setCenterClampedToGround(true);
+            }
+        } else if (!map.getCenterClampedToGround()) {
+            map.setCenterClampedToGround(true);
+        }
+
         try {
-            map.jumpTo({
-                center: [player.lng + dLng, player.lat + dLat],
-                zoom,
-                bearing: player.yaw,
-                pitch: player.pitch
-            });
+            map.jumpTo(opts);
         } catch (err) { /* пропускаем редкий сбой кадра */ }
+
+        // Приближаем ближнюю плоскость отсечения, чтобы близкие к камере объекты
+        // и края карты не обрезались. Дальнюю оставляем как авто-рассчитанную.
+        try {
+            const tr = map.transform;
+            if (typeof tr.overrideNearFarZ === "function") {
+                tr.clearNearFarZOverride();             // авто near/far под текущий кадр
+                const farZ = tr.farZ;
+                const h = tr.height || map.getCanvas().height || 800;
+                const nearZ = Math.max(0.02, h / CONFIG.nearClipDivisor);
+                if (isFinite(farZ) && farZ > nearZ) tr.overrideNearFarZ(nearZ, farZ);
+            }
+        } catch (err) { /* near/far override недоступен — пропускаем */ }
     }
 
     function updateHUD() {
