@@ -50,6 +50,9 @@
         #hud b { color: var(--accent); font-weight: 600; }
         #hud .row { display: flex; justify-content: space-between; gap: 14px; }
         #help { right: 14px; top: 14px; line-height: 1.6; }
+        body.overlay-open #panel,
+        body.overlay-open #help,
+        body.overlay-open #hud { display: none; }
         #help kbd {
             display: inline-block; min-width: 16px; text-align: center; padding: 1px 5px;
             border-radius: 4px; background: rgba(106, 209, 255, 0.15);
@@ -73,11 +76,9 @@
             border: 1px solid rgba(106,209,255,0.3); border-radius: 6px;
             font: inherit; outline: none;
         }
-        #panel input#city { width: 118px; text-align: left; }
         #panel input[type=checkbox] { width: auto; }
         #panel input:focus { border-color: var(--accent); }
         #panel .sep { margin-top: 9px; padding-top: 7px; border-top: 1px solid rgba(106,209,255,0.15); }
-        #panel .city-row { display: flex; gap: 6px; margin-top: 4px; }
         #panel button {
             flex: 1; padding: 5px 8px; cursor: pointer;
             background: rgba(106,209,255,0.16); color: #eaf6ff;
@@ -85,14 +86,62 @@
         }
         #panel button:hover { background: rgba(106,209,255,0.28); }
         #panel .hint { opacity: 0.55; margin-top: 8px; font-size: 11px; }
-        #panel #city-status { margin-top: 4px; min-height: 14px; color: var(--accent); font-size: 11px; }
+        #panel .style-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+        #panel button.mini { flex: 0 0 auto; padding: 3px 9px; font-size: 11px; border-radius: 5px; }
+        #panel #style-status { color: var(--accent); font-size: 11px; opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Поиск места — сверху по центру */
+        #search-bar {
+            position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+            z-index: 22; pointer-events: auto;
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            width: min(560px, calc(100vw - 280px));
+        }
+        #search-bar .search-row {
+            display: flex; align-items: stretch; gap: 10px; width: 100%;
+        }
+        #search-bar input {
+            flex: 1; min-width: 0; padding: 11px 16px;
+            font: 16px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #eaf6ff; background: rgba(10, 16, 24, 0.72);
+            border: 1px solid rgba(106, 209, 255, 0.35); border-radius: 10px;
+            outline: none; backdrop-filter: blur(8px);
+        }
+        #search-bar input::placeholder { color: rgba(207, 232, 255, 0.45); }
+        #search-bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(106, 209, 255, 0.15); }
+        #search-bar button {
+            flex: 0 0 auto; padding: 11px 22px; cursor: pointer;
+            font: 600 15px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #eaf6ff; background: rgba(106, 209, 255, 0.22);
+            border: 1px solid rgba(106, 209, 255, 0.45); border-radius: 10px;
+            backdrop-filter: blur(8px);
+        }
+        #search-bar button:hover { background: rgba(106, 209, 255, 0.34); }
+        #search-bar #city-status {
+            min-height: 16px; color: var(--accent);
+            font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            text-align: center; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+        }
 
         #resume-hint {
-            position: absolute; left: 50%; top: 18px; transform: translateX(-50%);
-            z-index: 9; display: none; pointer-events: none;
+            position: absolute; left: 50%; top: 88px; transform: translateX(-50%);
+            z-index: 10; display: none; pointer-events: none;
             font: 12px/1 ui-monospace, monospace; color: #eaf6ff;
             background: rgba(10,16,24,0.6); border: 1px solid rgba(106,209,255,0.3);
             border-radius: 999px; padding: 7px 14px; backdrop-filter: blur(6px);
+        }
+        #flight-hint {
+            position: absolute; left: 50%; top: 88px; transform: translateX(-50%);
+            z-index: 10; display: none; pointer-events: none;
+            font: 13px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #eaf6ff; background: rgba(10, 16, 24, 0.65);
+            border: 1px solid rgba(106, 209, 255, 0.35); border-radius: 999px;
+            padding: 8px 16px; backdrop-filter: blur(6px);
+        }
+        #flight-hint kbd {
+            display: inline-block; min-width: 18px; text-align: center; padding: 1px 6px;
+            margin-right: 4px; border-radius: 4px; background: rgba(106, 209, 255, 0.15);
+            border: 1px solid rgba(106, 209, 255, 0.35); color: #eaf6ff;
         }
 
         #overlay {
@@ -104,7 +153,7 @@
             transition: opacity 0.25s ease;
         }
         #overlay .logo {
-            width: 900px; max-width: 90vw; height: auto; display: block;
+            width: 1200px; max-width: 90vw; height: auto; display: block;
         }
         #overlay p { margin: 0; opacity: 0.85; font-size: 15px; max-width: 460px; }
         #overlay .play {
@@ -117,7 +166,7 @@
         #loading { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); z-index: 21; color: #9fd0ff; font-size: 13px; font-family: ui-monospace, monospace; }
     </style>
 </head>
-<body>
+<body class="overlay-open">
     <div id="map"></div>
     <div id="crosshair"></div>
 
@@ -132,22 +181,30 @@
         <label>Игнорировать рельеф камерой <input id="noterrcol" type="checkbox" /></label>
         <label>Тени зданий <input id="shadows" type="checkbox" /></label>
         <div class="sep"></div>
-        <div>Город:</div>
-        <div class="city-row">
-            <input id="city" type="text" placeholder="напр. Paris" />
-            <button id="city-go">Лететь</button>
+        <div class="style-row">
+            <button id="style-swap" class="mini" type="button">Swap style</button>
+            <span id="style-status"></span>
         </div>
-        <div id="city-status"></div>
+        <input id="style-file" type="file" accept=".json,application/json" hidden />
         <div class="hint">Esc — освободить курсор, чтобы менять поля</div>
     </div>
 
+    <div id="search-bar">
+        <div class="search-row">
+            <input id="city" type="search" placeholder="Город или место…" autocomplete="off" spellcheck="false" />
+            <button id="city-go" type="button">Лететь</button>
+        </div>
+        <div id="city-status"></div>
+    </div>
+
     <div id="resume-hint">Кликни по карте, чтобы вернуться к обзору</div>
+    <div id="flight-hint">Нажми <kbd>Esc</kbd> чтобы выйти из полета</div>
 
     <div id="help">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — ходьба</div>
         <div><kbd>Мышь</kbd> — обзор</div>
         <div><kbd>Space</kbd> — вверх · <kbd>X</kbd> — вниз</div>
-        <div><kbd>Shift</kbd> — ускорение ×100</div>
+        <div id="help-shift"><kbd>Shift</kbd> — ускорение</div>
         <div><kbd>Esc</kbd> — освободить курсор</div>
     </div>
 
@@ -164,17 +221,28 @@
         <img class="logo" src="images/logo_big.png" width="900" alt="World Geo Walk" />
         <p>3D-бродилка от первого лица по реальной карте. Гуляй между зданий, взлетай и осматривайся.</p>
         <div class="play">Кликни, чтобы начать ▶</div>
-        <p class="muted">WASD — ходьба · мышь — обзор · Space/X — вверх/вниз · Shift — ×50</p>
-        <div id="loading">загрузка карты…</div>
+        <p class="muted" id="overlay-hint"></p>
+        <div id="loading">реальный мир уже загружен</div>
     </div>
+
+    <!-- Запасные данные для открытия через file:// (двойным кликом), когда
+         браузер блокирует загрузку локальных settings.json и maps/*.json.
+         Генерируются из JSON командой `npm run snapshot`. При запуске через
+         http-сервер эти файлы можно игнорировать. -->
+    <script src="settings.js"></script>
+    <script src="maps/map1.js"></script>
 
     <script>
     "use strict";
 
     // ----------------------------------------------------------------------
-    // Настройки
+    // Настройки.
+    // Значения берутся из settings.json в корне проекта (его и правим);
+    // объект ниже — встроенные значения по умолчанию на случай, если файл
+    // недоступен (например, при открытии через file://).
     // ----------------------------------------------------------------------
-    const CONFIG = {
+    const CONFIG = (function () {
+        const defaults = {
         start: { lng: 44.80148, lat: 41.69354 }, // Тбилиси (проспект Руставели)
         startBearing: 35,
         eyeHeight: 2.3,       // высота глаз, м (рост повыше)
@@ -186,8 +254,10 @@
         // ближе плоскость — меньше обрезаются объекты у камеры (ценой точности глубины).
         nearClipDivisor: 4000,
         walkSpeed: 20,        // м/с
-        runMultiplier: 50,    // ускорение по Shift (×50)
+        runMultiplier: 50,    // ускорение по Shift (переопределяется settings.json)
         flySpeed: 20,         // м/с — подъём (Space) / спуск (X)
+        inertiaEnabled: true,   // инерция горизонтального движения (только settings.json)
+        inertia: 0.14,          // степень инертности, сек (больше — плавнее разгон/торможение)
         mouseYaw: 0.16,       // чувств. поворота, град/пиксель
         mousePitch: 0.10,     // чувств. наклона, град/пиксель
         // Наклон камеры (0 = вниз, 90 = горизонт). MapLibre у земли стабилен
@@ -196,14 +266,16 @@
         pitchMax: 88,         // самый ровный наклон без артефактов (≈2° вниз)
         pitchStart: 88,       // смотрим прямо и чуть вниз
         maxSafeZoom: 20,      // выше — нестабильно у горизонта
-        // Голубое небо + туман (дальность прорисовки). Меньше fogGroundBlend —
-        // ближе туман, короче видимость. 0.2 ≈ вдвое короче, чем дефолт 0.5.
-        skyColor: "#1f7ae0",
-        skyHorizonBlend: 0.35,
-        horizonColor: "#9fc8ff",
-        fogColor: "#cfe3ff",
-        fogGroundBlend: 0.2,
-        styleUrl: "https://tiles.openfreemap.org/styles/liberty",
+        // Небо + туман (градиент и дальность прорисовки) — править в settings.json → sky
+        sky: {
+            color: "#1f7ae0",
+            horizonBlend: 0.35,
+            horizonColor: "#9fc8ff",
+            horizonFogBlend: 0.5,
+            fogColor: "#cfe3ff",
+            fogGroundBlend: 0.2
+        },
+        styleUrl: "maps/map1.json", // стиль по умолчанию (папка /maps)
         // 3D рельеф (DEM от AWS, terrarium). 0 = выключен.
         terrainExaggeration: 1,
         // Игнорировать рельеф камерой: камера держит постоянную высоту,
@@ -220,7 +292,102 @@
         // Столкновения со зданиями: активны, пока высота над землёй ≤ этого значения.
         // Выше — пролетаем сквозь дома.
         collisionHeight: 10
-    };
+        };
+
+        function merge(o, source) {
+            const m = Object.assign({}, defaults, o);
+            if (o && o.start) m.start = Object.assign({}, defaults.start, o.start);
+            // sky — только из settings.json / settings.js, без подмешивания встроенных цветов
+            if (o && o.sky) m.sky = o.sky;
+            else m.sky = Object.assign({}, defaults.sky);
+            if (source) m._source = source;
+            return m;
+        }
+        // 1) settings.json — основной источник (работает через http-сервер)
+        if (location.protocol !== "file:") {
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open("GET", "settings.json", false);
+                xhr.send(null);
+                if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+                    return merge(JSON.parse(xhr.responseText), "settings.json");
+                }
+            } catch (e) { /* запасной вариант ниже */ }
+        }
+        // 2) settings.js — снимок settings.json для file:// (npm run snapshot)
+        if (window.GEOWALK_SETTINGS) return merge(window.GEOWALK_SETTINGS, "settings.js");
+        // 3) встроенные значения по умолчанию
+        return merge({}, "defaults");
+    })();
+
+    function styleNameFromUrl(url) {
+        if (!url || typeof url !== "string") return "embedded";
+        const m = url.match(/([^/\\]+)\.(json|js)$/i);
+        return m ? m[1] : url;
+    }
+
+    // Сразу применяем settings.json к полям панели и подсказкам (до init карты)
+    const elWalk = document.getElementById("walk");
+    const elRun = document.getElementById("run");
+    const elFly = document.getElementById("fly");
+    const elDraw = document.getElementById("draw");
+    const elRelief = document.getElementById("relief");
+    const elNoTerrCol = document.getElementById("noterrcol");
+    const elShadows = document.getElementById("shadows");
+    const elStyleStatus = document.getElementById("style-status");
+    const elHelpShift = document.getElementById("help-shift");
+    const elOverlayHint = document.getElementById("overlay-hint");
+
+    function applyConfigToUI() {
+        elWalk.value = CONFIG.walkSpeed;
+        elRun.value = CONFIG.runMultiplier;
+        elFly.value = CONFIG.flySpeed;
+        elDraw.value = CONFIG.sky.fogGroundBlend;
+        elRelief.value = CONFIG.terrainExaggeration;
+        elNoTerrCol.checked = CONFIG.ignoreTerrainCollision;
+        elShadows.checked = CONFIG.shadows;
+        elStyleStatus.textContent = "стиль: " + styleNameFromUrl(CONFIG.styleUrl);
+        elHelpShift.innerHTML = "<kbd>Shift</kbd> — ускорение ×" + CONFIG.runMultiplier;
+        elOverlayHint.textContent = "WASD — ходьба · мышь — обзор · Space/X — вверх/вниз · Shift — ×" + CONFIG.runMultiplier;
+    }
+    applyConfigToUI();
+
+    // Небо из settings.json → поля MapLibre Style Spec (sky)
+    function skyToStyleSpec(sky) {
+        if (!sky) return undefined;
+        return {
+            "sky-color": sky.color,
+            "sky-horizon-blend": sky.horizonBlend,
+            "horizon-color": sky.horizonColor,
+            "horizon-fog-blend": sky.horizonFogBlend,
+            "fog-color": sky.fogColor,
+            "fog-ground-blend": sky.fogGroundBlend
+        };
+    }
+
+    function styleWithSkyFromConfig(style) {
+        if (!style || typeof style !== "object" || !CONFIG.sky) return style;
+        const next = Object.assign({}, style);
+        next.sky = skyToStyleSpec(CONFIG.sky);
+        return next;
+    }
+
+    function loadInitialStyle() {
+        if (location.protocol === "file:" && window.GEOWALK_STYLE) {
+            return styleWithSkyFromConfig(window.GEOWALK_STYLE);
+        }
+        if (location.protocol !== "file:") {
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open("GET", CONFIG.styleUrl, false);
+                xhr.send(null);
+                if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+                    return styleWithSkyFromConfig(JSON.parse(xhr.responseText));
+                }
+            } catch (e) { /* MapLibre загрузит styleUrl сам */ }
+        }
+        return CONFIG.styleUrl;
+    }
 
     const EARTH_CIRC = 40075016.686; // м
     const TILE = 512;
@@ -230,9 +397,12 @@
     // ----------------------------------------------------------------------
     // Карта
     // ----------------------------------------------------------------------
+    // Стиль + небо из settings.json: sky вшивается в объект стиля до создания карты.
+    const initialStyle = loadInitialStyle();
+
     const map = new maplibregl.Map({
         container: "map",
-        style: CONFIG.styleUrl,
+        style: initialStyle,
         center: [CONFIG.start.lng, CONFIG.start.lat],
         zoom: 18,
         bearing: CONFIG.startBearing,
@@ -272,6 +442,13 @@
     // фиксированная высота рельефа-базы (м над уровнем моря) при включённом
     // «игнорировать рельеф»: камера держит постоянную абсолютную высоту = база + рост.
     let fixedElevation = null;
+    // скорость в системе игрока (м/с): вперёд/назад и влево/вправо — для инерции
+    let velFwd = 0, velStrafe = 0;
+
+    // Автопрокрутка на заставке: вперёд 10 м/с, не дольше 2 мин, пока виден оверлей
+    const OVERLAY_AUTO_WALK_SPEED = 10;
+    const OVERLAY_AUTO_WALK_SEC = 120;
+    let overlayAutoWalkTime = 0;
 
     const keys = Object.create(null);
     let locked = false;
@@ -283,9 +460,27 @@
     // ----------------------------------------------------------------------
     const overlay = document.getElementById("overlay");
     const resumeHint = document.getElementById("resume-hint");
+    const flightHint = document.getElementById("flight-hint");
     const canvasEl = map.getCanvas();
 
+    function overlayVisible() {
+        return !overlay.classList.contains("hidden");
+    }
+
+    function syncOverlayChrome() {
+        document.body.classList.toggle("overlay-open", overlayVisible());
+    }
+
     function requestLock() { canvasEl.requestPointerLock?.(); }
+
+    function dismissOverlay() {
+        started = true;
+        overlay.classList.add("hidden");
+        resumeHint.style.display = "none";
+        flightHint.style.display = "none";
+        syncOverlayChrome();
+    }
+
     overlay.addEventListener("click", requestLock);
     canvasEl.addEventListener("click", () => { if (!locked) requestLock(); });
 
@@ -295,11 +490,14 @@
             started = true;
             overlay.classList.add("hidden");
             resumeHint.style.display = "none";
+            flightHint.style.display = "block";
         } else {
+            flightHint.style.display = "none";
             // после старта не показываем большую заставку, чтобы был доступ к полям
             if (started) resumeHint.style.display = "block";
             else overlay.classList.remove("hidden");
         }
+        syncOverlayChrome();
     });
 
     document.addEventListener("mousemove", (e) => {
@@ -327,18 +525,9 @@
     // ----------------------------------------------------------------------
     // Панель настроек + переход по городу
     // ----------------------------------------------------------------------
-    const elWalk = document.getElementById("walk");
-    const elRun = document.getElementById("run");
-    const elFly = document.getElementById("fly");
-    const elDraw = document.getElementById("draw");
     const elCity = document.getElementById("city");
     const elCityGo = document.getElementById("city-go");
     const elCityStatus = document.getElementById("city-status");
-
-    elWalk.value = CONFIG.walkSpeed;
-    elRun.value = CONFIG.runMultiplier;
-    elFly.value = CONFIG.flySpeed;
-    elDraw.value = CONFIG.fogGroundBlend;
 
     function bindNumber(el, apply) {
         el.addEventListener("input", () => {
@@ -349,27 +538,12 @@
     bindNumber(elWalk, v => CONFIG.walkSpeed = v);
     bindNumber(elRun, v => CONFIG.runMultiplier = v);
     bindNumber(elFly, v => CONFIG.flySpeed = v);
-    bindNumber(elDraw, v => { CONFIG.fogGroundBlend = Math.max(0, Math.min(1, v)); applySky(); });
-
-    // 3D рельеф + тени
-    const elRelief = document.getElementById("relief");
-    const elNoTerrCol = document.getElementById("noterrcol");
-    const elShadows = document.getElementById("shadows");
-    elRelief.value = CONFIG.terrainExaggeration;
-    elNoTerrCol.checked = CONFIG.ignoreTerrainCollision;
-    elShadows.checked = CONFIG.shadows;
+    bindNumber(elDraw, v => { CONFIG.sky.fogGroundBlend = Math.max(0, Math.min(1, v)); applySky(); });
 
     function applySky() {
-        // Дальность прорисовки задаётся туманом: больше fog-ground-blend → дальше видно.
         try {
-            map.setSky({
-                "sky-color": CONFIG.skyColor,
-                "sky-horizon-blend": CONFIG.skyHorizonBlend,
-                "horizon-color": CONFIG.horizonColor,
-                "horizon-fog-blend": 0.5,
-                "fog-color": CONFIG.fogColor,
-                "fog-ground-blend": CONFIG.fogGroundBlend
-            });
+            if (!CONFIG.sky) return;
+            map.setSky(skyToStyleSpec(CONFIG.sky));
         } catch (err) { console.warn("Sky:", err); }
     }
 
@@ -381,11 +555,9 @@
     }
 
     function applyTerrainCollision(ignore) {
-        // ignore=true → постоянная высота камеры (база захватывается в applyCamera);
-        // ignore=false → камера повторяет рельеф (центр привязан к земле).
         CONFIG.ignoreTerrainCollision = ignore;
-        fixedElevation = null; // пересчитать базу на текущем месте
-        if (!ignore) { try { map.setCenterClampedToGround(true); } catch (e) {} }
+        fixedElevation = null;
+        try { map.setCenterClampedToGround(!ignore); } catch (e) {}
     }
 
     let ShadowClass = null;
@@ -403,7 +575,6 @@
                 sourceId: CONFIG.buildingsSourceId
             });
             map.addLayer(shadowLayer, CONFIG.buildingsLayerId);
-            // свет согласован с направлением тени
             map.setLight({ anchor: "map", position: [1.2, 210, 30], intensity: 0.5 });
         } catch (e) { console.warn("shadows:", e); }
     }
@@ -423,6 +594,27 @@
         if (elShadows.checked) enableShadows(); else disableShadows();
     });
 
+    // Swap style: выбрать другой JSON-стиль карты в рамках сессии
+    const elStyleSwap = document.getElementById("style-swap");
+    const elStyleFile = document.getElementById("style-file");
+
+    elStyleSwap.addEventListener("click", () => elStyleFile.click());
+    elStyleFile.addEventListener("change", () => {
+        const file = elStyleFile.files && elStyleFile.files[0];
+        elStyleFile.value = ""; // позволить выбрать тот же файл повторно
+        if (!file) return;
+        elStyleStatus.textContent = "загрузка…";
+        const reader = new FileReader();
+        reader.onload = () => {
+            let obj;
+            try { obj = JSON.parse(reader.result); }
+            catch (e) { elStyleStatus.textContent = "не JSON"; return; }
+            swapStyle(obj, file.name);
+        };
+        reader.onerror = () => { elStyleStatus.textContent = "ошибка чтения"; };
+        reader.readAsText(file);
+    });
+
     async function goToCity(name) {
         name = (name || "").trim();
         if (!name) return;
@@ -437,9 +629,13 @@
             player.lng = lng;
             player.lat = lat;
             player.altOffset = 0;
+            velFwd = 0;
+            velStrafe = 0;
             fixedElevation = null; // пересчитать базу высоты на новом месте
             const p = f.properties || {};
             elCityStatus.textContent = "→ " + (p.name || name) + (p.country ? ", " + p.country : "");
+            dismissOverlay();
+            if (ready) applyCamera();
         } catch (err) {
             elCityStatus.textContent = "ошибка сети";
         }
@@ -501,7 +697,8 @@
     // ----------------------------------------------------------------------
     // Игровой цикл
     // ----------------------------------------------------------------------
-    map.on("load", () => {
+    // Применяет все наши настройки поверх (свеже)загруженного стиля карты.
+    function setupStyle() {
         try { map.setVerticalFieldOfView(CONFIG.fov); } catch (err) { console.warn("FOV:", err); }
         stripIconLayers();
         applySky();
@@ -521,14 +718,53 @@
             applyTerrainCollision(CONFIG.ignoreTerrainCollision);
         } catch (err) { console.warn("DEM:", err); }
 
-        // Тени зданий
+        // Тени зданий (старый слой исчез вместе с прежним стилем)
+        shadowLayer = null;
         if (CONFIG.shadows) enableShadows();
 
+        // пересчитать базу высоты и кэш зданий под новый стиль
+        fixedElevation = null;
+        buildingCache = [];
+        cacheTime = 0;
+    }
+
+    map.on("load", () => {
+        setupStyle();
         ready = true;
         applyCamera();
     });
 
+    // Замена стиля карты в рамках сессии (из выбранного JSON-файла)
+    function swapStyle(styleObj, label) {
+        try {
+            ready = false;
+            map.setStyle(styleWithSkyFromConfig(styleObj), { diff: false });
+            map.once("style.load", () => {
+                setupStyle();
+                ready = true;
+                if (elStyleStatus) elStyleStatus.textContent = label ? ("стиль: " + label) : "стиль заменён";
+            });
+        } catch (err) {
+            console.warn("swapStyle:", err);
+            ready = true;
+            if (elStyleStatus) elStyleStatus.textContent = "ошибка стиля";
+        }
+    }
+
     function update(dt) {
+        const overlayWalk = overlayVisible() &&
+            overlayAutoWalkTime < OVERLAY_AUTO_WALK_SEC &&
+            !locked;
+
+        if (overlayWalk) {
+            overlayAutoWalkTime += dt;
+            const dist = OVERLAY_AUTO_WALK_SPEED * dt;
+            const b = player.yaw * DEG;
+            player.lat += (Math.cos(b) * dist) / M_PER_DEG_LAT;
+            player.lng += (Math.sin(b) * dist) / (M_PER_DEG_LAT * Math.cos(player.lat * DEG));
+            player.speed = OVERLAY_AUTO_WALK_SPEED;
+        }
+
         // движение
         let fwd = (keys["KeyW"] || keys["ArrowUp"] ? 1 : 0) - (keys["KeyS"] || keys["ArrowDown"] ? 1 : 0);
         let strafe = (keys["KeyD"] || keys["ArrowRight"] ? 1 : 0) - (keys["KeyA"] || keys["ArrowLeft"] ? 1 : 0);
@@ -542,18 +778,33 @@
             cacheTime = performance.now();
         }
 
-        let dist = 0;
+        const maxSpeed = (keys["ShiftLeft"] || keys["ShiftRight"]) ? CONFIG.walkSpeed * CONFIG.runMultiplier : CONFIG.walkSpeed;
+        let targetFwd = 0, targetStrafe = 0;
         if (locked && (fwd !== 0 || strafe !== 0)) {
             const len = Math.hypot(fwd, strafe);
-            fwd /= len; strafe /= len;
-            const speed = (keys["ShiftLeft"] || keys["ShiftRight"]) ? CONFIG.walkSpeed * CONFIG.runMultiplier : CONFIG.walkSpeed;
-            dist = speed * dt;
+            targetFwd = fwd / len;
+            targetStrafe = strafe / len;
+        }
+
+        if (CONFIG.inertiaEnabled) {
+            const tau = Math.max(0.02, CONFIG.inertia);
+            const blend = 1 - Math.exp(-dt / tau);
+            velFwd += (targetFwd * maxSpeed - velFwd) * blend;
+            velStrafe += (targetStrafe * maxSpeed - velStrafe) * blend;
+        } else {
+            velFwd = targetFwd * maxSpeed;
+            velStrafe = targetStrafe * maxSpeed;
+        }
+
+        const dist = Math.hypot(velFwd, velStrafe) * dt;
+        if (locked && dist > 1e-7) {
             const b = player.yaw * DEG;
             const sinB = Math.sin(b), cosB = Math.cos(b);
-            const north = (fwd * cosB - strafe * sinB) * dist;
-            const east  = (fwd * sinB + strafe * cosB) * dist;
+            const north = (velFwd * cosB - velStrafe * sinB) * dt;
+            const east  = (velFwd * sinB + velStrafe * cosB) * dt;
             let dLat = north / M_PER_DEG_LAT;
             let dLng = east / (M_PER_DEG_LAT * Math.cos(player.lat * DEG));
+            const reqDist = Math.hypot(north, east);
 
             // упираемся в дома (скольжение вдоль стен по осям), но не застреваем,
             // если уже оказались внутри здания — тогда даём выйти
@@ -564,8 +815,18 @@
             }
             player.lat += dLat;
             player.lng += dLng;
+
+            // при ударе о стену гасим инерцию пропорционально фактическому сдвигу
+            if (CONFIG.inertiaEnabled && reqDist > 1e-6) {
+                const actDist = Math.hypot(dLat * M_PER_DEG_LAT, dLng * M_PER_DEG_LAT * Math.cos(player.lat * DEG));
+                if (actDist < reqDist * 0.99) {
+                    const scale = actDist / reqDist;
+                    velFwd *= scale;
+                    velStrafe *= scale;
+                }
+            }
         }
-        player.speed = dt > 0 ? dist / dt : 0;
+        if (!overlayWalk) player.speed = dt > 0 ? Math.hypot(velFwd, velStrafe) : 0;
 
         // полёт: Space — вверх, X — вниз (со скоростью ходьбы)
         if (locked) {

@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "snapshot": "node make-snapshot.mjs",
+    "serve": "npx --yes http-server -p 8800 -c-1 .",
+    "start": "npm run snapshot && npm run serve",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
