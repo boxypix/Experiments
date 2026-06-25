@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <title>World Geo Walk</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <link rel="icon" href="images/favicon.ico" sizes="any" />
+
+    <meta name="description" content="World Geo Walk — 3D-бродилка от первого лица по реальной карте мира." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="World Geo Walk" />
+    <meta property="og:description" content="3D-бродилка от первого лица по реальной карте мира. Гуляй между зданий, взлетай и осматривайся." />
+    <meta property="og:image" content="images/cover.jpg" />
+    <meta property="og:image:width" content="1068" />
+    <meta property="og:image:height" content="562" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="World Geo Walk" />
+    <meta name="twitter:description" content="3D-бродилка от первого лица по реальной карте мира." />
+    <meta name="twitter:image" content="images/cover.jpg" />
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" />
+    <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+    <style>
+        :root { --accent: #6ad1ff; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0a0e14; }
+        #map { position: absolute; inset: 0; }
+        #map canvas { outline: none; }
+
+        /* Прицел */
+        #crosshair {
+            position: absolute; left: 50%; top: 50%;
+            width: 22px; height: 22px; margin: -11px 0 0 -11px;
+            pointer-events: none; z-index: 5; opacity: 0.85;
+        }
+        #crosshair::before, #crosshair::after {
+            content: ""; position: absolute; background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 3px rgba(0,0,0,0.8);
+        }
+        #crosshair::before { left: 50%; top: 0; width: 2px; height: 100%; margin-left: -1px; }
+        #crosshair::after  { top: 50%; left: 0; height: 2px; width: 100%; margin-top: -1px; }
+
+        #hud, #help {
+            position: absolute; z-index: 6;
+            font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #cfe8ff; background: rgba(10, 16, 24, 0.55);
+            border: 1px solid rgba(106, 209, 255, 0.25); border-radius: 10px;
+            padding: 10px 12px; backdrop-filter: blur(6px); pointer-events: none;
+        }
+        #hud { left: 14px; bottom: 14px; min-width: 190px; }
+        #hud b { color: var(--accent); font-weight: 600; }
+        #hud .row { display: flex; justify-content: space-between; gap: 14px; }
+        #help { right: 14px; top: 14px; line-height: 1.6; }
+        #help kbd {
+            display: inline-block; min-width: 16px; text-align: center; padding: 1px 5px;
+            border-radius: 4px; background: rgba(106, 209, 255, 0.15);
+            border: 1px solid rgba(106, 209, 255, 0.35); color: #eaf6ff;
+        }
+
+        /* Панель настроек */
+        #panel {
+            position: absolute; left: 14px; top: 14px; z-index: 8;
+            font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #cfe8ff; background: rgba(10, 16, 24, 0.62);
+            border: 1px solid rgba(106, 209, 255, 0.25); border-radius: 10px;
+            padding: 10px 12px; backdrop-filter: blur(6px);
+            pointer-events: auto; width: 210px;
+        }
+        #panel .title { color: var(--accent); font-weight: 600; margin-bottom: 8px; letter-spacing: 0.5px; }
+        #panel label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
+        #panel input {
+            width: 78px; padding: 4px 6px; text-align: right;
+            background: rgba(0,0,0,0.35); color: #eaf6ff;
+            border: 1px solid rgba(106,209,255,0.3); border-radius: 6px;
+            font: inherit; outline: none;
+        }
+        #panel input#city { width: 118px; text-align: left; }
+        #panel input[type=checkbox] { width: auto; }
+        #panel input:focus { border-color: var(--accent); }
+        #panel .sep { margin-top: 9px; padding-top: 7px; border-top: 1px solid rgba(106,209,255,0.15); }
+        #panel .city-row { display: flex; gap: 6px; margin-top: 4px; }
+        #panel button {
+            flex: 1; padding: 5px 8px; cursor: pointer;
+            background: rgba(106,209,255,0.16); color: #eaf6ff;
+            border: 1px solid rgba(106,209,255,0.4); border-radius: 6px; font: inherit;
+        }
+        #panel button:hover { background: rgba(106,209,255,0.28); }
+        #panel .hint { opacity: 0.55; margin-top: 8px; font-size: 11px; }
+        #panel #city-status { margin-top: 4px; min-height: 14px; color: var(--accent); font-size: 11px; }
+
+        #resume-hint {
+            position: absolute; left: 50%; top: 18px; transform: translateX(-50%);
+            z-index: 9; display: none; pointer-events: none;
+            font: 12px/1 ui-monospace, monospace; color: #eaf6ff;
+            background: rgba(10,16,24,0.6); border: 1px solid rgba(106,209,255,0.3);
+            border-radius: 999px; padding: 7px 14px; backdrop-filter: blur(6px);
+        }
+
+        #overlay {
+            position: absolute; inset: 0; z-index: 20;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+            background: radial-gradient(circle at 50% 40%, rgba(20,30,45,0.55), rgba(5,8,12,0.92));
+            color: #eaf6ff; text-align: center; cursor: pointer;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            transition: opacity 0.25s ease;
+        }
+        #overlay .logo {
+            width: 900px; max-width: 90vw; height: auto; display: block;
+        }
+        #overlay p { margin: 0; opacity: 0.85; font-size: 15px; max-width: 460px; }
+        #overlay .play {
+            margin-top: 6px; padding: 12px 28px; border-radius: 999px;
+            border: 1px solid rgba(106,209,255,0.5); background: rgba(106,209,255,0.12);
+            font-size: 16px; font-weight: 600; color: #eaf6ff;
+        }
+        #overlay.hidden { opacity: 0; pointer-events: none; }
+        .muted { opacity: 0.6; font-size: 12px; }
+        #loading { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); z-index: 21; color: #9fd0ff; font-size: 13px; font-family: ui-monospace, monospace; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="crosshair"></div>
+
+    <div id="panel">
+        <div class="title">Настройки</div>
+        <label>Скорость ходьбы <input id="walk" type="number" min="0" step="0.5" /></label>
+        <label>Ускорение (Shift) <input id="run" type="number" min="1" step="1" /></label>
+        <label>Взлёт / спуск <input id="fly" type="number" min="0" step="0.5" /></label>
+        <div class="sep"></div>
+        <label>3D рельеф (×, 0=выкл) <input id="relief" type="number" min="0" step="0.5" /></label>
+        <label>Тени зданий <input id="shadows" type="checkbox" /></label>
+        <div class="sep"></div>
+        <div>Город:</div>
+        <div class="city-row">
+            <input id="city" type="text" placeholder="напр. Paris" />
+            <button id="city-go">Лететь</button>
+        </div>
+        <div id="city-status"></div>
+        <div class="hint">Esc — освободить курсор, чтобы менять поля</div>
+    </div>
+
+    <div id="resume-hint">Кликни по карте, чтобы вернуться к обзору</div>
+
+    <div id="help">
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — ходьба</div>
+        <div><kbd>Мышь</kbd> — обзор</div>
+        <div><kbd>Space</kbd> — вверх · <kbd>X</kbd> — вниз</div>
+        <div><kbd>Shift</kbd> — ускорение ×100</div>
+        <div><kbd>Esc</kbd> — освободить курсор</div>
+    </div>
+
+    <div id="hud">
+        <div class="row"><span>Коорд.</span><b id="hud-coord">—</b></div>
+        <div class="row"><span>Курс</span><b id="hud-bearing">—</b></div>
+        <div class="row"><span>Взгляд</span><b id="hud-look">—</b></div>
+        <div class="row"><span>Высота</span><b id="hud-alt">—</b></div>
+        <div class="row"><span>Скорость</span><b id="hud-speed">—</b></div>
+        <div class="row"><span>Стены</span><b id="hud-collision">—</b></div>
+    </div>
+
+    <div id="overlay">
+        <img class="logo" src="images/logo_big.png" width="900" alt="World Geo Walk" />
+        <p>3D-бродилка от первого лица по реальной карте. Гуляй между зданий, взлетай и осматривайся.</p>
+        <div class="play">Кликни, чтобы начать ▶</div>
+        <p class="muted">WASD — ходьба · мышь — обзор · Space/X — вверх/вниз · Shift — ×50</p>
+        <div id="loading">загрузка карты…</div>
+    </div>
+
+    <script>
+    "use strict";
+
+    // ----------------------------------------------------------------------
+    // Настройки
+    // ----------------------------------------------------------------------
+    const CONFIG = {
+        start: { lng: 44.80148, lat: 41.69354 }, // Тбилиси (проспект Руставели)
+        startBearing: 35,
+        eyeHeight: 2.3,       // высота глаз, м (рост повыше)
+        groundAlt: 0,         // уровень земли, м
+        fov: 90,              // вертикальный угол обзора
+        walkSpeed: 20,        // м/с
+        runMultiplier: 50,    // ускорение по Shift (×50)
+        flySpeed: 20,         // м/с — подъём (Space) / спуск (X)
+        mouseYaw: 0.16,       // чувств. поворота, град/пиксель
+        mousePitch: 0.10,     // чувств. наклона, град/пиксель
+        // Наклон камеры (0 = вниз, 90 = горизонт). MapLibre у земли стабилен
+        // только в этом диапазоне, иначе рендер мерцает/падает.
+        pitchMin: 85,         // смотрим вниз (≈5° ниже горизонта)
+        pitchMax: 88,         // самый ровный наклон без артефактов (≈2° вниз)
+        pitchStart: 88,       // смотрим прямо и чуть вниз
+        maxSafeZoom: 20,      // выше — нестабильно у горизонта
+        // Голубое небо + туман (дальность прорисовки). Меньше fogGroundBlend —
+        // ближе туман, короче видимость. 0.2 ≈ вдвое короче, чем дефолт 0.5.
+        skyColor: "#1f7ae0",
+        skyHorizonBlend: 0.35,
+        horizonColor: "#9fc8ff",
+        fogColor: "#cfe3ff",
+        fogGroundBlend: 0.2,
+        styleUrl: "https://tiles.openfreemap.org/styles/liberty",
+        // 3D рельеф (DEM от AWS, terrarium). 0 = выключен.
+        terrainExaggeration: 1,
+        demUrl: "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
+        demEncoding: "terrarium",
+        // Тени зданий в реальном времени (CustomLayer, проекция следа + AO).
+        shadows: false,
+        shadowModuleUrl: "https://cdn.jsdelivr.net/gh/wallabyway/maplibre-building-shadows@main/ao-shadow.mjs",
+        buildingsLayerId: "building-3d",
+        buildingsSourceId: "openmaptiles",
+        buildingsSourceLayer: "building",
+        // Столкновения со зданиями: активны, пока высота над землёй ≤ этого значения.
+        // Выше — пролетаем сквозь дома.
+        collisionHeight: 10
+    };
+
+    const EARTH_CIRC = 40075016.686; // м
+    const TILE = 512;
+    const DEG = Math.PI / 180;
+    const M_PER_DEG_LAT = 111320;
+
+    // ----------------------------------------------------------------------
+    // Карта
+    // ----------------------------------------------------------------------
+    const map = new maplibregl.Map({
+        container: "map",
+        style: CONFIG.styleUrl,
+        center: [CONFIG.start.lng, CONFIG.start.lat],
+        zoom: 18,
+        bearing: CONFIG.startBearing,
+        pitch: 60,
+        interactive: false,
+        attributionControl: { compact: true },
+        maxPitch: 89,
+        maxZoom: 24,
+        fadeDuration: 0,
+        crossSourceCollisions: false
+    });
+
+    // Иконки POI у земли при быстрых сменах zoom вызывают сбой рендера
+    // символов в MapLibre — убираем иконочные слои (здания/дороги остаются).
+    function stripIconLayers() {
+        for (const layer of map.getStyle().layers || []) {
+            if (layer.type === "symbol" && layer.layout && layer.layout["icon-image"]) {
+                try { map.removeLayer(layer.id); } catch (e) {}
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // Состояние игрока
+    // ----------------------------------------------------------------------
+    const player = {
+        lng: CONFIG.start.lng,
+        lat: CONFIG.start.lat,
+        yaw: CONFIG.startBearing,    // курс, град
+        pitch: CONFIG.pitchStart,    // наклон камеры, град (0=вниз,90=горизонт)
+        altOffset: 0,                // подъём над землёй (полёт), м
+        speed: 0,
+        eye: CONFIG.eyeHeight,
+        collision: true
+    };
+
+    const keys = Object.create(null);
+    let locked = false;
+    let ready = false;
+    let started = false;
+
+    // ----------------------------------------------------------------------
+    // Ввод
+    // ----------------------------------------------------------------------
+    const overlay = document.getElementById("overlay");
+    const resumeHint = document.getElementById("resume-hint");
+    const canvasEl = map.getCanvas();
+
+    function requestLock() { canvasEl.requestPointerLock?.(); }
+    overlay.addEventListener("click", requestLock);
+    canvasEl.addEventListener("click", () => { if (!locked) requestLock(); });
+
+    document.addEventListener("pointerlockchange", () => {
+        locked = document.pointerLockElement === canvasEl;
+        if (locked) {
+            started = true;
+            overlay.classList.add("hidden");
+            resumeHint.style.display = "none";
+        } else {
+            // после старта не показываем большую заставку, чтобы был доступ к полям
+            if (started) resumeHint.style.display = "block";
+            else overlay.classList.remove("hidden");
+        }
+    });
+
+    document.addEventListener("mousemove", (e) => {
+        if (!locked) return;
+        player.yaw = ((player.yaw + e.movementX * CONFIG.mouseYaw) % 360 + 360) % 360;
+        // мышь вверх (movementY<0) → смотрим выше → pitch к горизонту (больше)
+        player.pitch -= e.movementY * CONFIG.mousePitch;
+        player.pitch = Math.max(CONFIG.pitchMin, Math.min(CONFIG.pitchMax, player.pitch));
+    });
+
+    function isTyping(e) {
+        const t = e.target;
+        return t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+    }
+
+    const HANDLED = ["Space","KeyX","KeyW","KeyA","KeyS","KeyD","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","ShiftLeft","ShiftRight"];
+    window.addEventListener("keydown", (e) => {
+        if (isTyping(e)) return;            // не мешаем вводу в поля
+        keys[e.code] = true;
+        if (HANDLED.includes(e.code)) e.preventDefault();
+    });
+    window.addEventListener("keyup", (e) => {
+        if (isTyping(e)) return;
+        keys[e.code] = false;
+    });
+
+    // ----------------------------------------------------------------------
+    // Панель настроек + переход по городу
+    // ----------------------------------------------------------------------
+    const elWalk = document.getElementById("walk");
+    const elRun = document.getElementById("run");
+    const elFly = document.getElementById("fly");
+    const elCity = document.getElementById("city");
+    const elCityGo = document.getElementById("city-go");
+    const elCityStatus = document.getElementById("city-status");
+
+    elWalk.value = CONFIG.walkSpeed;
+    elRun.value = CONFIG.runMultiplier;
+    elFly.value = CONFIG.flySpeed;
+
+    function bindNumber(el, apply) {
+        el.addEventListener("input", () => {
+            const v = parseFloat(el.value);
+            if (!isNaN(v)) apply(v);
+        });
+    }
+    bindNumber(elWalk, v => CONFIG.walkSpeed = v);
+    bindNumber(elRun, v => CONFIG.runMultiplier = v);
+    bindNumber(elFly, v => CONFIG.flySpeed = v);
+
+    // 3D рельеф + тени
+    const elRelief = document.getElementById("relief");
+    const elShadows = document.getElementById("shadows");
+    elRelief.value = CONFIG.terrainExaggeration;
+    elShadows.checked = CONFIG.shadows;
+
+    function applyTerrain(ex) {
+        try {
+            if (ex && ex > 0) map.setTerrain({ source: "terrain-dem", exaggeration: ex });
+            else map.setTerrain(null);
+        } catch (e) { console.warn("terrain:", e); }
+    }
+
+    let ShadowClass = null;
+    let shadowLayer = null;
+    async function enableShadows() {
+        try {
+            if (shadowLayer) return;
+            if (!map.getLayer(CONFIG.buildingsLayerId)) { console.warn("shadows: нет слоя зданий"); return; }
+            if (!ShadowClass) {
+                const mod = await import(CONFIG.shadowModuleUrl);
+                ShadowClass = mod.AOShadowLayer;
+            }
+            shadowLayer = new ShadowClass({
+                buildingsLayerId: CONFIG.buildingsLayerId,
+                sourceId: CONFIG.buildingsSourceId
+            });
+            map.addLayer(shadowLayer, CONFIG.buildingsLayerId);
+            // свет согласован с направлением тени
+            map.setLight({ anchor: "map", position: [1.2, 210, 30], intensity: 0.5 });
+        } catch (e) { console.warn("shadows:", e); }
+    }
+    function disableShadows() {
+        try { if (shadowLayer) { map.removeLayer(shadowLayer.id); shadowLayer = null; } } catch (e) {}
+    }
+
+    elRelief.addEventListener("input", () => {
+        const v = parseFloat(elRelief.value);
+        if (!isNaN(v)) { CONFIG.terrainExaggeration = v; applyTerrain(v); }
+    });
+    elShadows.addEventListener("change", () => {
+        if (elShadows.checked) enableShadows(); else disableShadows();
+    });
+
+    async function goToCity(name) {
+        name = (name || "").trim();
+        if (!name) return;
+        elCityStatus.textContent = "ищу…";
+        try {
+            const url = "https://photon.komoot.io/api/?limit=1&q=" + encodeURIComponent(name);
+            const resp = await fetch(url);
+            const data = await resp.json();
+            const f = data.features && data.features[0];
+            if (!f) { elCityStatus.textContent = "не найдено"; return; }
+            const [lng, lat] = f.geometry.coordinates;
+            player.lng = lng;
+            player.lat = lat;
+            player.altOffset = 0;
+            const p = f.properties || {};
+            elCityStatus.textContent = "→ " + (p.name || name) + (p.country ? ", " + p.country : "");
+        } catch (err) {
+            elCityStatus.textContent = "ошибка сети";
+        }
+    }
+    elCityGo.addEventListener("click", () => goToCity(elCity.value));
+    elCity.addEventListener("keydown", (e) => { if (e.key === "Enter") goToCity(elCity.value); });
+
+    // ----------------------------------------------------------------------
+    // Столкновения со зданиями (footprint из вектора + точка-в-полигоне)
+    // ----------------------------------------------------------------------
+    let buildingCache = [];
+    let cacheTime = 0;
+
+    function refreshBuildingCache() {
+        let feats;
+        try {
+            feats = map.querySourceFeatures(CONFIG.buildingsSourceId, { sourceLayer: CONFIG.buildingsSourceLayer });
+        } catch (e) { return; }
+        const lng0 = player.lng, lat0 = player.lat;
+        const pad = 0.0025; // ~250 м
+        const out = [];
+        for (const f of feats) {
+            const g = f.geometry; if (!g) continue;
+            const polys = g.type === "Polygon" ? [g.coordinates]
+                : g.type === "MultiPolygon" ? g.coordinates : null;
+            if (!polys) continue;
+            for (const poly of polys) {
+                const ring = poly[0];
+                if (!ring || ring.length < 3) continue;
+                let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+                for (const p of ring) {
+                    if (p[0] < minx) minx = p[0]; if (p[0] > maxx) maxx = p[0];
+                    if (p[1] < miny) miny = p[1]; if (p[1] > maxy) maxy = p[1];
+                }
+                if (maxx < lng0 - pad || minx > lng0 + pad || maxy < lat0 - pad || miny > lat0 + pad) continue;
+                out.push({ ring, minx, miny, maxx, maxy });
+            }
+        }
+        buildingCache = out;
+    }
+
+    function pointInRing(x, y, ring) {
+        let inside = false;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+            const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+            if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+        }
+        return inside;
+    }
+
+    function isInsideBuilding(lng, lat) {
+        for (const b of buildingCache) {
+            if (lng < b.minx || lng > b.maxx || lat < b.miny || lat > b.maxy) continue;
+            if (pointInRing(lng, lat, b.ring)) return true;
+        }
+        return false;
+    }
+
+    // ----------------------------------------------------------------------
+    // Игровой цикл
+    // ----------------------------------------------------------------------
+    map.on("load", () => {
+        try { map.setVerticalFieldOfView(CONFIG.fov); } catch (err) { console.warn("FOV:", err); }
+        stripIconLayers();
+        try {
+            map.setSky({
+                "sky-color": CONFIG.skyColor,
+                "sky-horizon-blend": CONFIG.skyHorizonBlend,
+                "horizon-color": CONFIG.horizonColor,
+                "horizon-fog-blend": 0.5,
+                "fog-color": CONFIG.fogColor,
+                "fog-ground-blend": CONFIG.fogGroundBlend
+            });
+        } catch (err) { console.warn("Sky:", err); }
+
+        // 3D рельеф: источник высот (DEM)
+        try {
+            if (!map.getSource("terrain-dem")) {
+                map.addSource("terrain-dem", {
+                    type: "raster-dem",
+                    tiles: [CONFIG.demUrl],
+                    tileSize: 256,
+                    encoding: CONFIG.demEncoding,
+                    maxzoom: 15
+                });
+            }
+            applyTerrain(CONFIG.terrainExaggeration);
+        } catch (err) { console.warn("DEM:", err); }
+
+        // Тени зданий
+        if (CONFIG.shadows) enableShadows();
+
+        ready = true;
+        applyCamera();
+    });
+
+    function update(dt) {
+        // движение
+        let fwd = (keys["KeyW"] || keys["ArrowUp"] ? 1 : 0) - (keys["KeyS"] || keys["ArrowDown"] ? 1 : 0);
+        let strafe = (keys["KeyD"] || keys["ArrowRight"] ? 1 : 0) - (keys["KeyA"] || keys["ArrowLeft"] ? 1 : 0);
+
+        // коллизия активна, пока высота над землёй ≤ collisionHeight
+        const heightAboveGround = CONFIG.eyeHeight + player.altOffset;
+        const collisionActive = heightAboveGround <= CONFIG.collisionHeight;
+        player.collision = collisionActive;
+        if (collisionActive && performance.now() - cacheTime > 350) {
+            refreshBuildingCache();
+            cacheTime = performance.now();
+        }
+
+        let dist = 0;
+        if (locked && (fwd !== 0 || strafe !== 0)) {
+            const len = Math.hypot(fwd, strafe);
+            fwd /= len; strafe /= len;
+            const speed = (keys["ShiftLeft"] || keys["ShiftRight"]) ? CONFIG.walkSpeed * CONFIG.runMultiplier : CONFIG.walkSpeed;
+            dist = speed * dt;
+            const b = player.yaw * DEG;
+            const sinB = Math.sin(b), cosB = Math.cos(b);
+            const north = (fwd * cosB - strafe * sinB) * dist;
+            const east  = (fwd * sinB + strafe * cosB) * dist;
+            let dLat = north / M_PER_DEG_LAT;
+            let dLng = east / (M_PER_DEG_LAT * Math.cos(player.lat * DEG));
+
+            // упираемся в дома (скольжение вдоль стен по осям), но не застреваем,
+            // если уже оказались внутри здания — тогда даём выйти
+            if (collisionActive && !isInsideBuilding(player.lng, player.lat)) {
+                if (isInsideBuilding(player.lng + dLng, player.lat)) dLng = 0;
+                if (isInsideBuilding(player.lng, player.lat + dLat)) dLat = 0;
+                if (dLng !== 0 && dLat !== 0 && isInsideBuilding(player.lng + dLng, player.lat + dLat)) { dLng = 0; dLat = 0; }
+            }
+            player.lat += dLat;
+            player.lng += dLng;
+        }
+        player.speed = dt > 0 ? dist / dt : 0;
+
+        // полёт: Space — вверх, X — вниз (со скоростью ходьбы)
+        if (locked) {
+            const up = (keys["Space"] ? 1 : 0) - (keys["KeyX"] ? 1 : 0);
+            player.altOffset += up * CONFIG.flySpeed * dt;
+            if (player.altOffset < 0) player.altOffset = 0;
+        }
+    }
+
+    // Камера от первого лица: глаз держим точно в точке игрока.
+    // MapLibre ставит камеру позади center на расстоянии cameraToCenterDistance,
+    // поэтому center выносим вперёд ровно на это расстояние по земле.
+    function applyCamera() {
+        if (!ready) return;
+        const tr = map.transform;
+        const ctc = tr.cameraToCenterDistance;          // пиксели (зависит от FOV и высоты окна)
+        const cosLat = Math.cos(player.lat * DEG);
+        const pr = player.pitch * DEG;
+        const targetEye = CONFIG.groundAlt + CONFIG.eyeHeight + player.altOffset;
+
+        // подбираем zoom так, чтобы высота глаз = targetEye:
+        // eye = cos(pitch) * ctc * metersPerPixel,  metersPerPixel = circ*cosLat/(TILE*2^zoom)
+        let zoom = Math.log2(Math.cos(pr) * ctc * EARTH_CIRC * cosLat / (TILE * targetEye));
+        zoom = Math.min(CONFIG.maxSafeZoom, Math.max(1, zoom));
+
+        // фактическая высота при выбранном zoom (может отличаться, если уперлись в maxSafeZoom)
+        const mpp = EARTH_CIRC * cosLat / (TILE * Math.pow(2, zoom));
+        const actualEye = Math.cos(pr) * ctc * mpp;
+        player.eye = actualEye;
+
+        // расстояние по земле от камеры (=игрок) до center
+        const groundDist = Math.tan(pr) * actualEye;
+        const b = player.yaw * DEG;
+        const dLat = (Math.cos(b) * groundDist) / M_PER_DEG_LAT;
+        const dLng = (Math.sin(b) * groundDist) / (M_PER_DEG_LAT * cosLat);
+
+        try {
+            map.jumpTo({
+                center: [player.lng + dLng, player.lat + dLat],
+                zoom,
+                bearing: player.yaw,
+                pitch: player.pitch
+            });
+        } catch (err) { /* пропускаем редкий сбой кадра */ }
+    }
+
+    function updateHUD() {
+        document.getElementById("hud-coord").textContent = player.lat.toFixed(5) + ", " + player.lng.toFixed(5);
+        document.getElementById("hud-bearing").textContent = Math.round(player.yaw) + "°";
+        document.getElementById("hud-look").textContent = (90 - player.pitch).toFixed(0) + "° вниз";
+        document.getElementById("hud-alt").textContent = (player.eye).toFixed(1) + " м";
+        document.getElementById("hud-speed").textContent = player.speed.toFixed(1) + " м/с";
+        document.getElementById("hud-collision").textContent = player.collision ? "упираемся" : "сквозь";
+    }
+
+    let lastT = performance.now();
+    function frame(now) {
+        const dt = Math.min(0.05, (now - lastT) / 1000);
+        lastT = now;
+        update(dt);
+        applyCamera();
+        updateHUD();
+        requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    window.addEventListener("resize", () => map.resize());
+    </script>
+</body>
+</html>
