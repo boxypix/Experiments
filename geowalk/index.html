@@ -52,7 +52,8 @@
         #help { right: 14px; top: 14px; line-height: 1.6; }
         body.overlay-open #panel,
         body.overlay-open #help,
-        body.overlay-open #hud { display: none; }
+        body.overlay-open #hud,
+        body.overlay-open #terrain-choose-wrap { display: none; }
         #help kbd {
             display: inline-block; min-width: 16px; text-align: center; padding: 1px 5px;
             border-radius: 4px; background: rgba(106, 209, 255, 0.15);
@@ -89,6 +90,35 @@
         #panel .style-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
         #panel button.mini { flex: 0 0 auto; padding: 3px 9px; font-size: 11px; border-radius: 5px; }
         #panel #style-status { color: var(--accent); font-size: 11px; opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Выбор режима рельефа — две клетки снизу по центру */
+        #terrain-choose-wrap {
+            position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%);
+            z-index: 22; display: flex; flex-direction: column; align-items: center; gap: 10px;
+            pointer-events: none;
+        }
+        #terrain-choose-wrap .terrain-choose-hint {
+            margin: 0; color: #eaf6ff; text-align: center; pointer-events: none;
+            font: 14px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            opacity: 0.9; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+        }
+        #terrain-choose {
+            display: flex; gap: 14px; pointer-events: auto;
+        }
+        #terrain-choose button {
+            padding: 0; margin: 0; border: 2px solid transparent; border-radius: 14px;
+            background: none; cursor: pointer; line-height: 0;
+            opacity: 0.55; transition: opacity 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+        #terrain-choose button:hover { opacity: 0.85; transform: scale(1.04); }
+        #terrain-choose button.selected {
+            opacity: 1; border-color: rgba(106, 209, 255, 0.75);
+            box-shadow: 0 0 16px rgba(106, 209, 255, 0.25);
+        }
+        #terrain-choose img {
+            display: block; width: 80px; height: 80px;
+            image-rendering: pixelated; border-radius: 12px;
+        }
 
         /* Поиск места — сверху по центру */
         #search-bar {
@@ -164,6 +194,48 @@
         #overlay.hidden { opacity: 0; pointer-events: none; }
         .muted { opacity: 0.6; font-size: 12px; }
         #loading { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); z-index: 21; color: #9fd0ff; font-size: 13px; font-family: ui-monospace, monospace; }
+
+        /* Переход после поиска: чёрный экран + вращающийся vortex */
+        #vortex-overlay {
+            position: absolute; inset: 0; z-index: 30;
+            display: flex; align-items: center; justify-content: center;
+            background: #000; pointer-events: none;
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #vortex-overlay.visible {
+            opacity: 1; visibility: visible;
+        }
+        #vortex-overlay .vortex-stage {
+            position: relative; z-index: 0;
+            width: 1000px; height: 1000px;
+            max-width: min(1000px, 95vw);
+            max-height: min(1000px, 95vh);
+        }
+        #vortex-overlay .vortex-caption {
+            position: absolute; left: 50%; bottom: 50px;
+            transform: translateX(-50%); z-index: 2;
+            margin: 0; color: #fff; font-weight: 700; text-align: center;
+            font-size: clamp(32px, 5vw, 52px); line-height: 1.15;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            letter-spacing: 0.01em;
+        }
+        #vortex-overlay .vortex-spin {
+            display: block; width: 100%; height: 100%;
+            image-rendering: pixelated;
+            animation: vortex-spin 5.6s linear infinite;
+            animation-play-state: paused;
+        }
+        #vortex-overlay.active .vortex-spin { animation-play-state: running; }
+        #vortex-overlay .vortex-buddy {
+            position: absolute; left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 1;
+        }
+        @keyframes vortex-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="overlay-open">
@@ -189,9 +261,21 @@
         <div class="hint">Esc — освободить курсор, чтобы менять поля</div>
     </div>
 
+    <div id="terrain-choose-wrap">
+        <p class="terrain-choose-hint">Нажми Q чтобы менять стиль движения</p>
+        <div id="terrain-choose">
+            <button type="button" id="choose-terrain-ignore" title="Игнорировать рельеф камерой">
+                <img src="images/ui_choose1.png" width="80" height="80" alt="Игнорировать рельеф" />
+            </button>
+            <button type="button" id="choose-terrain-follow" title="Следовать рельефу">
+                <img src="images/ui_choose2.png" width="80" height="80" alt="Следовать рельефу" />
+            </button>
+        </div>
+    </div>
+
     <div id="search-bar">
         <div class="search-row">
-            <input id="city" type="search" placeholder="Город или место…" autocomplete="off" spellcheck="false" />
+            <input id="city" type="search" placeholder="Попади в любой город или место…" autocomplete="off" spellcheck="false" />
             <button id="city-go" type="button">Лететь</button>
         </div>
         <div id="city-status"></div>
@@ -217,6 +301,14 @@
         <div class="row"><span>Стены</span><b id="hud-collision">—</b></div>
     </div>
 
+    <div id="vortex-overlay" aria-hidden="true">
+        <div class="vortex-stage">
+            <img class="vortex-spin" src="images/ui_vortex.png" width="900" height="900" alt="" />
+            <img class="vortex-buddy" src="images/ui_buddy.png" width="500" aalt="" />
+        </div>
+        <p class="vortex-caption">Телепортируем тебя...</p>
+    </div>
+
     <div id="overlay">
         <img class="logo" src="images/logo_big.png" width="900" alt="World Geo Walk" />
         <p>3D-бродилка от первого лица по реальной карте. Гуляй между зданий, взлетай и осматривайся.</p>
@@ -231,6 +323,7 @@
          http-сервер эти файлы можно игнорировать. -->
     <script src="settings.js"></script>
     <script src="maps/map1.js"></script>
+    <script src="modules/follow-terrain-hands.js"></script>
 
     <script>
     "use strict";
@@ -278,9 +371,12 @@
         styleUrl: "maps/map1.json", // стиль по умолчанию (папка /maps)
         // 3D рельеф (DEM от AWS, terrarium). 0 = выключен.
         terrainExaggeration: 1,
-        // Игнорировать рельеф камерой: камера держит постоянную высоту,
-        // не повторяя неровности рельефа (centerClampedToGround=false + фикс. база).
+        // «Игнорировать рельеф камерой»: вкл — фикс. высота (не меняется при подъёме).
+        // Выкл — высота по рельефу под игроком, не под точкой прицела впереди.
         ignoreTerrainCollision: true,
+        followTerrainEyeHeight: 2.6,   // высота глаз, м — галочка «игнорировать рельеф» выкл
+        ignoreTerrainEyeHeight: 23,     // высота глаз, м — галочка вкл
+        heightAnimSec: 2,              // длительность анимации смены высоты, сек
         demUrl: "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
         demEncoding: "terrarium",
         // Тени зданий в реальном времени (CustomLayer, проекция следа + AO).
@@ -326,6 +422,19 @@
         return m ? m[1] : url;
     }
 
+    function totalEyeHeightForIgnore(ignore) {
+        if (ignore) {
+            return CONFIG.ignoreTerrainEyeHeight != null
+                ? CONFIG.ignoreTerrainEyeHeight
+                : CONFIG.eyeHeight * CONFIG.startHeightMultiplier;
+        }
+        return CONFIG.followTerrainEyeHeight != null ? CONFIG.followTerrainEyeHeight : 2.6;
+    }
+
+    function altOffsetForTotalEye(totalEye) {
+        return totalEye - CONFIG.groundAlt - CONFIG.eyeHeight;
+    }
+
     // Сразу применяем settings.json к полям панели и подсказкам (до init карты)
     const elWalk = document.getElementById("walk");
     const elRun = document.getElementById("run");
@@ -333,6 +442,13 @@
     const elDraw = document.getElementById("draw");
     const elRelief = document.getElementById("relief");
     const elNoTerrCol = document.getElementById("noterrcol");
+    const elChooseFollow = document.getElementById("choose-terrain-follow");
+    const elChooseIgnore = document.getElementById("choose-terrain-ignore");
+    // Режимы terrain-choose (Q — следующий по кругу; сюда же можно добавить третий)
+    const TERRAIN_CHOOSE_MODES = [
+        { ignore: true,  button: elChooseIgnore },
+        { ignore: false, button: elChooseFollow }
+    ];
     const elShadows = document.getElementById("shadows");
     const elStyleStatus = document.getElementById("style-status");
     const elHelpShift = document.getElementById("help-shift");
@@ -349,8 +465,43 @@
         elStyleStatus.textContent = "стиль: " + styleNameFromUrl(CONFIG.styleUrl);
         elHelpShift.innerHTML = "<kbd>Shift</kbd> — ускорение ×" + CONFIG.runMultiplier;
         elOverlayHint.textContent = "WASD — ходьба · мышь — обзор · Space/X — вверх/вниз · Shift — ×" + CONFIG.runMultiplier;
+        syncTerrainChooseUI();
     }
     applyConfigToUI();
+    if (window.GeowalkFollowTerrainHands) GeowalkFollowTerrainHands.init();
+
+    function syncTerrainChooseUI() {
+        TERRAIN_CHOOSE_MODES.forEach(mode => {
+            mode.button.classList.toggle("selected", CONFIG.ignoreTerrainCollision === mode.ignore);
+        });
+        syncFollowTerrainHandsModule();
+    }
+
+    function syncFollowTerrainHandsModule() {
+        if (!window.GeowalkFollowTerrainHands) return;
+        GeowalkFollowTerrainHands.sync({
+            followTerrain: !CONFIG.ignoreTerrainCollision,
+            overlayOpen: document.body.classList.contains("overlay-open")
+        });
+    }
+
+    function setIgnoreTerrain(ignore) {
+        elNoTerrCol.checked = ignore;
+        applyTerrainCollision(ignore);
+        syncTerrainChooseUI();
+    }
+
+    function applyTerrainChooseIndex(index) {
+        const n = TERRAIN_CHOOSE_MODES.length;
+        const i = ((index % n) + n) % n;
+        setIgnoreTerrain(TERRAIN_CHOOSE_MODES[i].ignore);
+    }
+
+    function cycleTerrainChoose() {
+        let cur = TERRAIN_CHOOSE_MODES.findIndex(m => m.ignore === CONFIG.ignoreTerrainCollision);
+        if (cur < 0) cur = 0;
+        applyTerrainChooseIndex(cur + 1);
+    }
 
     // Небо из settings.json → поля MapLibre Style Spec (sky)
     function skyToStyleSpec(sky) {
@@ -433,7 +584,7 @@
         lat: CONFIG.start.lat,
         yaw: CONFIG.startBearing,    // курс, град
         pitch: CONFIG.pitchStart,    // наклон камеры, град (0=вниз,90=горизонт)
-        altOffset: CONFIG.eyeHeight * (CONFIG.startHeightMultiplier - 1), // старт выше в N раз
+        altOffset: altOffsetForTotalEye(totalEyeHeightForIgnore(CONFIG.ignoreTerrainCollision)),
         speed: 0,
         eye: CONFIG.eyeHeight,
         collision: true
@@ -444,6 +595,25 @@
     let fixedElevation = null;
     // скорость в системе игрока (м/с): вперёд/назад и влево/вправо — для инерции
     let velFwd = 0, velStrafe = 0;
+    let heightAnim = null;
+
+    function startHeightAnim(ignore) {
+        heightAnim = {
+            from: player.altOffset,
+            to: altOffsetForTotalEye(totalEyeHeightForIgnore(ignore)),
+            elapsed: 0,
+            duration: Math.max(0.2, CONFIG.heightAnimSec || 2)
+        };
+    }
+
+    function updateHeightAnim(dt) {
+        if (!heightAnim) return;
+        heightAnim.elapsed += dt;
+        const u = Math.min(1, heightAnim.elapsed / heightAnim.duration);
+        const ease = u * u * (3 - 2 * u);
+        player.altOffset = heightAnim.from + (heightAnim.to - heightAnim.from) * ease;
+        if (u >= 1) heightAnim = null;
+    }
 
     // Автопрокрутка на заставке: вперёд 10 м/с, не дольше 2 мин, пока виден оверлей
     const OVERLAY_AUTO_WALK_SPEED = 10;
@@ -469,6 +639,7 @@
 
     function syncOverlayChrome() {
         document.body.classList.toggle("overlay-open", overlayVisible());
+        syncFollowTerrainHandsModule();
     }
 
     function requestLock() { canvasEl.requestPointerLock?.(); }
@@ -511,9 +682,14 @@
         return t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
     }
 
-    const HANDLED = ["Space","KeyX","KeyW","KeyA","KeyS","KeyD","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","ShiftLeft","ShiftRight"];
+    const HANDLED = ["Space","KeyX","KeyW","KeyA","KeyS","KeyD","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","ShiftLeft","ShiftRight","KeyQ"];
     window.addEventListener("keydown", (e) => {
         if (isTyping(e)) return;            // не мешаем вводу в поля
+        if (e.code === "KeyQ") {
+            e.preventDefault();
+            cycleTerrainChoose();
+            return;
+        }
         keys[e.code] = true;
         if (HANDLED.includes(e.code)) e.preventDefault();
     });
@@ -528,6 +704,32 @@
     const elCity = document.getElementById("city");
     const elCityGo = document.getElementById("city-go");
     const elCityStatus = document.getElementById("city-status");
+    const vortexOverlay = document.getElementById("vortex-overlay");
+    let vortexTimer = null;
+    let vortexFadeTimer = null;
+
+    const VORTEX_TRANSITION_MS = 4000;
+    const VORTEX_FADE_MS = 300;
+
+    function showVortexTransition() {
+        if (vortexTimer) clearTimeout(vortexTimer);
+        if (vortexFadeTimer) { clearTimeout(vortexFadeTimer); vortexFadeTimer = null; }
+        if (!vortexOverlay.classList.contains("visible")) {
+            requestAnimationFrame(() => vortexOverlay.classList.add("visible"));
+        }
+        vortexOverlay.classList.add("active");
+        vortexOverlay.setAttribute("aria-hidden", "false");
+        vortexTimer = setTimeout(hideVortexTransition, VORTEX_TRANSITION_MS);
+    }
+
+    function hideVortexTransition() {
+        vortexOverlay.classList.remove("active");
+        vortexOverlay.classList.remove("visible");
+        vortexOverlay.setAttribute("aria-hidden", "true");
+        vortexTimer = null;
+        if (vortexFadeTimer) clearTimeout(vortexFadeTimer);
+        vortexFadeTimer = setTimeout(() => { vortexFadeTimer = null; }, VORTEX_FADE_MS);
+    }
 
     function bindNumber(el, apply) {
         el.addEventListener("input", () => {
@@ -557,7 +759,8 @@
     function applyTerrainCollision(ignore) {
         CONFIG.ignoreTerrainCollision = ignore;
         fixedElevation = null;
-        try { map.setCenterClampedToGround(!ignore); } catch (e) {}
+        try { map.setCenterClampedToGround(false); } catch (e) {}
+        startHeightAnim(ignore);
     }
 
     let ShadowClass = null;
@@ -586,9 +789,9 @@
         const v = parseFloat(elRelief.value);
         if (!isNaN(v)) { CONFIG.terrainExaggeration = v; applyTerrain(v); }
     });
-    elNoTerrCol.addEventListener("change", () => {
-        CONFIG.ignoreTerrainCollision = elNoTerrCol.checked;
-        applyTerrainCollision(CONFIG.ignoreTerrainCollision);
+    elNoTerrCol.addEventListener("change", () => setIgnoreTerrain(elNoTerrCol.checked));
+    TERRAIN_CHOOSE_MODES.forEach((mode, i) => {
+        mode.button.addEventListener("click", () => applyTerrainChooseIndex(i));
     });
     elShadows.addEventListener("change", () => {
         if (elShadows.checked) enableShadows(); else disableShadows();
@@ -628,13 +831,15 @@
             const [lng, lat] = f.geometry.coordinates;
             player.lng = lng;
             player.lat = lat;
-            player.altOffset = 0;
+            player.altOffset = altOffsetForTotalEye(totalEyeHeightForIgnore(CONFIG.ignoreTerrainCollision));
+            heightAnim = null;
             velFwd = 0;
             velStrafe = 0;
             fixedElevation = null; // пересчитать базу высоты на новом месте
             const p = f.properties || {};
             elCityStatus.textContent = "→ " + (p.name || name) + (p.country ? ", " + p.country : "");
             dismissOverlay();
+            showVortexTransition();
             if (ready) applyCamera();
         } catch (err) {
             elCityStatus.textContent = "ошибка сети";
@@ -828,8 +1033,10 @@
         }
         if (!overlayWalk) player.speed = dt > 0 ? Math.hypot(velFwd, velStrafe) : 0;
 
+        updateHeightAnim(dt);
+
         // полёт: Space — вверх, X — вниз (со скоростью ходьбы)
-        if (locked) {
+        if (locked && !heightAnim) {
             const up = (keys["Space"] ? 1 : 0) - (keys["KeyX"] ? 1 : 0);
             player.altOffset += up * CONFIG.flySpeed * dt;
             if (player.altOffset < 0) player.altOffset = 0;
@@ -892,8 +1099,21 @@
                 // чтобы не провалиться под землю
                 if (!map.getCenterClampedToGround()) map.setCenterClampedToGround(true);
             }
-        } else if (!map.getCenterClampedToGround()) {
-            map.setCenterClampedToGround(true);
+        } else {
+            // галочка выкл.: высота камеры — только по рельефу под игроком, не под прицелом (center)
+            if (map.getCenterClampedToGround()) map.setCenterClampedToGround(false);
+            if (map.getTerrain() && map.isSourceLoaded("terrain-dem")) {
+                const te = map.queryTerrainElevation([player.lng, player.lat]);
+                if (typeof te === "number" && isFinite(te)) {
+                    opts.elevation = te;
+                } else if (!map.getCenterClampedToGround()) {
+                    map.setCenterClampedToGround(true);
+                }
+            } else if (!map.getTerrain()) {
+                opts.elevation = 0;
+            } else if (!map.getCenterClampedToGround()) {
+                map.setCenterClampedToGround(true);
+            }
         }
 
         try {
@@ -930,6 +1150,9 @@
         update(dt);
         applyCamera();
         updateHUD();
+        if (window.GeowalkFollowTerrainHands) {
+            GeowalkFollowTerrainHands.tick({ speed: player.speed, dt });
+        }
         requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
