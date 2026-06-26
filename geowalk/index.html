@@ -70,6 +70,10 @@
             pointer-events: auto; width: 210px;
         }
         #panel .title { color: var(--accent); font-weight: 600; margin-bottom: 8px; letter-spacing: 0.5px; }
+        #panel .panel-logo {
+            display: block; width: 100%; height: auto;
+            margin: 0 0 8px; border-radius: 6px 6px 0 0;
+        }
         #panel label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
         #panel input {
             width: 78px; padding: 4px 6px; text-align: right;
@@ -243,6 +247,7 @@
     <div id="crosshair"></div>
 
     <div id="panel">
+        <img class="panel-logo" src="images/logo_big.png" alt="World Walk Cam" />
         <div class="title">Настройки</div>
         <label>Скорость ходьбы <input id="walk" type="number" min="0" step="0.5" /></label>
         <label>Ускорение (Shift) <input id="run" type="number" min="1" step="1" /></label>
@@ -377,6 +382,8 @@
         followTerrainEyeHeight: 2.6,   // высота глаз, м — галочка «игнорировать рельеф» выкл
         ignoreTerrainEyeHeight: 23,     // высота глаз, м — галочка вкл
         heightAnimSec: 2,              // длительность анимации смены высоты, сек
+        followTerrainJumpHeight: 14,   // прыжок Space в режиме «следовать рельефу», м
+        followTerrainJumpSec: 1.4,     // длительность прыжка вверх-вниз, сек
         demUrl: "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
         demEncoding: "terrarium",
         // Тени зданий в реальном времени (CustomLayer, проекция следа + AO).
@@ -596,8 +603,10 @@
     // скорость в системе игрока (м/с): вперёд/назад и влево/вправо — для инерции
     let velFwd = 0, velStrafe = 0;
     let heightAnim = null;
+    let jumpAnim = null;
 
     function startHeightAnim(ignore) {
+        jumpAnim = null;
         heightAnim = {
             from: player.altOffset,
             to: altOffsetForTotalEye(totalEyeHeightForIgnore(ignore)),
@@ -613,6 +622,34 @@
         const ease = u * u * (3 - 2 * u);
         player.altOffset = heightAnim.from + (heightAnim.to - heightAnim.from) * ease;
         if (u >= 1) heightAnim = null;
+    }
+
+    function getJumpLift() {
+        if (!jumpAnim) return 0;
+        const u = Math.min(1, jumpAnim.elapsed / jumpAnim.duration);
+        return Math.sin(Math.PI * u) * jumpAnim.amplitude;
+    }
+
+    function tryStartFollowJump() {
+        // Прыжок только когда галочка «Игнорировать рельеф» снята (режим следования)
+        if (CONFIG.ignoreTerrainCollision || !locked) return;
+        if (heightAnim || jumpAnim) return;
+        jumpAnim = {
+            base: player.altOffset,
+            amplitude: CONFIG.followTerrainJumpHeight != null ? CONFIG.followTerrainJumpHeight : 14,
+            elapsed: 0,
+            duration: Math.max(0.4, CONFIG.followTerrainJumpSec != null ? CONFIG.followTerrainJumpSec : 1.4)
+        };
+    }
+
+    function updateFollowJumpAnim(dt) {
+        if (!jumpAnim) return;
+        jumpAnim.elapsed += dt;
+        player.altOffset = jumpAnim.base + getJumpLift();
+        if (jumpAnim.elapsed >= jumpAnim.duration) {
+            player.altOffset = jumpAnim.base;
+            jumpAnim = null;
+        }
     }
 
     // Автопрокрутка на заставке: вперёд 10 м/с, не дольше 2 мин, пока виден оверлей
@@ -688,6 +725,11 @@
         if (e.code === "KeyQ") {
             e.preventDefault();
             cycleTerrainChoose();
+            return;
+        }
+        if (e.code === "Space" && locked && !CONFIG.ignoreTerrainCollision && !e.repeat) {
+            e.preventDefault();
+            tryStartFollowJump();
             return;
         }
         keys[e.code] = true;
@@ -833,6 +875,7 @@
             player.lat = lat;
             player.altOffset = altOffsetForTotalEye(totalEyeHeightForIgnore(CONFIG.ignoreTerrainCollision));
             heightAnim = null;
+            jumpAnim = null;
             velFwd = 0;
             velStrafe = 0;
             fixedElevation = null; // пересчитать базу высоты на новом месте
@@ -1034,9 +1077,10 @@
         if (!overlayWalk) player.speed = dt > 0 ? Math.hypot(velFwd, velStrafe) : 0;
 
         updateHeightAnim(dt);
+        updateFollowJumpAnim(dt);
 
-        // полёт: Space — вверх, X — вниз (со скоростью ходьбы)
-        if (locked && !heightAnim) {
+        // Space/X — подъём/спуск только при включённой галочке «игнорировать рельеф»
+        if (locked && !heightAnim && !jumpAnim && CONFIG.ignoreTerrainCollision) {
             const up = (keys["Space"] ? 1 : 0) - (keys["KeyX"] ? 1 : 0);
             player.altOffset += up * CONFIG.flySpeed * dt;
             if (player.altOffset < 0) player.altOffset = 0;

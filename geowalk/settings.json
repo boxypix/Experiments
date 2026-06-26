@@ -34,6 +34,8 @@
   "followTerrainEyeHeight": 2.6,
   "ignoreTerrainEyeHeight": 23,
   "heightAnimSec": 2,
+  "followTerrainJumpHeight": 14,
+  "followTerrainJumpSec": 1.4,
   "demUrl": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
   "demEncoding": "terrarium",
   "shadows": false,
