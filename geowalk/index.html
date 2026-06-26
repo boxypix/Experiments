@@ -379,7 +379,7 @@
         // «Игнорировать рельеф камерой»: вкл — фикс. высота (не меняется при подъёме).
         // Выкл — высота по рельефу под игроком, не под точкой прицела впереди.
         ignoreTerrainCollision: true,
-        followTerrainEyeHeight: 2.6,   // высота глаз, м — галочка «игнорировать рельеф» выкл
+        followTerrainEyeHeight: 2.8,   // высота глаз, м — галочка «игнорировать рельеф» выкл
         ignoreTerrainEyeHeight: 23,     // высота глаз, м — галочка вкл
         heightAnimSec: 2,              // длительность анимации смены высоты, сек
         followTerrainJumpHeight: 14,   // прыжок Space в режиме «следовать рельефу», м
@@ -435,7 +435,7 @@
                 ? CONFIG.ignoreTerrainEyeHeight
                 : CONFIG.eyeHeight * CONFIG.startHeightMultiplier;
         }
-        return CONFIG.followTerrainEyeHeight != null ? CONFIG.followTerrainEyeHeight : 2.6;
+        return CONFIG.followTerrainEyeHeight != null ? CONFIG.followTerrainEyeHeight : 2.8;
     }
 
     function altOffsetForTotalEye(totalEye) {

@@ -4,7 +4,7 @@
     "lat": 41.69354
   },
   "startBearing": 35,
-  "eyeHeight": 2.3,
+  "eyeHeight": 2.8,
   "startHeightMultiplier": 10,
   "groundAlt": 0,
   "fov": 90,
@@ -31,7 +31,7 @@
   "styleUrl": "maps/map1.json",
   "terrainExaggeration": 1,
   "ignoreTerrainCollision": true,
-  "followTerrainEyeHeight": 2.6,
+  "followTerrainEyeHeight": 2.8,
   "ignoreTerrainEyeHeight": 23,
   "heightAnimSec": 2,
   "followTerrainJumpHeight": 14,
