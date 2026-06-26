@@ -2,25 +2,25 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8" />
-    <title>World Geo Walk</title>
+    <title>World Walk Cam</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <link rel="icon" href="images/favicon.ico" sizes="any" />
 
-    <meta name="description" content="World Geo Walk — 3D-бродилка от первого лица по реальной карте мира." />
+    <meta name="description" content="World Walk Cam — 3D-бродилка от первого лица по реальной карте мира." />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="World Geo Walk" />
+    <meta property="og:title" content="World Walk Cam" />
     <meta property="og:description" content="3D-бродилка от первого лица по реальной карте мира. Гуляй между зданий, взлетай и осматривайся." />
     <meta property="og:image" content="images/cover.jpg" />
     <meta property="og:image:width" content="1068" />
     <meta property="og:image:height" content="562" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="World Geo Walk" />
+    <meta name="twitter:title" content="World Walk Cam" />
     <meta name="twitter:description" content="3D-бродилка от первого лица по реальной карте мира." />
     <meta name="twitter:image" content="images/cover.jpg" />
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" />
     <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
     <style>
-        :root { --accent: #6ad1ff; }
+        :root { --accent: #6ad1ff; --ui-bg: rgba(0, 0, 0, 0.35); }
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0a0e14; }
         #map { position: absolute; inset: 0; }
@@ -42,31 +42,49 @@
         #hud, #help {
             position: absolute; z-index: 6;
             font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            color: #cfe8ff; background: rgba(10, 16, 24, 0.55);
+            color: #cfe8ff; background: var(--ui-bg);
             border: 1px solid rgba(106, 209, 255, 0.25); border-radius: 10px;
-            padding: 10px 12px; backdrop-filter: blur(6px); pointer-events: none;
+            padding: 10px 12px; pointer-events: none;
         }
         #hud { left: 14px; bottom: 14px; min-width: 190px; }
         #hud b { color: var(--accent); font-weight: 600; }
         #hud .row { display: flex; justify-content: space-between; gap: 14px; }
+        #mini-map-wrap {
+            position: absolute; right: 14px; bottom: 24px; z-index: 6;
+            width: 200px; height: 200px; overflow: hidden; pointer-events: none;
+            border-radius: 10px;
+        }
+        #mini-map { width: 200px; height: 200px; }
+        #mini-map-marker {
+            position: absolute; left: 50%; top: 50%;
+            width: 80px; height: 80px;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 1;
+        }
         #help { right: 14px; top: 14px; line-height: 1.6; }
+        #help .help-sep {
+            margin-top: 8px; padding-top: 8px;
+            border-top: 1px solid rgba(106, 209, 255, 0.15);
+        }
         body.overlay-open #panel,
         body.overlay-open #help,
         body.overlay-open #hud,
+        body.overlay-open #mini-map-wrap,
         body.overlay-open #terrain-choose-wrap { display: none; }
+        body.car-mode #crosshair { display: none; }
         #help kbd {
-            display: inline-block; min-width: 16px; text-align: center; padding: 1px 5px;
-            border-radius: 4px; background: rgba(106, 209, 255, 0.15);
-            border: 1px solid rgba(106, 209, 255, 0.35); color: #eaf6ff;
+            display: inline-block; min-width: 12px; text-align: center; padding: 1px 10px; margin-bottom: 2px;
+            border-radius: 12px; background: rgba(1, 1, 1, 0.355);
+            /* border: 1px solid rgba(106, 209, 255, 0.35); color: #eaf6ff; */
         }
 
         /* Панель настроек */
         #panel {
             position: absolute; left: 14px; top: 14px; z-index: 8;
             font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            color: #cfe8ff; background: rgba(10, 16, 24, 0.62);
+            color: #cfe8ff; background: var(--ui-bg);
             border: 1px solid rgba(106, 209, 255, 0.25); border-radius: 10px;
-            padding: 10px 12px; backdrop-filter: blur(6px);
+            padding: 10px 12px;
             pointer-events: auto; width: 210px;
         }
         #panel .title { color: var(--accent); font-weight: 600; margin-bottom: 8px; letter-spacing: 0.5px; }
@@ -99,6 +117,8 @@
         #terrain-choose-wrap {
             position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%);
             z-index: 22; display: flex; flex-direction: column; align-items: center; gap: 10px;
+            padding: 12px; border-radius: 20px;
+            background: var(--ui-bg);
             pointer-events: none;
         }
         #terrain-choose-wrap .terrain-choose-hint {
@@ -110,18 +130,37 @@
             display: flex; gap: 14px; pointer-events: auto;
         }
         #terrain-choose button {
-            padding: 0; margin: 0; border: 2px solid transparent; border-radius: 14px;
-            background: none; cursor: pointer; line-height: 0;
-            opacity: 0.55; transition: opacity 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+            padding: 0; margin: 0; border: 3px solid transparent; border-radius: 14px;
+            background: none; cursor: pointer; line-height: 0; opacity: 1;
+            transition: border-color 0.15s ease, border-width 0.15s ease, transform 0.15s ease;
         }
-        #terrain-choose button:hover { opacity: 0.85; transform: scale(1.04); }
+        #terrain-choose button:hover:not(.selected) { transform: scale(1.1); }
         #terrain-choose button.selected {
-            opacity: 1; border-color: rgba(106, 209, 255, 0.75);
-            box-shadow: 0 0 16px rgba(106, 209, 255, 0.25);
+            border: 4px solid #fff;
+            transform: scale(1.1);
         }
         #terrain-choose img {
             display: block; width: 80px; height: 80px;
             image-rendering: pixelated; border-radius: 12px;
+        }
+
+        #movement-mode-toast {
+            position: absolute; left: 50%; top: calc(50% - 20vh); transform: translate(-50%, -50%);
+            z-index: 24; pointer-events: none;
+            font: 700 98px/1.15 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #fff; text-align: center; white-space: nowrap;
+            text-shadow: 0 2px 24px rgba(0, 0, 0, 0.85);
+            opacity: 0; visibility: hidden;
+        }
+        #movement-mode-toast.show {
+            visibility: visible;
+            animation: movement-mode-toast-fade 1.3s ease forwards;
+        }
+        @keyframes movement-mode-toast-fade {
+            0% { opacity: 0; }
+            23.08% { opacity: 1; }
+            76.92% { opacity: 1; }
+            100% { opacity: 0; }
         }
 
         /* Поиск места — сверху по центру */
@@ -137,20 +176,19 @@
         #search-bar input {
             flex: 1; min-width: 0; padding: 11px 16px;
             font: 16px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            color: #eaf6ff; background: rgba(10, 16, 24, 0.72);
+            color: #eaf6ff; background: var(--ui-bg);
             border: 1px solid rgba(106, 209, 255, 0.35); border-radius: 10px;
-            outline: none; backdrop-filter: blur(8px);
+            outline: none;
         }
         #search-bar input::placeholder { color: rgba(207, 232, 255, 0.45); }
         #search-bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(106, 209, 255, 0.15); }
         #search-bar button {
             flex: 0 0 auto; padding: 11px 22px; cursor: pointer;
             font: 600 15px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            color: #eaf6ff; background: rgba(106, 209, 255, 0.22);
+            color: #eaf6ff; background: var(--ui-bg);
             border: 1px solid rgba(106, 209, 255, 0.45); border-radius: 10px;
-            backdrop-filter: blur(8px);
         }
-        #search-bar button:hover { background: rgba(106, 209, 255, 0.34); }
+        #search-bar button:hover { background: rgba(0, 0, 0, 0.92); }
         #search-bar #city-status {
             min-height: 16px; color: var(--accent);
             font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -161,27 +199,26 @@
             position: absolute; left: 50%; top: 88px; transform: translateX(-50%);
             z-index: 10; display: none; pointer-events: none;
             font: 12px/1 ui-monospace, monospace; color: #eaf6ff;
-            background: rgba(10,16,24,0.6); border: 1px solid rgba(106,209,255,0.3);
-            border-radius: 999px; padding: 7px 14px; backdrop-filter: blur(6px);
+            background: var(--ui-bg); border: 1px solid rgba(106,209,255,0.3);
+            border-radius: 999px; padding: 7px 14px;
         }
         #flight-hint {
             position: absolute; left: 50%; top: 88px; transform: translateX(-50%);
             z-index: 10; display: none; pointer-events: none;
             font: 13px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            color: #eaf6ff; background: rgba(10, 16, 24, 0.65);
+            color: #eaf6ff; background: var(--ui-bg);
             border: 1px solid rgba(106, 209, 255, 0.35); border-radius: 999px;
-            padding: 8px 16px; backdrop-filter: blur(6px);
+            padding: 8px 16px;
         }
         #flight-hint kbd {
-            display: inline-block; min-width: 18px; text-align: center; padding: 1px 6px;
-            margin-right: 4px; border-radius: 4px; background: rgba(106, 209, 255, 0.15);
-            border: 1px solid rgba(106, 209, 255, 0.35); color: #eaf6ff;
+            display: inline-block; min-width: 12px; text-align: center; padding: 3px 12px; margin-bottom: 2px;
+            border-radius: 12px; background: rgba(1, 1, 1, 0.355);
         }
 
         #overlay {
             position: absolute; inset: 0; z-index: 20;
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
-            background: radial-gradient(circle at 50% 40%, rgba(20,30,45,0.55), rgba(5,8,12,0.92));
+            background: var(--ui-bg);
             color: #eaf6ff; text-align: center; cursor: pointer;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             transition: opacity 0.25s ease;
@@ -192,8 +229,8 @@
         #overlay p { margin: 0; opacity: 0.85; font-size: 15px; max-width: 460px; }
         #overlay .play {
             margin-top: 6px; padding: 12px 28px; border-radius: 999px;
-            border: 1px solid rgba(106,209,255,0.5); background: rgba(106,209,255,0.12);
-            font-size: 16px; font-weight: 600; color: #eaf6ff;
+            border: 1px solid rgb(233, 233, 233); background: rgb(228, 228, 228);
+            font-size: 16px; font-weight: 600; color: #171717;
         }
         #overlay.hidden { opacity: 0; pointer-events: none; }
         .muted { opacity: 0.6; font-size: 12px; }
@@ -257,6 +294,7 @@
         <label>3D рельеф (×, 0=выкл) <input id="relief" type="number" min="0" step="0.5" /></label>
         <label>Игнорировать рельеф камерой <input id="noterrcol" type="checkbox" /></label>
         <label>Тени зданий <input id="shadows" type="checkbox" /></label>
+        <label>Мини-карта <input id="minimap" type="checkbox" /></label>
         <div class="sep"></div>
         <div class="style-row">
             <button id="style-swap" class="mini" type="button">Swap style</button>
@@ -267,7 +305,8 @@
     </div>
 
     <div id="terrain-choose-wrap">
-        <p class="terrain-choose-hint">Нажми Q чтобы менять стиль движения</p>
+        <p class="terrain-choose-hint">Q – менять стиль движения</p>
+        <p class="terrain-choose-hint" id="terrain-choose-hint-car" hidden>С – вид машины сбоку / сверху</p>
         <div id="terrain-choose">
             <button type="button" id="choose-terrain-ignore" title="Игнорировать рельеф камерой">
                 <img src="images/ui_choose1.png" width="80" height="80" alt="Игнорировать рельеф" />
@@ -275,8 +314,13 @@
             <button type="button" id="choose-terrain-follow" title="Следовать рельефу">
                 <img src="images/ui_choose2.png" width="80" height="80" alt="Следовать рельефу" />
             </button>
+            <button type="button" id="choose-terrain-car" title="Езда на машине">
+                <img src="images/ui_choose3.png" width="80" height="80" alt="Машина" />
+            </button>
         </div>
     </div>
+
+    <div id="movement-mode-toast" aria-live="polite"></div>
 
     <div id="search-bar">
         <div class="search-row">
@@ -287,14 +331,18 @@
     </div>
 
     <div id="resume-hint">Кликни по карте, чтобы вернуться к обзору</div>
-    <div id="flight-hint">Нажми <kbd>Esc</kbd> чтобы выйти из полета</div>
+    <div id="flight-hint"><kbd>Esc</kbd> выйти</div>
 
     <div id="help">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — ходьба</div>
         <div><kbd>Мышь</kbd> — обзор</div>
-        <div><kbd>Space</kbd> — вверх · <kbd>X</kbd> — вниз</div>
-        <div id="help-shift"><kbd>Shift</kbd> — ускорение</div>
+        <div><kbd>Space</kbd> — вверх/прыгать/тормоз · <kbd>X</kbd> — вниз</div>
+        <div id="help-shift"><kbd>Shift</kbd> — мощно ускориться</div>
         <div><kbd>Esc</kbd> — освободить курсор</div>
+        <div id="help-car" hidden>
+            <div class="help-sep"></div>
+            <div><kbd>C</kbd> — сменить камеру авто</div>
+        </div>
     </div>
 
     <div id="hud">
@@ -304,6 +352,11 @@
         <div class="row"><span>Высота</span><b id="hud-alt">—</b></div>
         <div class="row"><span>Скорость</span><b id="hud-speed">—</b></div>
         <div class="row"><span>Стены</span><b id="hud-collision">—</b></div>
+    </div>
+
+    <div id="mini-map-wrap">
+        <div id="mini-map"></div>
+        <img id="mini-map-marker" src="images/ui_minimap_1.png" width="50" height="50" alt="" />
     </div>
 
     <div id="vortex-overlay" aria-hidden="true">
@@ -319,7 +372,7 @@
         <p>3D-бродилка от первого лица по реальной карте. Гуляй между зданий, взлетай и осматривайся.</p>
         <div class="play">Кликни, чтобы начать ▶</div>
         <p class="muted" id="overlay-hint"></p>
-        <div id="loading">реальный мир уже загружен</div>
+        <div id="loading">Это копия реального мира. 148,9 млн км² уже загружены!</div>
     </div>
 
     <!-- Запасные данные для открытия через file:// (двойным кликом), когда
@@ -328,7 +381,9 @@
          http-сервер эти файлы можно игнорировать. -->
     <script src="settings.js"></script>
     <script src="maps/map1.js"></script>
+    <script src="maps/mini1.js"></script>
     <script src="modules/follow-terrain-hands.js"></script>
+    <script src="modules/car-drive.js"></script>
 
     <script>
     "use strict";
@@ -384,10 +439,33 @@
         heightAnimSec: 2,              // длительность анимации смены высоты, сек
         followTerrainJumpHeight: 14,   // прыжок Space в режиме «следовать рельефу», м
         followTerrainJumpSec: 1.4,     // длительность прыжка вверх-вниз, сек
+        movementMode: "ignore",        // ignore | follow | car
+        // car* — править только в settings.json (ниже — запас для offline)
+        carEyeHeight: 2.2,
+        carCameraHeight: 5,
+        carCameraPitch: 64,
+        carLookAheadM: 15,
+        carTopCameraHeight: 14,
+        carTopCameraPitch: 5,
+        carTopLookAheadM: 0,
+        carTopZoom: 18.5,
+        carTurnSpeedDeg: 110,
+        carSpeed: 55,
+        carAccelSec: 0.65,             // разгон, сек (больше — инертнее)
+        carBrakeSec: 1.05,             // торможение / отпускание газа, сек
+        carHandbrakeSec: 0.22,         // Space — резкий тормоз, сек
+        carTurnInertiaSec: 0.5,
+        carSpriteSrc: "images/car_0.png",
+        carSpriteWidthPx: 280,
+        carSpritePivotOffsetX: 0,
+        carSpritePivotOffsetY: 0,
+        carSpriteTurnThresholdDeg: [20, 40],
+        carSpriteTopFrameIndex: 3,
         demUrl: "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
         demEncoding: "terrarium",
         // Тени зданий в реальном времени (CustomLayer, проекция следа + AO).
         shadows: false,
+        minimapEnabled: true,
         shadowModuleUrl: "https://cdn.jsdelivr.net/gh/wallabyway/maplibre-building-shadows@main/ao-shadow.mjs",
         buildingsLayerId: "building-3d",
         buildingsSourceId: "openmaptiles",
@@ -423,19 +501,33 @@
         return merge({}, "defaults");
     })();
 
+    if (!CONFIG.movementMode) {
+        CONFIG.movementMode = CONFIG.ignoreTerrainCollision ? "ignore" : "follow";
+    }
+    CONFIG.ignoreTerrainCollision = CONFIG.movementMode === "ignore";
+
+    function isCarMode() { return CONFIG.movementMode === "car"; }
+    function isFollowMode() { return CONFIG.movementMode === "follow"; }
+    function isIgnoreMode() { return CONFIG.movementMode === "ignore"; }
+
     function styleNameFromUrl(url) {
         if (!url || typeof url !== "string") return "embedded";
         const m = url.match(/([^/\\]+)\.(json|js)$/i);
         return m ? m[1] : url;
     }
 
-    function totalEyeHeightForIgnore(ignore) {
-        if (ignore) {
+    function totalEyeHeightForMode(mode) {
+        if (mode === "ignore") {
             return CONFIG.ignoreTerrainEyeHeight != null
                 ? CONFIG.ignoreTerrainEyeHeight
                 : CONFIG.eyeHeight * CONFIG.startHeightMultiplier;
         }
+        if (mode === "car") return CONFIG.carEyeHeight;
         return CONFIG.followTerrainEyeHeight != null ? CONFIG.followTerrainEyeHeight : 2.8;
+    }
+
+    function totalEyeHeightForIgnore(ignore) {
+        return totalEyeHeightForMode(ignore ? "ignore" : "follow");
     }
 
     function altOffsetForTotalEye(totalEye) {
@@ -449,16 +541,26 @@
     const elDraw = document.getElementById("draw");
     const elRelief = document.getElementById("relief");
     const elNoTerrCol = document.getElementById("noterrcol");
+    const elMinimap = document.getElementById("minimap");
     const elChooseFollow = document.getElementById("choose-terrain-follow");
     const elChooseIgnore = document.getElementById("choose-terrain-ignore");
-    // Режимы terrain-choose (Q — следующий по кругу; сюда же можно добавить третий)
-    const TERRAIN_CHOOSE_MODES = [
-        { ignore: true,  button: elChooseIgnore },
-        { ignore: false, button: elChooseFollow }
+    const elChooseCar = document.getElementById("choose-terrain-car");
+    const MOVEMENT_MODES = [
+        { id: "ignore", button: elChooseIgnore },
+        { id: "follow", button: elChooseFollow },
+        { id: "car", button: elChooseCar }
     ];
+    const MOVEMENT_MODE_LABELS = {
+        ignore: "Режим голубя",
+        follow: "Прогулка",
+        car: "Машинка"
+    };
     const elShadows = document.getElementById("shadows");
     const elStyleStatus = document.getElementById("style-status");
     const elHelpShift = document.getElementById("help-shift");
+    const elHelpCar = document.getElementById("help-car");
+    const elTerrainChooseHintCar = document.getElementById("terrain-choose-hint-car");
+    const elMovementModeToast = document.getElementById("movement-mode-toast");
     const elOverlayHint = document.getElementById("overlay-hint");
 
     function applyConfigToUI() {
@@ -469,45 +571,104 @@
         elRelief.value = CONFIG.terrainExaggeration;
         elNoTerrCol.checked = CONFIG.ignoreTerrainCollision;
         elShadows.checked = CONFIG.shadows;
+        if (elMinimap) elMinimap.checked = CONFIG.minimapEnabled !== false;
         elStyleStatus.textContent = "стиль: " + styleNameFromUrl(CONFIG.styleUrl);
         elHelpShift.innerHTML = "<kbd>Shift</kbd> — ускорение ×" + CONFIG.runMultiplier;
-        elOverlayHint.textContent = "WASD — ходьба · мышь — обзор · Space/X — вверх/вниз · Shift — ×" + CONFIG.runMultiplier;
-        syncTerrainChooseUI();
+        elOverlayHint.textContent = "Некоммерческий песочница для фана. By Boxypix design & dev. 2026";
+        syncMovementChooseUI();
     }
     applyConfigToUI();
     if (window.GeowalkFollowTerrainHands) GeowalkFollowTerrainHands.init();
 
-    function syncTerrainChooseUI() {
-        TERRAIN_CHOOSE_MODES.forEach(mode => {
-            mode.button.classList.toggle("selected", CONFIG.ignoreTerrainCollision === mode.ignore);
+    function carDriveOptionsFromConfig() {
+        return {
+            src: CONFIG.carSpriteSrc,
+            widthPx: CONFIG.carSpriteWidthPx,
+            turnThresholdDeg: CONFIG.carSpriteTurnThresholdDeg.slice(),
+            pivotOffsetX: CONFIG.carSpritePivotOffsetX,
+            pivotOffsetY: CONFIG.carSpritePivotOffsetY,
+            topFrameIndex: CONFIG.carSpriteTopFrameIndex
+        };
+    }
+
+    function initCarDriveModule() {
+        if (!window.GeowalkCarDrive) return;
+        GeowalkCarDrive.init(carDriveOptionsFromConfig());
+    }
+    initCarDriveModule();
+
+    function syncMovementChooseUI() {
+        MOVEMENT_MODES.forEach(mode => {
+            mode.button.classList.toggle("selected", CONFIG.movementMode === mode.id);
         });
+        document.body.classList.toggle("car-mode", isCarMode());
+        if (elHelpCar) elHelpCar.hidden = !isCarMode();
+        if (elTerrainChooseHintCar) elTerrainChooseHintCar.hidden = !isCarMode();
         syncFollowTerrainHandsModule();
+        syncCarDriveModule();
+    }
+
+    function syncCarDriveModule() {
+        if (!window.GeowalkCarDrive) return;
+        GeowalkCarDrive.sync({
+            carMode: isCarMode(),
+            overlayOpen: document.body.classList.contains("overlay-open")
+        });
     }
 
     function syncFollowTerrainHandsModule() {
         if (!window.GeowalkFollowTerrainHands) return;
         GeowalkFollowTerrainHands.sync({
-            followTerrain: !CONFIG.ignoreTerrainCollision,
+            followTerrain: isFollowMode(),
             overlayOpen: document.body.classList.contains("overlay-open")
         });
     }
 
-    function setIgnoreTerrain(ignore) {
-        elNoTerrCol.checked = ignore;
-        applyTerrainCollision(ignore);
-        syncTerrainChooseUI();
+    function showMovementModeToast(modeId) {
+        if (!elMovementModeToast) return;
+        const label = MOVEMENT_MODE_LABELS[modeId];
+        if (!label) return;
+        elMovementModeToast.textContent = label;
+        elMovementModeToast.classList.remove("show");
+        void elMovementModeToast.offsetWidth;
+        elMovementModeToast.classList.add("show");
     }
 
-    function applyTerrainChooseIndex(index) {
-        const n = TERRAIN_CHOOSE_MODES.length;
+    function setMovementMode(modeId) {
+        if (!MOVEMENT_MODES.some(m => m.id === modeId)) return;
+        const changed = CONFIG.movementMode !== modeId;
+        CONFIG.movementMode = modeId;
+        CONFIG.ignoreTerrainCollision = modeId === "ignore";
+        elNoTerrCol.checked = modeId === "ignore";
+        fixedElevation = null;
+        velFwd = 0;
+        velStrafe = 0;
+        carYawVel = 0;
+        carCameraView = "chase";
+        try { map.setCenterClampedToGround(false); } catch (e) {}
+        startHeightAnimForMode(modeId);
+        syncMovementChooseUI();
+        if (changed) showMovementModeToast(modeId);
+    }
+
+    function setIgnoreTerrain(ignore) {
+        setMovementMode(ignore ? "ignore" : "follow");
+    }
+
+    function applyMovementChooseIndex(index) {
+        const n = MOVEMENT_MODES.length;
         const i = ((index % n) + n) % n;
-        setIgnoreTerrain(TERRAIN_CHOOSE_MODES[i].ignore);
+        setMovementMode(MOVEMENT_MODES[i].id);
     }
 
     function cycleTerrainChoose() {
-        let cur = TERRAIN_CHOOSE_MODES.findIndex(m => m.ignore === CONFIG.ignoreTerrainCollision);
+        let cur = MOVEMENT_MODES.findIndex(m => m.id === CONFIG.movementMode);
         if (cur < 0) cur = 0;
-        applyTerrainChooseIndex(cur + 1);
+        applyMovementChooseIndex(cur + 1);
+    }
+
+    function syncTerrainChooseUI() {
+        syncMovementChooseUI();
     }
 
     // Небо из settings.json → поля MapLibre Style Spec (sky)
@@ -547,6 +708,26 @@
         return CONFIG.styleUrl;
     }
 
+    const MINI_MAP_STYLE_URL = "maps/mini1.json";
+
+    function loadMiniMapStyle() {
+        // Мини-карта всегда использует только maps/mini1.json (не основной стиль карты).
+        if (location.protocol === "file:" && window.GEOWALK_MINI_STYLE) {
+            return window.GEOWALK_MINI_STYLE;
+        }
+        if (location.protocol !== "file:") {
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open("GET", MINI_MAP_STYLE_URL, false);
+                xhr.send(null);
+                if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+                    return JSON.parse(xhr.responseText);
+                }
+            } catch (e) { /* см. запасной вариант ниже */ }
+        }
+        return MINI_MAP_STYLE_URL;
+    }
+
     const EARTH_CIRC = 40075016.686; // м
     const TILE = 512;
     const DEG = Math.PI / 180;
@@ -567,14 +748,65 @@
         pitch: 60,
         interactive: false,
         attributionControl: { compact: true },
-        maxPitch: 89,
+        maxPitch: 90,
         maxZoom: 24,
         fadeDuration: 0,
         crossSourceCollisions: false
     });
 
-    // Иконки POI у земли при быстрых сменах zoom вызывают сбой рендера
-    // символов в MapLibre — убираем иконочные слои (здания/дороги остаются).
+    let miniMap = null;
+    let miniMapReady = false;
+    const MINI_MAP_ZOOM = 12;
+    const elMiniMapWrap = document.getElementById("mini-map-wrap");
+
+    function createMiniMap() {
+        if (miniMap) return;
+        miniMap = new maplibregl.Map({
+            container: "mini-map",
+            style: loadMiniMapStyle(),
+            center: [CONFIG.start.lng, CONFIG.start.lat],
+            zoom: MINI_MAP_ZOOM,
+            bearing: CONFIG.startBearing,
+            pitch: 0,
+            interactive: false,
+            attributionControl: false,
+            fadeDuration: 0,
+            maxPitch: 0,
+            pitchWithRotate: false,
+            dragRotate: false
+        });
+        miniMap.on("load", () => {
+            miniMapReady = true;
+            updateMiniMap();
+        });
+    }
+
+    function destroyMiniMap() {
+        if (!miniMap) return;
+        miniMapReady = false;
+        try { miniMap.remove(); } catch (e) {}
+        miniMap = null;
+    }
+
+    function syncMiniMapEnabled() {
+        const on = CONFIG.minimapEnabled !== false;
+        if (elMiniMapWrap) elMiniMapWrap.hidden = !on;
+        if (on) createMiniMap();
+        else destroyMiniMap();
+    }
+
+    function updateMiniMap() {
+        if (!miniMap || !miniMapReady) return;
+        try {
+            miniMap.jumpTo({
+                center: [player.lng, player.lat],
+                bearing: player.yaw,
+                pitch: 0,
+                zoom: MINI_MAP_ZOOM
+            });
+        } catch (e) { /* пропускаем редкий сбой кадра */ }
+    }
+
     function stripIconLayers() {
         for (const layer of map.getStyle().layers || []) {
             if (layer.type === "symbol" && layer.layout && layer.layout["icon-image"]) {
@@ -591,28 +823,36 @@
         lat: CONFIG.start.lat,
         yaw: CONFIG.startBearing,    // курс, град
         pitch: CONFIG.pitchStart,    // наклон камеры, град (0=вниз,90=горизонт)
-        altOffset: altOffsetForTotalEye(totalEyeHeightForIgnore(CONFIG.ignoreTerrainCollision)),
+        altOffset: altOffsetForTotalEye(totalEyeHeightForMode(CONFIG.movementMode)),
         speed: 0,
         eye: CONFIG.eyeHeight,
         collision: true
     };
+
+    syncMiniMapEnabled();
 
     // фиксированная высота рельефа-базы (м над уровнем моря) при включённом
     // «игнорировать рельеф»: камера держит постоянную абсолютную высоту = база + рост.
     let fixedElevation = null;
     // скорость в системе игрока (м/с): вперёд/назад и влево/вправо — для инерции
     let velFwd = 0, velStrafe = 0;
+    let carYawVel = 0;
+    let carCameraView = "chase"; // chase | topdown (клавиша C)
     let heightAnim = null;
     let jumpAnim = null;
 
-    function startHeightAnim(ignore) {
+    function startHeightAnimForMode(mode) {
         jumpAnim = null;
         heightAnim = {
             from: player.altOffset,
-            to: altOffsetForTotalEye(totalEyeHeightForIgnore(ignore)),
+            to: altOffsetForTotalEye(totalEyeHeightForMode(mode)),
             elapsed: 0,
             duration: Math.max(0.2, CONFIG.heightAnimSec || 2)
         };
+    }
+
+    function startHeightAnim(ignore) {
+        startHeightAnimForMode(ignore ? "ignore" : "follow");
     }
 
     function updateHeightAnim(dt) {
@@ -632,7 +872,7 @@
 
     function tryStartFollowJump() {
         // Прыжок только когда галочка «Игнорировать рельеф» снята (режим следования)
-        if (CONFIG.ignoreTerrainCollision || !locked) return;
+        if (CONFIG.ignoreTerrainCollision || !locked || !isFollowMode()) return;
         if (heightAnim || jumpAnim) return;
         jumpAnim = {
             base: player.altOffset,
@@ -677,6 +917,7 @@
     function syncOverlayChrome() {
         document.body.classList.toggle("overlay-open", overlayVisible());
         syncFollowTerrainHandsModule();
+        syncCarDriveModule();
     }
 
     function requestLock() { canvasEl.requestPointerLock?.(); }
@@ -709,7 +950,7 @@
     });
 
     document.addEventListener("mousemove", (e) => {
-        if (!locked) return;
+        if (!locked || isCarMode()) return;
         player.yaw = ((player.yaw + e.movementX * CONFIG.mouseYaw) % 360 + 360) % 360;
         // вертикальный обзор отключён — наклон камеры фиксирован (CONFIG.pitchStart)
     });
@@ -719,15 +960,35 @@
         return t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
     }
 
-    const HANDLED = ["Space","KeyX","KeyW","KeyA","KeyS","KeyD","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","ShiftLeft","ShiftRight","KeyQ"];
+    const HANDLED = ["Space","KeyX","KeyW","KeyA","KeyS","KeyD","KeyC","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","ShiftLeft","ShiftRight","KeyQ","Digit1","Digit2","Digit3"];
     window.addEventListener("keydown", (e) => {
         if (isTyping(e)) return;            // не мешаем вводу в поля
+        if (e.code === "Digit1" && !e.repeat) {
+            e.preventDefault();
+            applyMovementChooseIndex(0);
+            return;
+        }
+        if (e.code === "Digit2" && !e.repeat) {
+            e.preventDefault();
+            applyMovementChooseIndex(1);
+            return;
+        }
+        if (e.code === "Digit3" && !e.repeat) {
+            e.preventDefault();
+            applyMovementChooseIndex(2);
+            return;
+        }
         if (e.code === "KeyQ") {
             e.preventDefault();
             cycleTerrainChoose();
             return;
         }
-        if (e.code === "Space" && locked && !CONFIG.ignoreTerrainCollision && !e.repeat) {
+        if (e.code === "KeyC" && locked && isCarMode() && !e.repeat) {
+            e.preventDefault();
+            carCameraView = carCameraView === "chase" ? "topdown" : "chase";
+            return;
+        }
+        if (e.code === "Space" && locked && isFollowMode() && !e.repeat) {
             e.preventDefault();
             tryStartFollowJump();
             return;
@@ -799,10 +1060,7 @@
     }
 
     function applyTerrainCollision(ignore) {
-        CONFIG.ignoreTerrainCollision = ignore;
-        fixedElevation = null;
-        try { map.setCenterClampedToGround(false); } catch (e) {}
-        startHeightAnim(ignore);
+        setMovementMode(ignore ? "ignore" : "follow");
     }
 
     let ShadowClass = null;
@@ -832,8 +1090,12 @@
         if (!isNaN(v)) { CONFIG.terrainExaggeration = v; applyTerrain(v); }
     });
     elNoTerrCol.addEventListener("change", () => setIgnoreTerrain(elNoTerrCol.checked));
-    TERRAIN_CHOOSE_MODES.forEach((mode, i) => {
-        mode.button.addEventListener("click", () => applyTerrainChooseIndex(i));
+    elMinimap.addEventListener("change", () => {
+        CONFIG.minimapEnabled = elMinimap.checked;
+        syncMiniMapEnabled();
+    });
+    MOVEMENT_MODES.forEach((mode, i) => {
+        mode.button.addEventListener("click", () => applyMovementChooseIndex(i));
     });
     elShadows.addEventListener("change", () => {
         if (elShadows.checked) enableShadows(); else disableShadows();
@@ -873,7 +1135,7 @@
             const [lng, lat] = f.geometry.coordinates;
             player.lng = lng;
             player.lat = lat;
-            player.altOffset = altOffsetForTotalEye(totalEyeHeightForIgnore(CONFIG.ignoreTerrainCollision));
+            player.altOffset = altOffsetForTotalEye(totalEyeHeightForMode(CONFIG.movementMode));
             heightAnim = null;
             jumpAnim = null;
             velFwd = 0;
@@ -963,7 +1225,7 @@
                 });
             }
             applyTerrain(CONFIG.terrainExaggeration);
-            applyTerrainCollision(CONFIG.ignoreTerrainCollision);
+            fixedElevation = null;
         } catch (err) { console.warn("DEM:", err); }
 
         // Тени зданий (старый слой исчез вместе с прежним стилем)
@@ -1013,7 +1275,6 @@
             player.speed = OVERLAY_AUTO_WALK_SPEED;
         }
 
-        // движение
         let fwd = (keys["KeyW"] || keys["ArrowUp"] ? 1 : 0) - (keys["KeyS"] || keys["ArrowDown"] ? 1 : 0);
         let strafe = (keys["KeyD"] || keys["ArrowRight"] ? 1 : 0) - (keys["KeyA"] || keys["ArrowLeft"] ? 1 : 0);
 
@@ -1026,22 +1287,62 @@
             cacheTime = performance.now();
         }
 
-        const maxSpeed = (keys["ShiftLeft"] || keys["ShiftRight"]) ? CONFIG.walkSpeed * CONFIG.runMultiplier : CONFIG.walkSpeed;
+        let maxSpeed = (keys["ShiftLeft"] || keys["ShiftRight"]) ? CONFIG.walkSpeed * CONFIG.runMultiplier : CONFIG.walkSpeed;
         let targetFwd = 0, targetStrafe = 0;
-        if (locked && (fwd !== 0 || strafe !== 0)) {
+
+        if (isCarMode() && locked && !overlayWalk) {
+            let turnInput = strafe;
+            if (velFwd < -0.05) turnInput = -strafe;
+            const maxTurnRate = CONFIG.carTurnSpeedDeg;
+            const targetYawVel = turnInput * maxTurnRate;
+            const turnTau = Math.max(0.02, CONFIG.carTurnInertiaSec);
+            const turnBlend = 1 - Math.exp(-dt / turnTau);
+            carYawVel += (targetYawVel - carYawVel) * turnBlend;
+            player.yaw = ((player.yaw + carYawVel * dt) % 360 + 360) % 360;
+
+            maxSpeed = (keys["ShiftLeft"] || keys["ShiftRight"])
+                ? CONFIG.carSpeed * CONFIG.runMultiplier
+                : CONFIG.carSpeed;
+            if (locked && fwd !== 0 && !keys["Space"]) targetFwd = fwd > 0 ? 1 : -1;
+            targetStrafe = 0;
+
+            const targetVel = targetFwd * maxSpeed;
+            const accelTau = Math.max(0.02, CONFIG.carAccelSec);
+            const brakeTau = Math.max(0.02, CONFIG.carBrakeSec);
+            const handbrakeTau = Math.max(0.02, CONFIG.carHandbrakeSec);
+            let tau = brakeTau;
+            if (keys["Space"]) {
+                tau = handbrakeTau;
+            } else if (Math.abs(targetVel) > 0.01) {
+                if (Math.abs(velFwd) < 0.05 || velFwd * targetVel > 0) {
+                    if (Math.abs(targetVel) > Math.abs(velFwd)) tau = accelTau;
+                }
+            }
+            const blend = 1 - Math.exp(-dt / tau);
+            const stopVel = keys["Space"] ? 0 : targetVel;
+            velFwd += (stopVel - velFwd) * blend;
+            velStrafe += (0 - velStrafe) * blend;
+        } else if (locked && (fwd !== 0 || strafe !== 0)) {
             const len = Math.hypot(fwd, strafe);
             targetFwd = fwd / len;
             targetStrafe = strafe / len;
-        }
-
-        if (CONFIG.inertiaEnabled) {
+            if (CONFIG.inertiaEnabled) {
+                const tau = Math.max(0.02, CONFIG.inertia);
+                const blend = 1 - Math.exp(-dt / tau);
+                velFwd += (targetFwd * maxSpeed - velFwd) * blend;
+                velStrafe += (targetStrafe * maxSpeed - velStrafe) * blend;
+            } else {
+                velFwd = targetFwd * maxSpeed;
+                velStrafe = targetStrafe * maxSpeed;
+            }
+        } else if (CONFIG.inertiaEnabled) {
             const tau = Math.max(0.02, CONFIG.inertia);
             const blend = 1 - Math.exp(-dt / tau);
-            velFwd += (targetFwd * maxSpeed - velFwd) * blend;
-            velStrafe += (targetStrafe * maxSpeed - velStrafe) * blend;
+            velFwd += (0 - velFwd) * blend;
+            velStrafe += (0 - velStrafe) * blend;
         } else {
-            velFwd = targetFwd * maxSpeed;
-            velStrafe = targetStrafe * maxSpeed;
+            velFwd = 0;
+            velStrafe = 0;
         }
 
         const dist = Math.hypot(velFwd, velStrafe) * dt;
@@ -1080,7 +1381,7 @@
         updateFollowJumpAnim(dt);
 
         // Space/X — подъём/спуск только при включённой галочке «игнорировать рельеф»
-        if (locked && !heightAnim && !jumpAnim && CONFIG.ignoreTerrainCollision) {
+        if (locked && !heightAnim && !jumpAnim && isIgnoreMode()) {
             const up = (keys["Space"] ? 1 : 0) - (keys["KeyX"] ? 1 : 0);
             player.altOffset += up * CONFIG.flySpeed * dt;
             if (player.altOffset < 0) player.altOffset = 0;
@@ -1092,9 +1393,67 @@
     // поэтому center выносим вперёд ровно на это расстояние по земле.
     function applyCamera() {
         if (!ready) return;
-        const tr = map.transform;
-        const ctc = tr.cameraToCenterDistance;          // пиксели (зависит от FOV и высоты окна)
         const cosLat = Math.cos(player.lat * DEG);
+
+        if (isCarMode()) {
+            const topdown = carCameraView === "topdown";
+            const b = player.yaw * DEG;
+            let zoom, camPitch, aheadM, targetEye;
+
+            if (topdown) {
+                // MapLibre pitch: 0 = строго сверху, 90 = горизонт
+                camPitch = CONFIG.carTopCameraPitch;
+                aheadM = CONFIG.carTopLookAheadM;
+                zoom = CONFIG.carTopZoom;
+                targetEye = CONFIG.carTopCameraHeight;
+                player.eye = targetEye;
+            } else {
+                camPitch = CONFIG.carCameraPitch;
+                aheadM = CONFIG.carLookAheadM;
+                targetEye = CONFIG.carCameraHeight;
+                const pr = camPitch * DEG;
+                const tr = map.transform;
+                const ctc = tr.cameraToCenterDistance;
+                zoom = Math.log2(Math.cos(pr) * ctc * EARTH_CIRC * cosLat / (TILE * targetEye));
+                zoom = Math.min(CONFIG.maxSafeZoom, Math.max(1, zoom));
+                const mpp = EARTH_CIRC * cosLat / (TILE * Math.pow(2, zoom));
+                player.eye = Math.cos(pr) * ctc * mpp;
+            }
+
+            const opts = {
+                center: [
+                    player.lng + (Math.sin(b) * aheadM) / (M_PER_DEG_LAT * cosLat),
+                    player.lat + (Math.cos(b) * aheadM) / M_PER_DEG_LAT
+                ],
+                zoom,
+                bearing: player.yaw,
+                pitch: camPitch
+            };
+
+            if (map.getCenterClampedToGround()) map.setCenterClampedToGround(false);
+            if (map.getTerrain() && map.isSourceLoaded("terrain-dem")) {
+                const te = map.queryTerrainElevation([player.lng, player.lat]);
+                if (typeof te === "number" && isFinite(te)) opts.elevation = te;
+            } else if (!map.getTerrain()) {
+                opts.elevation = 0;
+            }
+
+            try { map.jumpTo(opts); } catch (err) { /* пропускаем редкий сбой кадра */ }
+            try {
+                const tr2 = map.transform;
+                if (typeof tr2.overrideNearFarZ === "function") {
+                    tr2.clearNearFarZOverride();
+                    const farZ = tr2.farZ;
+                    const h = tr2.height || map.getCanvas().height || 800;
+                    const nearZ = Math.max(0.02, h / CONFIG.nearClipDivisor);
+                    if (isFinite(farZ) && farZ > nearZ) tr2.overrideNearFarZ(nearZ, farZ);
+                }
+            } catch (err) { /* near/far override недоступен */ }
+            return;
+        }
+
+        const tr = map.transform;
+        const ctc = tr.cameraToCenterDistance;
         const pr = player.pitch * DEG;
         const targetEye = CONFIG.groundAlt + CONFIG.eyeHeight + player.altOffset;
 
@@ -1121,7 +1480,7 @@
             pitch: player.pitch
         };
 
-        if (CONFIG.ignoreTerrainCollision) {
+        if (isIgnoreMode()) {
             // постоянная высота: один раз фиксируем базу рельефа и держим её,
             // тогда камера = база + рост, не повторяя неровности под ногами.
             if (fixedElevation === null) {
@@ -1193,15 +1552,34 @@
         lastT = now;
         update(dt);
         applyCamera();
+        if (window.GeowalkCarDrive && isCarMode() && ready) {
+            const rect = map.getCanvas().getBoundingClientRect();
+            // Ось машины — позиция игрока; carLookAheadM смещает только центр камеры вперёд.
+            const pt = map.project([player.lng, player.lat]);
+            GeowalkCarDrive.setPivot(rect.left + pt.x, rect.top + pt.y);
+        }
         updateHUD();
+        updateMiniMap();
         if (window.GeowalkFollowTerrainHands) {
             GeowalkFollowTerrainHands.tick({ speed: player.speed, dt });
+        }
+        if (window.GeowalkCarDrive) {
+            GeowalkCarDrive.tick({
+                speed: player.speed,
+                dt,
+                turnSpeedDeg: carYawVel,
+                viewMode: carCameraView,
+                yaw: player.yaw
+            });
         }
         requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
 
-    window.addEventListener("resize", () => map.resize());
+    window.addEventListener("resize", () => {
+        map.resize();
+        if (miniMap) miniMap.resize();
+    });
     </script>
 </body>
 </html>

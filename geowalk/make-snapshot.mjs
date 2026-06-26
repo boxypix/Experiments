@@ -16,3 +16,4 @@ snapshot("settings.json", "settings.js", "GEOWALK_SETTINGS");
 const settings = JSON.parse(readFileSync("settings.json", "utf8"));
 const styleFile = settings.styleUrl || "maps/map1.json";
 snapshot(styleFile, "maps/map1.js", "GEOWALK_STYLE");
+snapshot("maps/mini1.json", "maps/mini1.js", "GEOWALK_MINI_STYLE");
