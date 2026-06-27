@@ -28,6 +28,32 @@
     "fogColor": "#cfe3ff",
     "fogGroundBlend": 0.2
   },
+  "skyByStyle": {
+    "maps/map1.json": {
+      "color": "#0350B2",
+      "horizonBlend": 0.35,
+      "horizonColor": "#9fc8ff",
+      "horizonFogBlend": 0.5,
+      "fogColor": "#cfe3ff",
+      "fogGroundBlend": 0.2
+    },
+    "maps/map2.json": {
+      "color": "#32005B",
+      "horizonBlend": 0.35,
+      "horizonColor": "#C46935",
+      "horizonFogBlend": 0.5,
+      "fogColor": "#C46935",
+      "fogGroundBlend": 0.2
+    },
+    "maps/map3.json": {
+      "color": "#000227",
+      "horizonBlend": 0.4,
+      "horizonColor": "#271BD8",
+      "horizonFogBlend": 0.55,
+      "fogColor": "#747F82",
+      "fogGroundBlend": 0.2
+    }
+  },
   "styleUrl": "maps/map1.json",
   "terrainExaggeration": 1,
   "ignoreTerrainCollision": true,

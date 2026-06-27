@@ -30,7 +30,7 @@
       "source-layer": "water",
       "filter": ["!=", ["get", "brunnel"], "tunnel"],
       "layout": {"visibility": "visible"},
-      "paint": {"fill-color": "rgba(94, 94, 94, 1)", "fill-antialias": false}
+      "paint": {"fill-color": "rgba(117, 117, 117, 1)", "fill-antialias": false}
     },
     {
       "id": "road_link",
@@ -380,19 +380,19 @@
           ["coalesce", ["get", "name_en"], ["get", "name"]]
         ],
         "text-font": ["Noto Sans Bold"],
-        "text-max-width": 8,
         "text-offset": [0, -0.2],
         "text-size": [
           "interpolate",
           ["exponential", 1.2],
           ["zoom"],
           4,
-          12,
+          10,
           7,
-          14,
           11,
-          20
-        ]
+          11,
+          13
+        ],
+        "text-max-width": 4
       },
       "paint": {"text-color": "#000"}
     }

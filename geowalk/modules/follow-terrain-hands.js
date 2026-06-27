@@ -48,6 +48,14 @@
             "  display: block; height: auto; max-width: 100%;",
             "  will-change: transform;",
             "  transform: translate(0, 0);",
+            "}",
+            "@media (max-width: 800px) {",
+            "  #geowalk-follow-hands {",
+            "    left: 50%; width: 190vw; transform: translateX(-50%); bottom: 0;",
+            "  }",
+            "  #geowalk-follow-hands img {",
+            "    width: 100% !important; max-width: none;",
+            "  }",
             "}"
         ].join("\n");
         document.head.appendChild(styleEl);

@@ -143,6 +143,11 @@
             display: block; width: 80px; height: 80px;
             image-rendering: pixelated; border-radius: 12px;
         }
+        @media (max-width: 700px) {
+            #terrain-choose-wrap .terrain-choose-hint,
+            #terrain-choose-hint-car { display: none !important; }
+            #terrain-choose img { width: 60px; height: 60px; }
+        }
 
         #movement-mode-toast {
             position: absolute; left: 50%; top: calc(50% - 20vh); transform: translate(-50%, -50%);
@@ -189,7 +194,7 @@
             opacity: 0.3; pointer-events: none;
         }
         .touch-cross {
-            position: absolute; left: 16px; bottom: 210px;
+            position: absolute; left: 16px; bottom: 140px;
             display: grid;
             grid-template-columns: 56px 56px 56px;
             grid-template-rows: 56px 56px 56px;
@@ -200,7 +205,7 @@
         .touch-cross .touch-btn:nth-child(3) { grid-column: 3; grid-row: 2; }
         .touch-cross .touch-btn:nth-child(4) { grid-column: 2; grid-row: 3; }
         .touch-joystick {
-            position: absolute; right: 16px; bottom: 210px;
+            position: absolute; right: 16px; bottom: 165px;
             width: 120px; height: 120px;
             pointer-events: auto; touch-action: none;
         }
@@ -215,13 +220,32 @@
             transform: translate(-50%, -50%);
             pointer-events: none;
         }
+        .touch-car-actions {
+            position: absolute; right: 16px; bottom: 140px;
+            display: none; flex-direction: column; gap: 10px;
+            align-items: stretch; pointer-events: none;
+        }
+        body.car-mode .touch-joystick { display: none; }
+        body.car-mode .touch-car-actions { display: flex; }
+        .touch-btn-wide {
+            width: 120px; height: 48px;
+            font: 600 16px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .touch-btn-go {
+            width: 120px; height: 120px; border-radius: 20px;
+            font: 700 28px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
 
         /* Поиск места — сверху по центру */
-        #search-bar {
+        #search-wrap {
             position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
-            z-index: 22; pointer-events: auto;
-            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            z-index: 22; display: flex; flex-direction: column; align-items: stretch; gap: 4px;
             width: min(560px, calc(100vw - 280px));
+        }
+        #search-bar {
+            pointer-events: auto;
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            width: 100%;
         }
         #search-bar .search-row {
             display: flex; align-items: stretch; gap: 10px; width: 100%;
@@ -247,6 +271,42 @@
             font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             text-align: center; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
         }
+        #search-debug-toggle {
+            display: none;
+            align-self: flex-start;
+            width: auto; min-height: 0;
+            margin: 0; padding: 0;
+            border: none; background: transparent;
+            box-shadow: none; appearance: none; -webkit-appearance: none;
+            color: #000; opacity: 0.7; cursor: pointer;
+            font: 400 10px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            text-align: left; text-decoration: none; line-height: 1;
+            pointer-events: auto;
+        }
+        #search-debug-toggle:active,
+        #search-debug-toggle:focus { outline: none; background: transparent; }
+        @media (max-width: 800px) {
+            #search-wrap { width: 95vw; }
+            #city-go { display: none; }
+            #search-debug-toggle { display: inline; }
+            #help, #hud { display: none !important; }
+            #panel {
+                display: none;
+                left: 50%; top: 50%;
+                transform: translate(-50%, -50%);
+                max-height: calc(100vh - 32px);
+                overflow-y: auto;
+                z-index: 25;
+            }
+            body.debug-panel-open #panel { display: block; }
+            #mini-map-wrap {
+                right: 14px; top: 88px; bottom: auto;
+                width: 100px; height: 100px;
+            }
+            #mini-map { width: 100px; height: 100px; }
+            #mini-map-marker { width: 40px; height: 40px; }
+            #movement-mode-toast { font-size: 44px; }
+        }
 
         #resume-hint {
             position: absolute; left: 50%; top: 88px; transform: translateX(-50%);
@@ -270,24 +330,28 @@
 
         #overlay {
             position: absolute; inset: 0; z-index: 20;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 16px; padding: 24px 16px; overflow-y: auto;
             background: var(--ui-bg);
             color: #eaf6ff; text-align: center; cursor: pointer;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             transition: opacity 0.25s ease;
         }
         #overlay .logo {
-            width: 1200px; max-width: 90vw; height: auto; display: block;
+            width: min(900px, 90vw); max-width: 100%; height: auto; display: block; flex-shrink: 0;
         }
-        #overlay p { margin: 0; opacity: 0.85; font-size: 15px; max-width: 460px; }
+        #overlay p { margin: 0; opacity: 0.85; font-size: 15px; max-width: 460px; line-height: 1.45; }
         #overlay .play {
-            margin-top: 6px; padding: 12px 28px; border-radius: 999px;
+            padding: 12px 28px; border-radius: 999px; flex-shrink: 0;
             border: 1px solid rgb(233, 233, 233); background: rgb(228, 228, 228);
             font-size: 16px; font-weight: 600; color: #171717;
         }
         #overlay.hidden { opacity: 0; pointer-events: none; }
-        .muted { opacity: 0.6; font-size: 12px; }
-        #loading { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); z-index: 21; color: #9fd0ff; font-size: 13px; font-family: ui-monospace, monospace; }
+        .muted { opacity: 0.6; font-size: 12px; line-height: 1.4; }
+        #loading {
+            margin: 0; color: #9fd0ff; font-size: 13px; line-height: 1.4;
+            font-family: ui-monospace, monospace; max-width: 460px;
+        }
 
         /* Переход после поиска: чёрный экран + вращающийся vortex */
         #vortex-overlay {
@@ -302,9 +366,9 @@
         }
         #vortex-overlay .vortex-stage {
             position: relative; z-index: 0;
-            width: 1000px; height: 1000px;
-            max-width: min(1000px, 95vw);
-            max-height: min(1000px, 95vh);
+            --vortex-size: min(1000px, 95vw, 95vh);
+            width: var(--vortex-size);
+            height: var(--vortex-size);
         }
         #vortex-overlay .vortex-caption {
             position: absolute; left: 50%; bottom: 50px;
@@ -316,6 +380,7 @@
         }
         #vortex-overlay .vortex-spin {
             display: block; width: 100%; height: 100%;
+            aspect-ratio: 1 / 1; object-fit: contain;
             image-rendering: pixelated;
             animation: vortex-spin 5.6s linear infinite;
             animation-play-state: paused;
@@ -330,6 +395,56 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+
+        /* Меню выбора стиля карты */
+        #style-menu-overlay {
+            position: absolute; inset: 0; z-index: 35;
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px 16px;
+            background: rgba(0, 0, 0, 0.88);
+            opacity: 0; visibility: hidden; pointer-events: none;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        #style-menu-overlay.visible {
+            opacity: 1; visibility: visible; pointer-events: auto;
+        }
+        #style-menu-overlay .style-menu-close {
+            position: absolute; top: 16px; right: 16px;
+            width: 44px; height: 44px; padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08); color: #fff;
+            font: 300 32px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            cursor: pointer; appearance: none; -webkit-appearance: none;
+        }
+        #style-menu-overlay .style-menu-close:hover { background: rgba(255, 255, 255, 0.16); }
+        #style-menu-overlay .style-menu-inner {
+            width: min(420px, 100%); display: flex; flex-direction: column;
+            align-items: stretch; gap: 20px; text-align: center;
+        }
+        #style-menu-overlay .style-menu-title {
+            margin: 0; color: #fff; font-weight: 700;
+            font: 700 clamp(28px, 6vw, 40px)/1.15 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        #style-menu-overlay .style-menu-desc {
+            margin: 0; color: rgba(255, 255, 255, 0.72);
+            font: 400 clamp(15px, 3.5vw, 18px)/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        #style-menu-overlay .style-menu-actions {
+            display: flex; flex-direction: column; gap: 12px; margin-top: 8px;
+        }
+        #style-menu-overlay .style-menu-btn {
+            width: 100%; padding: 14px 18px; cursor: pointer;
+            border: 1px solid rgba(106, 209, 255, 0.45); border-radius: 12px;
+            background: rgba(106, 209, 255, 0.14); color: #eaf6ff;
+            font: 600 16px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+        #style-menu-overlay .style-menu-btn:hover { background: rgba(106, 209, 255, 0.26); }
+        #style-menu-overlay .style-menu-btn:active { transform: scale(0.98); }
+        #style-menu-overlay .style-menu-btn-white {
+            background: #fff; color: #171717; border-color: #fff;
+        }
+        #style-menu-overlay .style-menu-btn-white:hover { background: #f0f0f0; }
     </style>
 </head>
 <body class="overlay-open">
@@ -339,22 +454,36 @@
     <div id="panel">
         <img class="panel-logo" src="images/logo_big.png" alt="World Walk Cam" />
         <div class="title">Настройки</div>
-        <label>Скорость ходьбы <input id="walk" type="number" min="0" step="0.5" /></label>
+        <label>Моя скорость <input id="walk" type="number" min="0" step="0.5" /></label>
         <label>Ускорение (Shift) <input id="run" type="number" min="1" step="1" /></label>
         <label>Взлёт / спуск <input id="fly" type="number" min="0" step="0.5" /></label>
-        <label>Дальность прорисовки (0–1) <input id="draw" type="number" min="0" max="1" step="0.05" /></label>
+        <label>Туман (0–1) <input id="draw" type="number" min="0" max="1" step="0.05" /></label>
         <div class="sep"></div>
         <label>3D рельеф (×, 0=выкл) <input id="relief" type="number" min="0" step="0.5" /></label>
-        <label>Игнорировать рельеф камерой <input id="noterrcol" type="checkbox" /></label>
-        <label>Тени зданий <input id="shadows" type="checkbox" /></label>
+        <label>Игнор. рельеф <input id="noterrcol" type="checkbox" /></label>
+        <label>RT тени (сломаны) <input id="shadows" type="checkbox" /></label>
         <label>Мини-карта <input id="minimap" type="checkbox" /></label>
         <div class="sep"></div>
         <div class="style-row">
-            <button id="style-swap" class="mini" type="button">Swap style</button>
+            <button id="style-swap" class="mini style-swap" type="button">Swap style</button>
             <span id="style-status"></span>
         </div>
         <input id="style-file" type="file" accept=".json,application/json" hidden />
         <div class="hint">Esc — освободить курсор, чтобы менять поля</div>
+    </div>
+
+    <div id="style-menu-overlay" aria-hidden="true" hidden>
+        <button type="button" class="style-menu-close" id="style-menu-close" aria-label="Закрыть">×</button>
+        <div class="style-menu-inner">
+            <h2 class="style-menu-title">Стиль реальности</h2>
+            <p class="style-menu-desc">Выбери стиль карты для путешествий</p>
+            <div class="style-menu-actions">
+                <button type="button" class="style-menu-btn" data-style-url="maps/map1.json">Тест – отличный денек</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/map2.json">Тест – мертвый рассвет</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/map3.json">Тест – арктическое зарево</button>
+                <button type="button" class="style-menu-btn style-menu-btn-white" id="style-menu-upload">Загрузить свой</button>
+            </div>
+        </div>
     </div>
 
     <div id="terrain-choose-wrap">
@@ -375,12 +504,15 @@
 
     <div id="movement-mode-toast" aria-live="polite"></div>
 
-    <div id="search-bar">
-        <div class="search-row">
-            <input id="city" type="search" placeholder="Попади в любой город или место…" autocomplete="off" spellcheck="false" />
-            <button id="city-go" type="button">Лететь</button>
+    <div id="search-wrap">
+        <div id="search-bar">
+            <div class="search-row">
+                <input id="city" type="search" placeholder="Попади в любой город или место…" autocomplete="off" spellcheck="false" />
+                <button id="city-go" type="button">Лететь</button>
+            </div>
+            <div id="city-status"></div>
         </div>
-        <div id="city-status"></div>
+        <button type="button" id="search-debug-toggle">Debug menu</button>
     </div>
 
     <div id="resume-hint">Кликни по карте, чтобы вернуться к обзору</div>
@@ -396,6 +528,10 @@
         <div class="touch-joystick" id="touch-joystick">
             <div class="touch-joystick-base"></div>
             <div class="touch-joystick-stick" id="touch-joystick-stick"></div>
+        </div>
+        <div class="touch-car-actions">
+            <button type="button" class="touch-btn touch-btn-wide" id="touch-cam" aria-label="Сменить камеру">Cam</button>
+            <button type="button" class="touch-btn touch-btn-go" id="touch-go" aria-label="Ехать вперёд">Go</button>
         </div>
     </div>
 
@@ -437,8 +573,8 @@
         <img class="logo" src="images/logo_big.png" width="900" alt="World Geo Walk" />
         <p>3D-бродилка от первого лица по реальной карте. Гуляй между зданий, взлетай и осматривайся.</p>
         <div class="play">Кликни, чтобы начать ▶</div>
-        <p class="muted" id="overlay-hint"></p>
         <div id="loading">Это копия реального мира. 148,9 млн км² уже загружены!</div>
+        <p class="muted" id="overlay-hint"></p>
     </div>
 
     <!-- Запасные данные для открытия через file:// (двойным кликом), когда
@@ -447,6 +583,8 @@
          http-сервер эти файлы можно игнорировать. -->
     <script src="settings.js"></script>
     <script src="maps/map1.js"></script>
+    <script src="maps/map2.js"></script>
+    <script src="maps/map3.js"></script>
     <script src="maps/mini1.js"></script>
     <script src="modules/follow-terrain-hands.js"></script>
     <script src="modules/car-drive.js"></script>
@@ -493,6 +631,32 @@
             horizonFogBlend: 0.5,
             fogColor: "#cfe3ff",
             fogGroundBlend: 0.2
+        },
+        skyByStyle: {
+            "maps/map1.json": {
+                color: "#0350B2",
+                horizonBlend: 0.35,
+                horizonColor: "#9fc8ff",
+                horizonFogBlend: 0.5,
+                fogColor: "#cfe3ff",
+                fogGroundBlend: 0.2
+            },
+            "maps/map2.json": {
+                color: "#32005B",
+                horizonBlend: 0.35,
+                horizonColor: "#C46935",
+                horizonFogBlend: 0.5,
+                fogColor: "#C46935",
+                fogGroundBlend: 0.2
+            },
+            "maps/map3.json": {
+                color: "#000227",
+                horizonBlend: 0.4,
+                horizonColor: "#271BD8",
+                horizonFogBlend: 0.55,
+                fogColor: "#747F82",
+                fogGroundBlend: 0.2
+            }
         },
         styleUrl: "maps/map1.json", // стиль по умолчанию (папка /maps)
         // 3D рельеф (DEM от AWS, terrarium). 0 = выключен.
@@ -547,6 +711,21 @@
             // sky — только из settings.json / settings.js, без подмешивания встроенных цветов
             if (o && o.sky) m.sky = o.sky;
             else m.sky = Object.assign({}, defaults.sky);
+            if (o && o.skyByStyle) {
+                m.skyByStyle = {};
+                for (const k of Object.keys(o.skyByStyle)) {
+                    m.skyByStyle[k] = Object.assign({}, o.skyByStyle[k]);
+                }
+            } else if (defaults.skyByStyle) {
+                m.skyByStyle = {};
+                for (const k of Object.keys(defaults.skyByStyle)) {
+                    m.skyByStyle[k] = Object.assign({}, defaults.skyByStyle[k]);
+                }
+            } else {
+                m.skyByStyle = {};
+            }
+            const map1Key = m.styleUrl || "maps/map1.json";
+            if (!m.skyByStyle[map1Key]) m.skyByStyle[map1Key] = Object.assign({}, m.sky);
             if (source) m._source = source;
             return m;
         }
@@ -571,6 +750,53 @@
         CONFIG.movementMode = CONFIG.ignoreTerrainCollision ? "ignore" : "follow";
     }
     CONFIG.ignoreTerrainCollision = CONFIG.movementMode === "ignore";
+
+    const DEFAULT_SKY_STYLE_KEY = "__default__";
+    const MAP1_STYLE_URL = CONFIG.styleUrl || "maps/map1.json";
+
+    function cloneSkyParams(sky) {
+        return sky ? Object.assign({}, sky) : null;
+    }
+
+    function getDefaultSky() {
+        if (CONFIG.skyByStyle && CONFIG.skyByStyle[MAP1_STYLE_URL]) {
+            return cloneSkyParams(CONFIG.skyByStyle[MAP1_STYLE_URL]);
+        }
+        return cloneSkyParams(CONFIG.sky);
+    }
+
+    function getSkyForStyleKey(styleKey) {
+        if (styleKey && styleKey !== DEFAULT_SKY_STYLE_KEY &&
+            CONFIG.skyByStyle && CONFIG.skyByStyle[styleKey]) {
+            return cloneSkyParams(CONFIG.skyByStyle[styleKey]);
+        }
+        return getDefaultSky();
+    }
+
+    let activeStyleSkyKey = MAP1_STYLE_URL;
+
+    function getActiveSky() {
+        return getSkyForStyleKey(activeStyleSkyKey);
+    }
+
+    function syncConfigSkyFromActiveStyle() {
+        CONFIG.sky = getActiveSky();
+    }
+
+    function persistActiveSkyParams() {
+        if (!CONFIG.skyByStyle) CONFIG.skyByStyle = {};
+        const storeKey = activeStyleSkyKey === DEFAULT_SKY_STYLE_KEY
+            ? MAP1_STYLE_URL
+            : activeStyleSkyKey;
+        CONFIG.skyByStyle[storeKey] = cloneSkyParams(CONFIG.sky);
+    }
+
+    function setActiveStyleSkyKey(styleKey) {
+        activeStyleSkyKey = styleKey || DEFAULT_SKY_STYLE_KEY;
+        syncConfigSkyFromActiveStyle();
+    }
+
+    syncConfigSkyFromActiveStyle();
 
     function isCarMode() { return CONFIG.movementMode === "car"; }
     function isFollowMode() { return CONFIG.movementMode === "follow"; }
@@ -752,9 +978,11 @@
     }
 
     function styleWithSkyFromConfig(style) {
-        if (!style || typeof style !== "object" || !CONFIG.sky) return style;
+        if (!style || typeof style !== "object") return style;
+        const sky = getActiveSky();
+        if (!sky) return style;
         const next = Object.assign({}, style);
-        next.sky = skyToStyleSpec(CONFIG.sky);
+        next.sky = skyToStyleSpec(sky);
         return next;
     }
 
@@ -938,8 +1166,8 @@
     }
 
     function tryStartFollowJump() {
-        // Прыжок только когда галочка «Игнорировать рельеф» снята (режим следования)
-        if (CONFIG.ignoreTerrainCollision || !locked || !isFollowMode()) return;
+        // Прыжок в режиме «следовать рельефу» (desktop: pointer lock, touch: сенсорный UI)
+        if (CONFIG.ignoreTerrainCollision || !controlsActive() || !isFollowMode()) return;
         if (heightAnim || jumpAnim) return;
         jumpAnim = {
             base: player.altOffset,
@@ -996,12 +1224,30 @@
         if (el) el.setAttribute("aria-hidden", isTouchUiActive() ? "false" : "true");
     }
 
+    let resetTouchJoystick = null;
+
     function syncTouchCrossUI() {
         const elDown = document.getElementById("touch-down");
-        if (!elDown) return;
-        const disabled = isFollowMode();
-        elDown.disabled = disabled;
-        elDown.classList.toggle("touch-btn-disabled", disabled);
+        if (elDown) {
+            elDown.disabled = false;
+            elDown.classList.remove("touch-btn-disabled");
+            if (isCarMode()) {
+                elDown.textContent = "_";
+                elDown.setAttribute("aria-label", "Тормоз");
+            } else if (isFollowMode()) {
+                elDown.textContent = "J";
+                elDown.setAttribute("aria-label", "Прыжок");
+            } else {
+                elDown.textContent = "↓";
+                elDown.setAttribute("aria-label", "Вниз");
+            }
+        }
+        if (isCarMode()) {
+            touchJoy.fwd = 0;
+            touchJoy.turn = 0;
+            keys["KeyW"] = false;
+            if (resetTouchJoystick) resetTouchJoystick();
+        }
     }
 
     function initTouchControls() {
@@ -1020,6 +1266,7 @@
             touchJoy.turn = 0;
             elStick.style.transform = "translate(-50%, -50%)";
         }
+        resetTouchJoystick = resetStick;
 
         function updateStick(e) {
             const rect = elJoy.getBoundingClientRect();
@@ -1084,8 +1331,8 @@
         });
 
         bindTouchBtn(elDown, () => {
-            if (isFollowMode()) return;
-            if (isIgnoreMode()) keys["KeyX"] = true;
+            if (isFollowMode()) tryStartFollowJump();
+            else if (isIgnoreMode()) keys["KeyX"] = true;
             else if (isCarMode()) keys["Space"] = true;
         }, () => {
             keys["KeyX"] = false;
@@ -1094,6 +1341,17 @@
 
         bindTouchBtn(elLeft, () => { keys["KeyA"] = true; }, () => { keys["KeyA"] = false; });
         bindTouchBtn(elRight, () => { keys["KeyD"] = true; }, () => { keys["KeyD"] = false; });
+
+        const elGo = document.getElementById("touch-go");
+        const elCam = document.getElementById("touch-cam");
+        bindTouchBtn(elGo, () => { keys["KeyW"] = true; }, () => { keys["KeyW"] = false; });
+        if (elCam) {
+            elCam.addEventListener("pointerdown", (e) => {
+                e.preventDefault();
+                if (!isCarMode()) return;
+                carCameraView = carCameraView === "chase" ? "topdown" : "chase";
+            });
+        }
 
         syncTouchCrossUI();
         syncTouchControlsAria();
@@ -1185,7 +1443,7 @@
             carCameraView = carCameraView === "chase" ? "topdown" : "chase";
             return;
         }
-        if (e.code === "Space" && locked && isFollowMode() && !e.repeat) {
+        if (e.code === "Space" && controlsActive() && isFollowMode() && !e.repeat) {
             e.preventDefault();
             tryStartFollowJump();
             return;
@@ -1240,12 +1498,17 @@
     bindNumber(elWalk, v => CONFIG.walkSpeed = v);
     bindNumber(elRun, v => CONFIG.runMultiplier = v);
     bindNumber(elFly, v => CONFIG.flySpeed = v);
-    bindNumber(elDraw, v => { CONFIG.sky.fogGroundBlend = Math.max(0, Math.min(1, v)); applySky(); });
+    bindNumber(elDraw, v => {
+        CONFIG.sky.fogGroundBlend = Math.max(0, Math.min(1, v));
+        persistActiveSkyParams();
+        applySky();
+    });
 
     function applySky() {
         try {
-            if (!CONFIG.sky) return;
-            map.setSky(skyToStyleSpec(CONFIG.sky));
+            const sky = getActiveSky();
+            if (!sky) return;
+            map.setSky(skyToStyleSpec(sky));
         } catch (err) { console.warn("Sky:", err); }
     }
 
@@ -1298,14 +1561,99 @@
         if (elShadows.checked) enableShadows(); else disableShadows();
     });
 
-    // Swap style: выбрать другой JSON-стиль карты в рамках сессии
-    const elStyleSwap = document.getElementById("style-swap");
+    // Swap style: полноэкранное меню выбора стиля карты
     const elStyleFile = document.getElementById("style-file");
+    const elStyleMenu = document.getElementById("style-menu-overlay");
+    const elStyleMenuClose = document.getElementById("style-menu-close");
+    const elStyleMenuUpload = document.getElementById("style-menu-upload");
+    const STYLE_PRESETS = {
+        "maps/map1.json": "map1",
+        "maps/map2.json": "map2",
+        "maps/map3.json": "map3"
+    };
+    const EMBEDDED_STYLE_BY_URL = {
+        "maps/map1.json": "GEOWALK_STYLE",
+        "maps/map2.json": "GEOWALK_STYLE_MAP2",
+        "maps/map3.json": "GEOWALK_STYLE_MAP3"
+    };
 
-    elStyleSwap.addEventListener("click", () => elStyleFile.click());
+    function getEmbeddedStyle(url) {
+        const key = EMBEDDED_STYLE_BY_URL[url];
+        return key && window[key] ? window[key] : null;
+    }
+
+    async function fetchStyleJson(url) {
+        // Через http-сервер всегда берём актуальный JSON из /maps.
+        if (location.protocol !== "file:") {
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error("HTTP " + resp.status);
+            return resp.json();
+        }
+        // file:// — браузер блокирует fetch/XHR к локальным json, используем снимок .js
+        const embedded = getEmbeddedStyle(url);
+        if (embedded) return embedded;
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", url, false);
+        xhr.send(null);
+        if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+            return JSON.parse(xhr.responseText);
+        }
+        throw new Error("load failed");
+    }
+
+    function openStyleMenu() {
+        if (!elStyleMenu) return;
+        elStyleMenu.hidden = false;
+        elStyleMenu.classList.add("visible");
+        elStyleMenu.setAttribute("aria-hidden", "false");
+    }
+
+    function closeStyleMenu() {
+        if (!elStyleMenu) return;
+        elStyleMenu.classList.remove("visible");
+        elStyleMenu.setAttribute("aria-hidden", "true");
+        elStyleMenu.hidden = true;
+    }
+
+    document.querySelectorAll(".style-swap").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openStyleMenu();
+        });
+    });
+
+    if (elStyleMenuClose) elStyleMenuClose.addEventListener("click", closeStyleMenu);
+    if (elStyleMenu) {
+        elStyleMenu.addEventListener("click", (e) => {
+            if (e.target === elStyleMenu) closeStyleMenu();
+        });
+    }
+    if (elStyleMenuUpload) {
+        elStyleMenuUpload.addEventListener("click", () => elStyleFile.click());
+    }
+    elStyleMenu && elStyleMenu.querySelectorAll("[data-style-url]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            loadStyleFromUrl(btn.getAttribute("data-style-url"));
+        });
+    });
+
+    async function loadStyleFromUrl(url) {
+        if (!url) return;
+        if (elStyleStatus) elStyleStatus.textContent = "загрузка…";
+        closeStyleMenu();
+        const label = STYLE_PRESETS[url] || styleNameFromUrl(url);
+        try {
+            const obj = await fetchStyleJson(url);
+            swapStyle(obj, label, url);
+        } catch (err) {
+            console.warn("loadStyleFromUrl:", err);
+            if (elStyleStatus) elStyleStatus.textContent = "ошибка загрузки";
+        }
+    }
+
     elStyleFile.addEventListener("change", () => {
         const file = elStyleFile.files && elStyleFile.files[0];
-        elStyleFile.value = ""; // позволить выбрать тот же файл повторно
+        elStyleFile.value = "";
         if (!file) return;
         elStyleStatus.textContent = "загрузка…";
         const reader = new FileReader();
@@ -1313,10 +1661,18 @@
             let obj;
             try { obj = JSON.parse(reader.result); }
             catch (e) { elStyleStatus.textContent = "не JSON"; return; }
-            swapStyle(obj, file.name);
+            closeStyleMenu();
+            swapStyle(obj, file.name, DEFAULT_SKY_STYLE_KEY);
         };
         reader.onerror = () => { elStyleStatus.textContent = "ошибка чтения"; };
         reader.readAsText(file);
+    });
+
+    window.addEventListener("keydown", (e) => {
+        if (e.code === "Escape" && elStyleMenu && elStyleMenu.classList.contains("visible")) {
+            e.preventDefault();
+            closeStyleMenu();
+        }
     });
 
     async function goToCity(name) {
@@ -1349,6 +1705,14 @@
     }
     elCityGo.addEventListener("click", () => goToCity(elCity.value));
     elCity.addEventListener("keydown", (e) => { if (e.key === "Enter") goToCity(elCity.value); });
+
+    const elSearchDebugToggle = document.getElementById("search-debug-toggle");
+    if (elSearchDebugToggle) {
+        elSearchDebugToggle.addEventListener("click", (e) => {
+            e.stopPropagation();
+            document.body.classList.toggle("debug-panel-open");
+        });
+    }
 
     // ----------------------------------------------------------------------
     // Столкновения со зданиями (footprint из вектора + точка-в-полигоне)
@@ -1442,14 +1806,23 @@
     });
 
     // Замена стиля карты в рамках сессии (из выбранного JSON-файла)
-    function swapStyle(styleObj, label) {
+    function swapStyle(styleObj, label, styleSkyKey) {
         try {
+            setActiveStyleSkyKey(styleSkyKey);
+            if (elDraw) elDraw.value = CONFIG.sky.fogGroundBlend;
             ready = false;
             map.setStyle(styleWithSkyFromConfig(styleObj), { diff: false });
             map.once("style.load", () => {
                 setupStyle();
                 ready = true;
                 if (elStyleStatus) elStyleStatus.textContent = label ? ("стиль: " + label) : "стиль заменён";
+            });
+            map.once("error", (e) => {
+                if (!ready) {
+                    ready = true;
+                    console.warn("swapStyle load error:", e && e.error);
+                    if (elStyleStatus) elStyleStatus.textContent = "ошибка стиля";
+                }
             });
         } catch (err) {
             console.warn("swapStyle:", err);
@@ -1472,14 +1845,13 @@
             player.speed = OVERLAY_AUTO_WALK_SPEED;
         }
 
-        if (isTouchUiActive() && controlsActive() && !isCarMode() && Math.abs(touchJoy.turn) > 0.001) {
-            player.yaw = ((player.yaw + touchJoy.turn * 120 * dt) % 360 + 360) % 360;
-        }
-
         let fwd = (keys["KeyW"] || keys["ArrowUp"] ? 1 : 0) - (keys["KeyS"] || keys["ArrowDown"] ? 1 : 0);
         let strafe = (keys["KeyD"] || keys["ArrowRight"] ? 1 : 0) - (keys["KeyA"] || keys["ArrowLeft"] ? 1 : 0);
-        if (isTouchUiActive() && Math.abs(touchJoy.fwd) > 0.001) {
+        if (isTouchUiActive() && !isCarMode() && Math.abs(touchJoy.fwd) > 0.001) {
             fwd = touchJoy.fwd;
+        }
+        if (isTouchUiActive() && !isCarMode() && controlsActive() && Math.abs(touchJoy.turn) > 0.001) {
+            player.yaw = ((player.yaw + touchJoy.turn * 120 * dt) % 360 + 360) % 360;
         }
 
         // коллизия активна, пока высота над землёй ≤ collisionHeight
@@ -1495,7 +1867,7 @@
         let targetFwd = 0, targetStrafe = 0;
 
         if (isCarMode() && controlsActive() && !overlayWalk) {
-            let turnInput = Math.max(-1, Math.min(1, strafe + touchJoy.turn));
+            let turnInput = Math.max(-1, Math.min(1, strafe));
             if (velFwd < -0.05) turnInput = -turnInput;
             const maxTurnRate = CONFIG.carTurnSpeedDeg;
             const targetYawVel = turnInput * maxTurnRate;
