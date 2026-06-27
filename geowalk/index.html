@@ -184,6 +184,10 @@
         }
         .touch-btn:active,
         .touch-btn.pressed { border-color: #fff; background: rgba(0, 0, 0, 0.92); }
+        .touch-btn.touch-btn-disabled,
+        .touch-btn:disabled {
+            opacity: 0.3; pointer-events: none;
+        }
         .touch-cross {
             position: absolute; left: 16px; bottom: 210px;
             display: grid;
@@ -195,9 +199,6 @@
         .touch-cross .touch-btn:nth-child(2) { grid-column: 1; grid-row: 2; }
         .touch-cross .touch-btn:nth-child(3) { grid-column: 3; grid-row: 2; }
         .touch-cross .touch-btn:nth-child(4) { grid-column: 2; grid-row: 3; }
-        #touch-boost {
-            position: absolute; left: 16px; bottom: 24px;
-        }
         .touch-joystick {
             position: absolute; right: 16px; bottom: 210px;
             width: 120px; height: 120px;
@@ -387,12 +388,11 @@
 
     <div id="touch-controls" aria-hidden="true">
         <div class="touch-cross">
-            <button type="button" class="touch-btn" id="touch-up" aria-label="Лететь вверх">↑</button>
-            <button type="button" class="touch-btn" id="touch-left" aria-label="Повернуть влево">←</button>
-            <button type="button" class="touch-btn" id="touch-right" aria-label="Повернуть вправо">→</button>
-            <button type="button" class="touch-btn" id="touch-down" aria-label="Лететь вниз">↓</button>
+            <button type="button" class="touch-btn" id="touch-up" aria-label="Вверх">↑</button>
+            <button type="button" class="touch-btn" id="touch-left" aria-label="Стрейф влево">←</button>
+            <button type="button" class="touch-btn" id="touch-right" aria-label="Стрейф вправо">→</button>
+            <button type="button" class="touch-btn" id="touch-down" aria-label="Вниз">↓</button>
         </div>
-        <button type="button" class="touch-btn" id="touch-boost" aria-label="Ускорение">⚡</button>
         <div class="touch-joystick" id="touch-joystick">
             <div class="touch-joystick-base"></div>
             <div class="touch-joystick-stick" id="touch-joystick-stick"></div>
@@ -672,6 +672,7 @@
         if (elTerrainChooseHintCar) elTerrainChooseHintCar.hidden = !isCarMode();
         syncFollowTerrainHandsModule();
         syncCarDriveModule();
+        syncTouchCrossUI();
     }
 
     function syncCarDriveModule() {
@@ -964,9 +965,7 @@
     let overlayAutoWalkTime = 0;
 
     const keys = Object.create(null);
-    const touchJoy = { fwd: 0, strafe: 0 };
-    let touchTurnLeft = false;
-    let touchTurnRight = false;
+    const touchJoy = { fwd: 0, turn: 0 };
     let joyPointerId = null;
     let locked = false;
     let ready = false;
@@ -997,6 +996,14 @@
         if (el) el.setAttribute("aria-hidden", isTouchUiActive() ? "false" : "true");
     }
 
+    function syncTouchCrossUI() {
+        const elDown = document.getElementById("touch-down");
+        if (!elDown) return;
+        const disabled = isFollowMode();
+        elDown.disabled = disabled;
+        elDown.classList.toggle("touch-btn-disabled", disabled);
+    }
+
     function initTouchControls() {
         const JOY_RADIUS = 52;
         const JOY_DEAD = 0.12;
@@ -1006,12 +1013,11 @@
         const elLeft = document.getElementById("touch-left");
         const elRight = document.getElementById("touch-right");
         const elDown = document.getElementById("touch-down");
-        const elBoost = document.getElementById("touch-boost");
         if (!elJoy || !elStick) return;
 
         function resetStick() {
             touchJoy.fwd = 0;
-            touchJoy.strafe = 0;
+            touchJoy.turn = 0;
             elStick.style.transform = "translate(-50%, -50%)";
         }
 
@@ -1028,8 +1034,9 @@
             }
             elStick.style.transform = "translate(calc(-50% + " + dx + "px), calc(-50% + " + dy + "px))";
             touchJoy.fwd = -dy / JOY_RADIUS;
-            touchJoy.strafe = dx / JOY_RADIUS;
-            if (Math.hypot(touchJoy.fwd, touchJoy.strafe) < JOY_DEAD) resetStick();
+            touchJoy.turn = dx / JOY_RADIUS;
+            if (Math.abs(touchJoy.fwd) < JOY_DEAD) touchJoy.fwd = 0;
+            if (Math.abs(touchJoy.turn) < JOY_DEAD) touchJoy.turn = 0;
         }
 
         elJoy.addEventListener("pointerdown", (e) => {
@@ -1068,15 +1075,27 @@
         }
 
         bindTouchBtn(elUp, () => {
-            if (isFollowMode()) tryStartFollowJump();
-            else keys["Space"] = true;
-        }, () => { keys["Space"] = false; });
+            if (isIgnoreMode()) keys["Space"] = true;
+            else if (isFollowMode()) tryStartFollowJump();
+            else if (isCarMode()) keys["ShiftLeft"] = true;
+        }, () => {
+            keys["Space"] = false;
+            keys["ShiftLeft"] = false;
+        });
 
-        bindTouchBtn(elDown, () => { keys["KeyX"] = true; }, () => { keys["KeyX"] = false; });
-        bindTouchBtn(elLeft, () => { touchTurnLeft = true; }, () => { touchTurnLeft = false; });
-        bindTouchBtn(elRight, () => { touchTurnRight = true; }, () => { touchTurnRight = false; });
-        bindTouchBtn(elBoost, () => { keys["ShiftLeft"] = true; }, () => { keys["ShiftLeft"] = false; });
+        bindTouchBtn(elDown, () => {
+            if (isFollowMode()) return;
+            if (isIgnoreMode()) keys["KeyX"] = true;
+            else if (isCarMode()) keys["Space"] = true;
+        }, () => {
+            keys["KeyX"] = false;
+            keys["Space"] = false;
+        });
 
+        bindTouchBtn(elLeft, () => { keys["KeyA"] = true; }, () => { keys["KeyA"] = false; });
+        bindTouchBtn(elRight, () => { keys["KeyD"] = true; }, () => { keys["KeyD"] = false; });
+
+        syncTouchCrossUI();
         syncTouchControlsAria();
         window.addEventListener("resize", syncTouchControlsAria);
     }
@@ -1453,17 +1472,14 @@
             player.speed = OVERLAY_AUTO_WALK_SPEED;
         }
 
-        if (isTouchUiActive() && controlsActive()) {
-            const yawSpeed = isCarMode() ? CONFIG.carTurnSpeedDeg : 120;
-            if (touchTurnLeft) player.yaw = ((player.yaw - yawSpeed * dt) % 360 + 360) % 360;
-            if (touchTurnRight) player.yaw = ((player.yaw + yawSpeed * dt) % 360 + 360) % 360;
+        if (isTouchUiActive() && controlsActive() && !isCarMode() && Math.abs(touchJoy.turn) > 0.001) {
+            player.yaw = ((player.yaw + touchJoy.turn * 120 * dt) % 360 + 360) % 360;
         }
 
         let fwd = (keys["KeyW"] || keys["ArrowUp"] ? 1 : 0) - (keys["KeyS"] || keys["ArrowDown"] ? 1 : 0);
         let strafe = (keys["KeyD"] || keys["ArrowRight"] ? 1 : 0) - (keys["KeyA"] || keys["ArrowLeft"] ? 1 : 0);
-        if (isTouchUiActive() && (Math.abs(touchJoy.fwd) > 0.001 || Math.abs(touchJoy.strafe) > 0.001)) {
+        if (isTouchUiActive() && Math.abs(touchJoy.fwd) > 0.001) {
             fwd = touchJoy.fwd;
-            strafe = touchJoy.strafe;
         }
 
         // коллизия активна, пока высота над землёй ≤ collisionHeight
@@ -1479,8 +1495,8 @@
         let targetFwd = 0, targetStrafe = 0;
 
         if (isCarMode() && controlsActive() && !overlayWalk) {
-            let turnInput = strafe;
-            if (velFwd < -0.05) turnInput = -strafe;
+            let turnInput = Math.max(-1, Math.min(1, strafe + touchJoy.turn));
+            if (velFwd < -0.05) turnInput = -turnInput;
             const maxTurnRate = CONFIG.carTurnSpeedDeg;
             const targetYawVel = turnInput * maxTurnRate;
             const turnTau = Math.max(0.02, CONFIG.carTurnInertiaSec);
