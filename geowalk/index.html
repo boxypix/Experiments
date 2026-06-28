@@ -23,6 +23,7 @@
         :root { --accent: #6ad1ff; --ui-bg: rgba(0, 0, 0, 0.35); }
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0a0e14; }
+        html, body { -webkit-tap-highlight-color: transparent; }
         #map { position: absolute; inset: 0; }
         #map canvas { outline: none; }
 
@@ -54,12 +55,22 @@
             width: 200px; height: 200px; overflow: hidden; pointer-events: none;
             border-radius: 10px;
         }
-        #mini-map { width: 200px; height: 200px; }
+        #mini-map { position: relative; z-index: 0; width: 200px; height: 200px; }
+        #mini-map-ui {
+            position: absolute; inset: 0; z-index: 1; pointer-events: none;
+        }
         #mini-map-marker {
             position: absolute; left: 50%; top: 50%;
             width: 80px; height: 80px;
             transform: translate(-50%, -50%);
             pointer-events: none; z-index: 1;
+        }
+        #mini-map-compass {
+            position: absolute; left: 50%; top: 50%;
+            width: 140px; height: 140px;
+            transform: translate(-50%, -50%);
+            transform-origin: center center;
+            pointer-events: none; z-index: 2;
         }
         #help { right: 14px; top: 14px; line-height: 1.6; }
         #help .help-sep {
@@ -74,7 +85,7 @@
         body.car-mode #crosshair { display: none; }
         #help kbd {
             display: inline-block; min-width: 12px; text-align: center; padding: 1px 10px; margin-bottom: 2px;
-            border-radius: 12px; background: rgba(1, 1, 1, 0.355);
+            border-radius: 12px; background: rgba(1, 1, 1, 0.431);
             /* border: 1px solid rgba(106, 209, 255, 0.35); color: #eaf6ff; */
         }
 
@@ -109,9 +120,21 @@
         }
         #panel button:hover { background: rgba(106,209,255,0.28); }
         #panel .hint { opacity: 0.55; margin-top: 8px; font-size: 11px; }
-        #panel .style-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-        #panel button.mini { flex: 0 0 auto; padding: 3px 9px; font-size: 11px; border-radius: 5px; }
-        #panel #style-status { color: var(--accent); font-size: 11px; opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #panel .style-row { display: flex; flex-direction: column; align-items: stretch; gap: 6px; margin-top: 4px; }
+        #panel button.mini { flex: 0 0 auto; padding: 5px 9px; font-size: 13px; border-radius: 5px; }
+        #panel button.style-swap {
+            background: #fff; color: #000;
+            border: none; outline: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            font-weight: 700;
+        }
+        #panel button.style-swap:hover { background: #f0f0f0; }
+        #panel button.style-swap:active { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); }
+        #panel button.style-swap:focus { outline: none; }
+        #panel #style-status {
+            color: var(--accent); font-size: 11px; opacity: 0.8;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
 
         /* Выбор режима рельефа — две клетки снизу по центру */
         #terrain-choose-wrap {
@@ -173,11 +196,25 @@
             display: none;
             position: absolute; inset: 0; z-index: 15;
             pointer-events: none; touch-action: none;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
         }
         @media (max-width: 800px) {
             body:not(.overlay-open) #touch-controls { display: block; }
             body:not(.overlay-open) #resume-hint,
             body:not(.overlay-open) #flight-hint { display: none !important; }
+            body:not(.overlay-open) {
+                user-select: none;
+                -webkit-user-select: none;
+                -webkit-touch-callout: none;
+                touch-action: none;
+            }
+            body:not(.overlay-open) #search-bar input,
+            body:not(.overlay-open) #panel input,
+            body:not(.overlay-open) #panel textarea {
+                user-select: text;
+                -webkit-user-select: text;
+                touch-action: manipulation;
+            }
         }
         .touch-btn {
             width: 56px; height: 56px; padding: 0; margin: 0;
@@ -185,6 +222,7 @@
             background: var(--ui-bg); color: #eaf6ff;
             font: 700 22px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             cursor: pointer; user-select: none; -webkit-user-select: none;
+            -webkit-touch-callout: none; -webkit-user-drag: none;
             pointer-events: auto; touch-action: none;
         }
         .touch-btn:active,
@@ -208,6 +246,7 @@
             position: absolute; right: 16px; bottom: 165px;
             width: 120px; height: 120px;
             pointer-events: auto; touch-action: none;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
         }
         .touch-joystick-base {
             position: absolute; inset: 0; border-radius: 50%;
@@ -305,7 +344,24 @@
             }
             #mini-map { width: 100px; height: 100px; }
             #mini-map-marker { width: 40px; height: 40px; }
+            #mini-map-compass { width: 70px; height: 70px; }
             #movement-mode-toast { font-size: 44px; }
+            #mini-map-wrap.expanded #mini-map-ui { width: 100px; height: 100px; }
+        }
+
+        #mini-map-wrap.expanded {
+            left: 50%; top: 50%; right: auto; bottom: auto;
+            transform: translate(-50%, -50%);
+            width: 90vw; height: 80vh;
+            z-index: 20;
+            border-radius: 16px;
+        }
+        #mini-map-wrap.expanded #mini-map { width: 100%; height: 100%; }
+        #mini-map-wrap.expanded #mini-map-ui {
+            inset: auto;
+            left: 50%; top: 50%;
+            width: 200px; height: 200px;
+            transform: translate(-50%, -50%);
         }
 
         #resume-hint {
@@ -465,7 +521,7 @@
         <label>Мини-карта <input id="minimap" type="checkbox" /></label>
         <div class="sep"></div>
         <div class="style-row">
-            <button id="style-swap" class="mini style-swap" type="button">Swap style</button>
+            <button id="style-swap" class="mini style-swap" type="button">Стиль реальности</button>
             <span id="style-status"></span>
         </div>
         <input id="style-file" type="file" accept=".json,application/json" hidden />
@@ -479,7 +535,7 @@
             <p class="style-menu-desc">Выбери стиль карты для путешествий</p>
             <div class="style-menu-actions">
                 <button type="button" class="style-menu-btn" data-style-url="maps/map1.json">Тест – отличный денек</button>
-                <button type="button" class="style-menu-btn" data-style-url="maps/map2.json">Тест – мертвый рассвет</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/map2.json">Тест – горячий рассвет</button>
                 <button type="button" class="style-menu-btn" data-style-url="maps/map3.json">Тест – арктическое зарево</button>
                 <button type="button" class="style-menu-btn style-menu-btn-white" id="style-menu-upload">Загрузить свой</button>
             </div>
@@ -508,7 +564,7 @@
         <div id="search-bar">
             <div class="search-row">
                 <input id="city" type="search" placeholder="Попади в любой город или место…" autocomplete="off" spellcheck="false" />
-                <button id="city-go" type="button">Лететь</button>
+                <button id="city-go" type="button">Телепорт</button>
             </div>
             <div id="city-status"></div>
         </div>
@@ -541,6 +597,7 @@
         <div><kbd>Space</kbd> — вверх/прыгать/тормоз · <kbd>X</kbd> — вниз</div>
         <div id="help-shift"><kbd>Shift</kbd> — мощно ускориться</div>
         <div><kbd>Esc</kbd> — освободить курсор</div>
+        <div><kbd>M</kbd> — показать карту города</div>
         <div id="help-car" hidden>
             <div class="help-sep"></div>
             <div><kbd>C</kbd> — сменить камеру авто</div>
@@ -558,7 +615,10 @@
 
     <div id="mini-map-wrap">
         <div id="mini-map"></div>
-        <img id="mini-map-marker" src="images/ui_minimap_1.png" width="50" height="50" alt="" />
+        <div id="mini-map-ui">
+            <img id="mini-map-marker" src="images/ui_minimap_1.png" width="50" height="50" alt="" />
+            <img id="mini-map-compass" src="images/ui_minimap_n.png" width="140" height="140" alt="Север" />
+        </div>
     </div>
 
     <div id="vortex-overlay" aria-hidden="true">
@@ -1051,8 +1111,21 @@
 
     let miniMap = null;
     let miniMapReady = false;
+    let miniMapExpanded = false;
     const MINI_MAP_ZOOM = 12;
     const elMiniMapWrap = document.getElementById("mini-map-wrap");
+    const elMiniMapCompass = document.getElementById("mini-map-compass");
+
+    function setMiniMapExpanded(expanded) {
+        miniMapExpanded = !!expanded;
+        if (elMiniMapWrap) elMiniMapWrap.classList.toggle("expanded", miniMapExpanded);
+        if (miniMap) requestAnimationFrame(() => { try { miniMap.resize(); } catch (e) {} });
+    }
+
+    function toggleMiniMapExpanded() {
+        if (CONFIG.minimapEnabled === false || !elMiniMapWrap || elMiniMapWrap.hidden) return;
+        setMiniMapExpanded(!miniMapExpanded);
+    }
 
     function createMiniMap() {
         if (miniMap) return;
@@ -1086,6 +1159,7 @@
     function syncMiniMapEnabled() {
         const on = CONFIG.minimapEnabled !== false;
         if (elMiniMapWrap) elMiniMapWrap.hidden = !on;
+        if (!on) setMiniMapExpanded(false);
         if (on) createMiniMap();
         else destroyMiniMap();
     }
@@ -1100,6 +1174,9 @@
                 zoom: MINI_MAP_ZOOM
             });
         } catch (e) { /* пропускаем редкий сбой кадра */ }
+        if (elMiniMapCompass) {
+            elMiniMapCompass.style.transform = "translate(-50%, -50%) rotate(" + (-player.yaw) + "deg)";
+        }
     }
 
     function stripIconLayers() {
@@ -1214,6 +1291,18 @@
     function isTouchUiActive() {
         return window.matchMedia("(max-width: 800px)").matches && !overlayVisible();
     }
+
+    function isTouchUiTextInput(el) {
+        return el && el.closest && el.closest("#search-bar input, #panel input, #panel textarea");
+    }
+
+    function preventTouchUiSelection(e) {
+        if (!isTouchUiActive() || isTouchUiTextInput(e.target)) return;
+        e.preventDefault();
+    }
+
+    document.addEventListener("selectstart", preventTouchUiSelection);
+    document.addEventListener("contextmenu", preventTouchUiSelection);
 
     function controlsActive() {
         return locked || isTouchUiActive();
@@ -1436,6 +1525,11 @@
         if (e.code === "KeyQ") {
             e.preventDefault();
             cycleTerrainChoose();
+            return;
+        }
+        if (e.code === "KeyM" && !e.repeat) {
+            e.preventDefault();
+            toggleMiniMapExpanded();
             return;
         }
         if (e.code === "KeyC" && locked && isCarMode() && !e.repeat) {

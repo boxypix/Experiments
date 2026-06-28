@@ -30,7 +30,7 @@
       "source-layer": "water",
       "filter": ["!=", ["get", "brunnel"], "tunnel"],
       "layout": {"visibility": "visible"},
-      "paint": {"fill-color": "rgba(117, 117, 117, 1)", "fill-antialias": false}
+      "paint": {"fill-color": "rgba(72, 81, 93, 1)", "fill-antialias": false}
     },
     {
       "id": "road_link",
