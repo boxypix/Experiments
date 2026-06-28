@@ -87,6 +87,7 @@
   "demEncoding": "terrarium",
   "shadows": false,
   "minimapEnabled": true,
+  "surfaceProbeEnabled": true,
   "shadowModuleUrl": "https://cdn.jsdelivr.net/gh/wallabyway/maplibre-building-shadows@main/ao-shadow.mjs",
   "buildingsLayerId": "building-3d",
   "buildingsSourceId": "openmaptiles",

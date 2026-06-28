@@ -33,6 +33,40 @@
     let smoothSpeed = 0;
     let dispX = 0;
     let dispY = 0;
+    let activeSrc = null;
+
+    const SURFACE_SRC_SUFFIX = [
+        { layer: "water", suffix: "2" },
+        { layer: "landcover_wood", suffix: "3" },
+        { layer: "landcover_sand", suffix: "4" },
+        { layer: "landuse_hospital", suffix: "5" },
+        { layer: "landuse_school", suffix: "6" },
+        { layer: "landuse_cemetery", suffix: "7" }
+    ];
+
+    function handsSrcForLayers(layers) {
+        const base = opts.src;
+        const hit = Array.isArray(layers) ? layers : [];
+        let suffix = "";
+        for (const rule of SURFACE_SRC_SUFFIX) {
+            if (hit.includes(rule.layer)) {
+                suffix = rule.suffix;
+                break;
+            }
+        }
+        if (!suffix) return base;
+        const dot = base.lastIndexOf(".");
+        if (dot <= 0) return base + suffix;
+        return base.slice(0, dot) + suffix + base.slice(dot);
+    }
+
+    function applyHandsSrc(layers) {
+        if (!img) return;
+        const next = handsSrcForLayers(layers);
+        if (next === activeSrc) return;
+        activeSrc = next;
+        img.src = next;
+    }
 
     function injectStyles() {
         if (styleEl) return;
@@ -68,7 +102,8 @@
         root.id = "geowalk-follow-hands";
         root.setAttribute("aria-hidden", "true");
         img = document.createElement("img");
-        img.src = opts.src;
+        activeSrc = opts.src;
+        img.src = activeSrc;
         img.alt = "";
         img.style.width = "min(" + opts.maxWidthPx + "px, " + opts.widthPercent + "vw)";
         root.style.zIndex = String(opts.zIndex);
@@ -102,6 +137,7 @@
         root.classList.toggle("visible", show);
         root.setAttribute("aria-hidden", show ? "false" : "true");
         if (!show) resetBob();
+        else applyHandsSrc([]);
     }
 
     function tick(motion) {
@@ -110,6 +146,8 @@
             resetBob();
             return;
         }
+
+        applyHandsSrc(motion && motion.surfaceLayers);
 
         const speed = motion && motion.speed != null ? motion.speed : 0;
         const dt = motion && motion.dt != null ? motion.dt : 0;
@@ -135,6 +173,7 @@
     window.GeowalkFollowTerrainHands = {
         init(options) {
             opts = Object.assign({}, DEFAULTS, options || {});
+            activeSrc = null;
             ensureDom();
             if (root) root.style.bottom = opts.bottomOffsetPx + "px";
         },

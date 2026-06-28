@@ -135,6 +135,9 @@
             color: var(--accent); font-size: 11px; opacity: 0.8;
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
+        #panel .surface-status {
+            opacity: 0.55; margin-top: 8px; font-size: 10px; line-height: 1.35;
+        }
 
         /* Выбор режима рельефа — две клетки снизу по центру */
         #terrain-choose-wrap {
@@ -525,6 +528,8 @@
             <span id="style-status"></span>
         </div>
         <input id="style-file" type="file" accept=".json,application/json" hidden />
+        <label>Понимать покрытия <input id="surface-probe" type="checkbox" /></label>
+        <div id="surface-status" class="surface-status"></div>
         <div class="hint">Esc — освободить курсор, чтобы менять поля</div>
     </div>
 
@@ -756,6 +761,7 @@
         // Тени зданий в реальном времени (CustomLayer, проекция следа + AO).
         shadows: false,
         minimapEnabled: true,
+        surfaceProbeEnabled: true,
         shadowModuleUrl: "https://cdn.jsdelivr.net/gh/wallabyway/maplibre-building-shadows@main/ao-shadow.mjs",
         buildingsLayerId: "building-3d",
         buildingsSourceId: "openmaptiles",
@@ -894,6 +900,7 @@
     const elRelief = document.getElementById("relief");
     const elNoTerrCol = document.getElementById("noterrcol");
     const elMinimap = document.getElementById("minimap");
+    const elSurfaceProbe = document.getElementById("surface-probe");
     const elChooseFollow = document.getElementById("choose-terrain-follow");
     const elChooseIgnore = document.getElementById("choose-terrain-ignore");
     const elChooseCar = document.getElementById("choose-terrain-car");
@@ -924,6 +931,7 @@
         elNoTerrCol.checked = CONFIG.ignoreTerrainCollision;
         elShadows.checked = CONFIG.shadows;
         if (elMinimap) elMinimap.checked = CONFIG.minimapEnabled !== false;
+        if (elSurfaceProbe) elSurfaceProbe.checked = CONFIG.surfaceProbeEnabled !== false;
         elStyleStatus.textContent = "стиль: " + styleNameFromUrl(CONFIG.styleUrl);
         elHelpShift.innerHTML = "<kbd>Shift</kbd> — ускорение ×" + CONFIG.runMultiplier;
         elOverlayHint.textContent = "Некоммерческий песочница для фана. By Boxypix design & dev. 2026";
@@ -1648,6 +1656,16 @@
         CONFIG.minimapEnabled = elMinimap.checked;
         syncMiniMapEnabled();
     });
+    if (elSurfaceProbe) {
+        elSurfaceProbe.addEventListener("change", () => {
+            CONFIG.surfaceProbeEnabled = elSurfaceProbe.checked;
+            if (!CONFIG.surfaceProbeEnabled) {
+                surfaceCache = emptySurfaceCache();
+                surfaceCacheTime = 0;
+            }
+            updateSurfaceStatus();
+        });
+    }
     MOVEMENT_MODES.forEach((mode, i) => {
         mode.button.addEventListener("click", () => applyMovementChooseIndex(i));
     });
@@ -1859,6 +1877,118 @@
         return false;
     }
 
+    function ringsFromFeature(f) {
+        const g = f.geometry;
+        if (!g) return [];
+        if (g.type === "Polygon") return g.coordinates[0] ? [g.coordinates[0]] : [];
+        if (g.type === "MultiPolygon") return g.coordinates.map(p => p[0]).filter(Boolean);
+        return [];
+    }
+
+    function pushRingToCache(out, ring, lng0, lat0, pad) {
+        if (!ring || ring.length < 3) return;
+        let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+        for (const p of ring) {
+            if (p[0] < minx) minx = p[0]; if (p[0] > maxx) maxx = p[0];
+            if (p[1] < miny) miny = p[1]; if (p[1] > maxy) maxy = p[1];
+        }
+        if (maxx < lng0 - pad || minx > lng0 + pad || maxy < lat0 - pad || miny > lat0 + pad) return;
+        out.push({ ring, minx, miny, maxx, maxy });
+    }
+
+    const SURFACE_PROBE_LAYERS = [
+        { id: "water", sourceLayer: "water" },
+        { id: "landcover_wood", sourceLayer: "landcover", class: "wood" },
+        { id: "landcover_sand", sourceLayer: "landcover", class: "sand" },
+        { id: "landcover_grass", sourceLayer: "landcover", class: "grass" },
+        { id: "landcover_wetland", sourceLayer: "landcover", class: "wetland" },
+        { id: "park", sourceLayer: "park" },
+        { id: "landuse_cemetery", sourceLayer: "landuse", class: "cemetery" },
+        { id: "landuse_hospital", sourceLayer: "landuse", class: "hospital" },
+        { id: "landuse_school", sourceLayer: "landuse", class: "school" },
+        { id: "road_area_pattern", sourceLayer: "transportation", polygonOnly: true }
+    ];
+
+    function emptySurfaceCache() {
+        const cache = Object.create(null);
+        for (const layer of SURFACE_PROBE_LAYERS) cache[layer.id] = [];
+        return cache;
+    }
+
+    let surfaceCache = emptySurfaceCache();
+    let surfaceCacheTime = 0;
+    let playerSurfaceLayers = [];
+
+    function refreshSurfaceCache() {
+        surfaceCache = emptySurfaceCache();
+        if (!map.getSource("openmaptiles")) return;
+        const lng0 = player.lng, lat0 = player.lat;
+        const pad = 0.0025;
+        const sourceFeats = Object.create(null);
+        for (const layer of SURFACE_PROBE_LAYERS) {
+            if (sourceFeats[layer.sourceLayer]) continue;
+            try {
+                sourceFeats[layer.sourceLayer] = map.querySourceFeatures("openmaptiles", { sourceLayer: layer.sourceLayer });
+            } catch (e) {
+                sourceFeats[layer.sourceLayer] = [];
+            }
+        }
+        for (const layer of SURFACE_PROBE_LAYERS) {
+            for (const f of sourceFeats[layer.sourceLayer]) {
+                if (layer.class && f.properties?.class !== layer.class) continue;
+                if (layer.polygonOnly) {
+                    const gt = f.geometry?.type;
+                    if (gt !== "Polygon" && gt !== "MultiPolygon") continue;
+                }
+                for (const ring of ringsFromFeature(f)) pushRingToCache(surfaceCache[layer.id], ring, lng0, lat0, pad);
+            }
+        }
+    }
+
+    function isCarSandSurface(layers) {
+        return layers.includes("landcover_sand");
+    }
+
+    function isCarWoodSurface(layers) {
+        return layers.includes("landcover_wood");
+    }
+
+    function isCarWaterSurface(layers) {
+        return layers.includes("water") && !layers.includes("road_area_pattern");
+    }
+
+    function isOnSurface(cache, lng, lat) {
+        for (const item of cache) {
+            if (lng < item.minx || lng > item.maxx || lat < item.miny || lat > item.maxy) continue;
+            if (pointInRing(lng, lat, item.ring)) return true;
+        }
+        return false;
+    }
+
+    function probeSurfaceAt(lng, lat) {
+        const hit = [];
+        for (const layer of SURFACE_PROBE_LAYERS) {
+            if (isOnSurface(surfaceCache[layer.id], lng, lat)) hit.push(layer.id);
+        }
+        return hit;
+    }
+
+    function updateSurfaceStatus() {
+        const el = document.getElementById("surface-status");
+        if (!el) return;
+        if (CONFIG.surfaceProbeEnabled === false || !ready || (!isFollowMode() && !isCarMode())) {
+            el.textContent = "";
+            playerSurfaceLayers = [];
+            return;
+        }
+        if (isCarMode() || performance.now() - surfaceCacheTime > 350) {
+            refreshSurfaceCache();
+            surfaceCacheTime = performance.now();
+        }
+        playerSurfaceLayers = probeSurfaceAt(player.lng, player.lat);
+        el.textContent = playerSurfaceLayers.length ? playerSurfaceLayers.join(" · ") : "—";
+    }
+
     // ----------------------------------------------------------------------
     // Игровой цикл
     // ----------------------------------------------------------------------
@@ -1891,6 +2021,8 @@
         fixedElevation = null;
         buildingCache = [];
         cacheTime = 0;
+        surfaceCache = emptySurfaceCache();
+        surfaceCacheTime = 0;
     }
 
     map.on("load", () => {
@@ -2216,6 +2348,7 @@
         document.getElementById("hud-alt").textContent = (player.eye).toFixed(1) + " м";
         document.getElementById("hud-speed").textContent = player.speed.toFixed(1) + " м/с";
         document.getElementById("hud-collision").textContent = player.collision ? "упираемся" : "сквозь";
+        updateSurfaceStatus();
     }
 
     let lastT = performance.now();
@@ -2233,15 +2366,29 @@
         updateHUD();
         updateMiniMap();
         if (window.GeowalkFollowTerrainHands) {
-            GeowalkFollowTerrainHands.tick({ speed: player.speed, dt });
+            GeowalkFollowTerrainHands.tick({
+                speed: player.speed,
+                dt,
+                surfaceLayers: playerSurfaceLayers
+            });
         }
         if (window.GeowalkCarDrive) {
+            const mapRect = map.getCanvas().getBoundingClientRect();
             GeowalkCarDrive.tick({
                 speed: player.speed,
                 dt,
                 turnSpeedDeg: carYawVel,
                 viewMode: carCameraView,
-                yaw: player.yaw
+                yaw: player.yaw,
+                lng: player.lng,
+                lat: player.lat,
+                onWater: isCarWaterSurface(playerSurfaceLayers),
+                onWood: isCarWoodSurface(playerSurfaceLayers),
+                onSand: isCarSandSurface(playerSurfaceLayers),
+                projectPoint(lng, lat) {
+                    const pt = map.project([lng, lat]);
+                    return { x: mapRect.left + pt.x, y: mapRect.top + pt.y };
+                }
             });
         }
         requestAnimationFrame(frame);
