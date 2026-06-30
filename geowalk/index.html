@@ -96,13 +96,38 @@
             color: #cfe8ff; background: var(--ui-bg);
             border: 1px solid rgba(106, 209, 255, 0.25); border-radius: 10px;
             padding: 10px 12px;
-            pointer-events: auto; width: 210px;
+            pointer-events: auto; width: auto; max-width: 204px;
+        }
+        #panel .panel-logo {
+            display: block; width: 180px; max-width: 100%; height: auto;
+            margin: 0 0 6px; border-radius: 6px;
+        }
+        #panel .panel-collapsed .panel-debug-toggle {
+            margin-bottom: 0;
+        }
+        #panel .panel-debug-toggle {
+            display: block;
+            margin: 0; padding: 0;
+            border: none; background: transparent; box-shadow: none;
+            appearance: none; -webkit-appearance: none;
+            color: rgba(160, 160, 160, 0.95); cursor: pointer;
+            font: 400 11px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            text-align: left; text-decoration: none;
+            pointer-events: auto;
+        }
+        #panel .panel-debug-toggle:hover { color: rgba(190, 190, 190, 1); }
+        #panel .panel-debug-toggle:active,
+        #panel .panel-debug-toggle:focus { outline: none; background: transparent; }
+        #panel .panel-body { display: none; }
+        #panel.expanded {
+            width: 204px; max-width: calc(100vw - 28px);
+        }
+        #panel.expanded .panel-collapsed { display: none; }
+        #panel.expanded .panel-body { display: block; }
+        #panel .panel-body > .panel-debug-toggle {
+            margin-bottom: 8px;
         }
         #panel .title { color: var(--accent); font-weight: 600; margin-bottom: 8px; letter-spacing: 0.5px; }
-        #panel .panel-logo {
-            display: block; width: 100%; height: auto;
-            margin: 0 0 8px; border-radius: 6px 6px 0 0;
-        }
         #panel label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
         #panel input {
             width: 78px; padding: 4px 6px; text-align: right;
@@ -111,6 +136,13 @@
             font: inherit; outline: none;
         }
         #panel input[type=checkbox] { width: auto; }
+        #panel select {
+            width: 110px; padding: 4px 6px;
+            background: rgba(0,0,0,0.35); color: #eaf6ff;
+            border: 1px solid rgba(106,209,255,0.3); border-radius: 6px;
+            font: inherit; outline: none;
+        }
+        #panel select:focus { border-color: var(--accent); }
         #panel input:focus { border-color: var(--accent); }
         #panel .sep { margin-top: 9px; padding-top: 7px; border-top: 1px solid rgba(106,209,255,0.15); }
         #panel button {
@@ -313,34 +345,17 @@
             font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             text-align: center; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
         }
-        #search-debug-toggle {
-            display: none;
-            align-self: flex-start;
-            width: auto; min-height: 0;
-            margin: 0; padding: 0;
-            border: none; background: transparent;
-            box-shadow: none; appearance: none; -webkit-appearance: none;
-            color: #000; opacity: 0.7; cursor: pointer;
-            font: 400 10px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            text-align: left; text-decoration: none; line-height: 1;
-            pointer-events: auto;
-        }
-        #search-debug-toggle:active,
-        #search-debug-toggle:focus { outline: none; background: transparent; }
         @media (max-width: 800px) {
             #search-wrap { width: 95vw; }
             #city-go { display: none; }
-            #search-debug-toggle { display: inline; }
             #help, #hud { display: none !important; }
-            #panel {
-                display: none;
+            #panel.expanded {
                 left: 50%; top: 50%;
                 transform: translate(-50%, -50%);
                 max-height: calc(100vh - 32px);
                 overflow-y: auto;
                 z-index: 25;
             }
-            body.debug-panel-open #panel { display: block; }
             #mini-map-wrap {
                 right: 14px; top: 88px; bottom: auto;
                 width: 100px; height: 100px;
@@ -412,47 +427,106 @@
             font-family: ui-monospace, monospace; max-width: 460px;
         }
 
-        /* Переход после поиска: чёрный экран + вращающийся vortex */
-        #vortex-overlay {
+        /* Переход после поиска: затемнение + полоса телепорта снизу вверх */
+        #teleport-overlay {
             position: absolute; inset: 0; z-index: 30;
-            display: flex; align-items: center; justify-content: center;
-            background: #000; pointer-events: none;
+            overflow: hidden; pointer-events: none;
             opacity: 0; visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
         }
-        #vortex-overlay.visible {
+        #teleport-overlay.visible {
             opacity: 1; visibility: visible;
+            transition: none;
         }
-        #vortex-overlay .vortex-stage {
-            position: relative; z-index: 0;
-            --vortex-size: min(1000px, 95vw, 95vh);
-            width: var(--vortex-size);
-            height: var(--vortex-size);
+        #teleport-overlay.visible.fading-out {
+            opacity: 0;
+            transition: opacity 1s ease;
         }
-        #vortex-overlay .vortex-caption {
-            position: absolute; left: 50%; bottom: 50px;
-            transform: translateX(-50%); z-index: 2;
+        #teleport-overlay .teleport-backdrop {
+            position: absolute; inset: 0; z-index: 0;
+            background: #000; opacity: 0;
+        }
+        #teleport-overlay.active .teleport-backdrop {
+            animation: teleport-fade-black 1s ease forwards;
+        }
+        #teleport-overlay .teleport-strip {
+            position: absolute; left: 0; top: 0; z-index: 1;
+            display: block; width: 100%; height: auto;
+            transform: translateY(-100%);
+            will-change: transform;
+        }
+        #teleport-overlay.active .teleport-strip {
+            animation: teleport-strip-cycle 4s forwards;
+        }
+        #teleport-overlay .teleport-caption {
+            position: absolute; left: 50%; top: 32px;
+            transform: translateX(-50%); z-index: 4;
             margin: 0; color: #fff; font-weight: 700; text-align: center;
             font-size: clamp(32px, 5vw, 52px); line-height: 1.15;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             letter-spacing: 0.01em;
+            text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
         }
-        #vortex-overlay .vortex-spin {
-            display: block; width: 100%; height: 100%;
-            aspect-ratio: 1 / 1; object-fit: contain;
-            image-rendering: pixelated;
-            animation: vortex-spin 5.6s linear infinite;
-            animation-play-state: paused;
+        #teleport-overlay .teleport-buddy-wrap {
+            position: absolute; left: 50%; top: 50%; z-index: 3;
+            width: min(360px, 52vw);
+            transform: translate(-50%, calc(-50% + 100vh));
+            opacity: 0; pointer-events: none;
+            will-change: transform, opacity;
+            animation: teleport-buddy-move 5s forwards paused;
         }
-        #vortex-overlay.active .vortex-spin { animation-play-state: running; }
-        #vortex-overlay .vortex-buddy {
-            position: absolute; left: 50%; top: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none; z-index: 1;
+        #teleport-overlay .teleport-buddy {
+            display: block; width: 100%; height: auto;
+            transform: rotate(0deg);
+            transform-origin: center center;
+            will-change: transform;
+            animation: teleport-buddy-spin 5s linear forwards paused;
         }
-        @keyframes vortex-spin {
+        #teleport-overlay.active .teleport-buddy-wrap,
+        #teleport-overlay.active .teleport-buddy {
+            animation-play-state: running;
+        }
+        @keyframes teleport-fade-black {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes teleport-strip-cycle {
+            0% {
+                transform: translateY(-100%);
+                animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            75% {
+                transform: translateY(0);
+                animation-timing-function: cubic-bezier(0.4, 0, 1, 1);
+            }
+            100% { transform: translateY(-100%); }
+        }
+        @keyframes teleport-buddy-move {
+            0%, 19.99% {
+                transform: translate(-50%, calc(-50% + 100vh));
+                opacity: 0;
+            }
+            20% {
+                transform: translate(-50%, calc(-50% + 100vh));
+                opacity: 1;
+                animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            35% {
+                transform: translate(-50%, -50%);
+                opacity: 1;
+            }
+            60% {
+                transform: translate(-50%, -50%);
+                opacity: 1;
+                animation-timing-function: cubic-bezier(0.4, 0, 1, 1);
+            }
+            75%, 100% {
+                transform: translate(-50%, calc(-50% + 100vh));
+                opacity: 0;
+            }
+        }
+        @keyframes teleport-buddy-spin {
             from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            to { transform: rotate(-90deg); }
         }
 
         /* Меню выбора стиля карты */
@@ -512,11 +586,31 @@
 
     <div id="panel">
         <img class="panel-logo" src="images/logo_big.png" alt="World Walk Cam" />
-        <div class="title">Настройки</div>
+        <div class="panel-collapsed">
+            <button type="button" class="panel-debug-toggle" data-panel-toggle="open">Show debug menu</button>
+        </div>
+        <div class="panel-body">
+            <button type="button" class="panel-debug-toggle" data-panel-toggle="close">Hide debug menu</button>
+            <div class="title">Настройки</div>
         <label>Моя скорость <input id="walk" type="number" min="0" step="0.5" /></label>
         <label>Ускорение (Shift) <input id="run" type="number" min="1" step="1" /></label>
         <label>Взлёт / спуск <input id="fly" type="number" min="0" step="0.5" /></label>
+        <label>FPS limit (0=без) <input id="fps-limit" type="number" min="0" step="1" /></label>
         <label>Туман (0–1) <input id="draw" type="number" min="0" max="1" step="0.05" /></label>
+        <label>Cutoff 3D <input id="clip3d" type="checkbox" /></label>
+        <label>Дальность 3D (0–1) <input id="clip3d-factor" type="number" min="0.05" max="1" step="0.05" /></label>
+        <label>Машина
+            <select id="car-sprite">
+                <option value="0">car_0</option>
+                <option value="1">car_1</option>
+                <option value="2">car_2</option>
+                <option value="3">car_3</option>
+            </select>
+        </label>
+        <label>Наклон в car <input id="car-roll" type="checkbox" /></label>
+        <label>Угол наклона (°) <input id="car-roll-max" type="number" min="0" max="45" step="1" /></label>
+        <label>Время наклона (с) <input id="car-roll-sec" type="number" min="0.05" step="0.05" /></label>
+        <label>Шлейф (шт.) <input id="car-wake-max" type="number" min="1" max="30" step="1" /></label>
         <div class="sep"></div>
         <label>3D рельеф (×, 0=выкл) <input id="relief" type="number" min="0" step="0.5" /></label>
         <label>Игнор. рельеф <input id="noterrcol" type="checkbox" /></label>
@@ -531,6 +625,7 @@
         <label>Понимать покрытия <input id="surface-probe" type="checkbox" /></label>
         <div id="surface-status" class="surface-status"></div>
         <div class="hint">Esc — освободить курсор, чтобы менять поля</div>
+        </div>
     </div>
 
     <div id="style-menu-overlay" aria-hidden="true" hidden>
@@ -573,7 +668,6 @@
             </div>
             <div id="city-status"></div>
         </div>
-        <button type="button" id="search-debug-toggle">Debug menu</button>
     </div>
 
     <div id="resume-hint">Кликни по карте, чтобы вернуться к обзору</div>
@@ -626,12 +720,13 @@
         </div>
     </div>
 
-    <div id="vortex-overlay" aria-hidden="true">
-        <div class="vortex-stage">
-            <img class="vortex-spin" src="images/ui_vortex.png" width="900" height="900" alt="" />
-            <img class="vortex-buddy" src="images/ui_buddy.png" width="500" aalt="" />
+    <div id="teleport-overlay" aria-hidden="true">
+        <div class="teleport-backdrop"></div>
+        <img class="teleport-strip" src="images/ui_teleport_1.png" alt="" />
+        <div class="teleport-buddy-wrap" aria-hidden="true">
+            <img class="teleport-buddy" src="images/ui_buddy.png" alt="" />
         </div>
-        <p class="vortex-caption">Телепортируем тебя...</p>
+        <p class="teleport-caption">Телепортируем тебя...</p>
     </div>
 
     <div id="overlay">
@@ -678,6 +773,7 @@
         walkSpeed: 20,        // м/с
         runMultiplier: 50,    // ускорение по Shift (переопределяется settings.json)
         flySpeed: 20,         // м/с — подъём (Space) / спуск (X)
+        fpsLimit: 60,         // лимит кадров/с (0 = без лимита)
         inertiaEnabled: true,   // инерция горизонтального движения (только settings.json)
         inertia: 0.14,          // степень инертности, сек (больше — плавнее разгон/торможение)
         mouseYaw: 0.16,       // чувств. поворота, град/пиксель
@@ -723,7 +819,7 @@
                 fogGroundBlend: 0.2
             }
         },
-        styleUrl: "maps/map1.json", // стиль по умолчанию (папка /maps)
+        styleUrl: "maps/map2.json", // стиль по умолчанию (папка /maps)
         // 3D рельеф (DEM от AWS, terrarium). 0 = выключен.
         terrainExaggeration: 1,
         // «Игнорировать рельеф камерой»: вкл — фикс. высота (не меняется при подъёме).
@@ -750,6 +846,12 @@
         carBrakeSec: 1.05,             // торможение / отпускание газа, сек
         carHandbrakeSec: 0.22,         // Space — резкий тормоз, сек
         carTurnInertiaSec: 0.5,
+        carCameraRollEnabled: true,
+        carCameraRollMax: 5,
+        carCameraRollSpeedMin: 30,
+        carCameraRollSec: 0.8,
+        carWakeMaxCount: 5,
+        carSpriteId: 0,
         carSpriteSrc: "images/car_0.png",
         carSpriteWidthPx: 280,
         carSpritePivotOffsetX: 0,
@@ -766,9 +868,12 @@
         buildingsLayerId: "building-3d",
         buildingsSourceId: "openmaptiles",
         buildingsSourceLayer: "building",
-        // Столкновения со зданиями: активны, пока высота над землёй ≤ этого значения.
+        // Столкновения со зданиями: active, пока высота над землёй ≤ этого значения.
         // Выше — пролетаем сквозь дома.
-        collisionHeight: 10
+        collisionHeight: 10,
+        // Cutoff 3D: уменьшает дальнюю плоскость отсечения (доля авто farZ, 0–1).
+        clip3dEnabled: true,
+        clip3dFactor: 0.38
         };
 
         function merge(o, source) {
@@ -816,6 +921,53 @@
         CONFIG.movementMode = CONFIG.ignoreTerrainCollision ? "ignore" : "follow";
     }
     CONFIG.ignoreTerrainCollision = CONFIG.movementMode === "ignore";
+
+    const CAR_SPRITE_PATHS = [
+        "images/car_0.png",
+        "images/car_1.png",
+        "images/car_2.png",
+        "images/car_3.png"
+    ];
+    const CAR_SPRITE_DEFAULT_ID = 0;
+
+    function carSpritePath(id) {
+        const n = id | 0;
+        return CAR_SPRITE_PATHS[n >= 0 && n < CAR_SPRITE_PATHS.length ? n : CAR_SPRITE_DEFAULT_ID];
+    }
+
+    function carSpriteIdFromConfig() {
+        if (CONFIG.carSpriteId != null) {
+            const n = CONFIG.carSpriteId | 0;
+            if (n >= 0 && n < CAR_SPRITE_PATHS.length) return n;
+        }
+        const idx = CAR_SPRITE_PATHS.indexOf(CONFIG.carSpriteSrc);
+        return idx >= 0 ? idx : CAR_SPRITE_DEFAULT_ID;
+    }
+
+    function probeCarSpriteSrc(src) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => resolve(src);
+            img.onerror = () => resolve(null);
+            img.src = src;
+        });
+    }
+
+    async function applyCarSprite(id, syncSelect) {
+        const requestedId = id | 0;
+        let resolvedId = requestedId;
+        let src = carSpritePath(resolvedId);
+        if (!(await probeCarSpriteSrc(src))) {
+            resolvedId = CAR_SPRITE_DEFAULT_ID;
+            src = CAR_SPRITE_PATHS[CAR_SPRITE_DEFAULT_ID];
+            if (!(await probeCarSpriteSrc(src))) src = CAR_SPRITE_PATHS[CAR_SPRITE_DEFAULT_ID];
+        }
+        CONFIG.carSpriteId = resolvedId;
+        CONFIG.carSpriteSrc = src;
+        if (syncSelect !== false && elCarSprite) elCarSprite.value = String(resolvedId);
+        if (window.GeowalkCarDrive) GeowalkCarDrive.setSpriteSrc(src);
+        return resolvedId;
+    }
 
     const DEFAULT_SKY_STYLE_KEY = "__default__";
     const MAP1_STYLE_URL = CONFIG.styleUrl || "maps/map1.json";
@@ -896,7 +1048,15 @@
     const elWalk = document.getElementById("walk");
     const elRun = document.getElementById("run");
     const elFly = document.getElementById("fly");
+    const elFpsLimit = document.getElementById("fps-limit");
     const elDraw = document.getElementById("draw");
+    const elClip3d = document.getElementById("clip3d");
+    const elClip3dFactor = document.getElementById("clip3d-factor");
+    const elCarRoll = document.getElementById("car-roll");
+    const elCarSprite = document.getElementById("car-sprite");
+    const elCarRollMax = document.getElementById("car-roll-max");
+    const elCarRollSec = document.getElementById("car-roll-sec");
+    const elCarWakeMax = document.getElementById("car-wake-max");
     const elRelief = document.getElementById("relief");
     const elNoTerrCol = document.getElementById("noterrcol");
     const elMinimap = document.getElementById("minimap");
@@ -926,7 +1086,17 @@
         elWalk.value = CONFIG.walkSpeed;
         elRun.value = CONFIG.runMultiplier;
         elFly.value = CONFIG.flySpeed;
+        if (elFpsLimit) elFpsLimit.value = CONFIG.fpsLimit;
         elDraw.value = CONFIG.sky.fogGroundBlend;
+        if (elClip3d) elClip3d.checked = !!CONFIG.clip3dEnabled;
+        if (elClip3dFactor) elClip3dFactor.value = CONFIG.clip3dFactor;
+        if (elCarSprite) elCarSprite.value = String(carSpriteIdFromConfig());
+        if (elCarRoll) elCarRoll.checked = CONFIG.carCameraRollEnabled !== false;
+        if (elCarRollMax) elCarRollMax.value = CONFIG.carCameraRollMax;
+        if (elCarRollSec) elCarRollSec.value = CONFIG.carCameraRollSec;
+        if (elCarWakeMax) elCarWakeMax.value = CONFIG.carWakeMaxCount;
+        syncClipPanelUI();
+        syncCarRollPanelUI();
         elRelief.value = CONFIG.terrainExaggeration;
         elNoTerrCol.checked = CONFIG.ignoreTerrainCollision;
         elShadows.checked = CONFIG.shadows;
@@ -947,7 +1117,8 @@
             turnThresholdDeg: CONFIG.carSpriteTurnThresholdDeg.slice(),
             pivotOffsetX: CONFIG.carSpritePivotOffsetX,
             pivotOffsetY: CONFIG.carSpritePivotOffsetY,
-            topFrameIndex: CONFIG.carSpriteTopFrameIndex
+            topFrameIndex: CONFIG.carSpriteTopFrameIndex,
+            wakeMaxCount: CONFIG.carWakeMaxCount
         };
     }
 
@@ -956,6 +1127,7 @@
         GeowalkCarDrive.init(carDriveOptionsFromConfig());
     }
     initCarDriveModule();
+    applyCarSprite(carSpriteIdFromConfig(), true);
 
     function syncMovementChooseUI() {
         MOVEMENT_MODES.forEach(mode => {
@@ -1005,6 +1177,7 @@
         velFwd = 0;
         velStrafe = 0;
         carYawVel = 0;
+        carCameraRoll = 0;
         carCameraView = "chase";
         try { map.setCenterClampedToGround(false); } catch (e) {}
         startHeightAnimForMode(modeId);
@@ -1055,8 +1228,15 @@
     }
 
     function loadInitialStyle() {
-        if (location.protocol === "file:" && window.GEOWALK_STYLE) {
-            return styleWithSkyFromConfig(window.GEOWALK_STYLE);
+        if (location.protocol === "file:") {
+            const embeddedByUrl = {
+                "maps/map1.json": window.GEOWALK_STYLE,
+                "maps/map2.json": window.GEOWALK_STYLE_MAP2,
+                "maps/map3.json": window.GEOWALK_STYLE_MAP3
+            };
+            const embedded = embeddedByUrl[CONFIG.styleUrl];
+            if (embedded) return styleWithSkyFromConfig(embedded);
+            if (window.GEOWALK_STYLE) return styleWithSkyFromConfig(window.GEOWALK_STYLE);
         }
         if (location.protocol !== "file:") {
             try {
@@ -1217,6 +1397,7 @@
     // скорость в системе игрока (м/с): вперёд/назад и влево/вправо — для инерции
     let velFwd = 0, velStrafe = 0;
     let carYawVel = 0;
+    let carCameraRoll = 0;
     let carCameraView = "chase"; // chase | topdown (клавиша C)
     let heightAnim = null;
     let jumpAnim = null;
@@ -1564,31 +1745,71 @@
     const elCity = document.getElementById("city");
     const elCityGo = document.getElementById("city-go");
     const elCityStatus = document.getElementById("city-status");
-    const vortexOverlay = document.getElementById("vortex-overlay");
-    let vortexTimer = null;
-    let vortexFadeTimer = null;
+    const teleportOverlay = document.getElementById("teleport-overlay");
+    let teleportHideTimer = null;
+    let teleportFadeTimer = null;
 
-    const VORTEX_TRANSITION_MS = 4000;
-    const VORTEX_FADE_MS = 300;
+    const TELEPORT_FADE_START_MS = 4000;
+    const TELEPORT_TOTAL_MS = 5000;
+    const TELEPORT_MAP_DELAY_MS = 1500;
+    let teleportMoveTimer = null;
 
-    function showVortexTransition() {
-        if (vortexTimer) clearTimeout(vortexTimer);
-        if (vortexFadeTimer) { clearTimeout(vortexFadeTimer); vortexFadeTimer = null; }
-        if (!vortexOverlay.classList.contains("visible")) {
-            requestAnimationFrame(() => vortexOverlay.classList.add("visible"));
-        }
-        vortexOverlay.classList.add("active");
-        vortexOverlay.setAttribute("aria-hidden", "false");
-        vortexTimer = setTimeout(hideVortexTransition, VORTEX_TRANSITION_MS);
+    function applyTeleportToMap(lng, lat) {
+        player.lng = lng;
+        player.lat = lat;
+        player.altOffset = altOffsetForTotalEye(totalEyeHeightForMode(CONFIG.movementMode));
+        heightAnim = null;
+        jumpAnim = null;
+        velFwd = 0;
+        velStrafe = 0;
+        fixedElevation = null;
+        if (ready) applyCamera();
     }
 
-    function hideVortexTransition() {
-        vortexOverlay.classList.remove("active");
-        vortexOverlay.classList.remove("visible");
-        vortexOverlay.setAttribute("aria-hidden", "true");
-        vortexTimer = null;
-        if (vortexFadeTimer) clearTimeout(vortexFadeTimer);
-        vortexFadeTimer = setTimeout(() => { vortexFadeTimer = null; }, VORTEX_FADE_MS);
+    function scheduleTeleportMove(lng, lat) {
+        if (teleportMoveTimer) clearTimeout(teleportMoveTimer);
+        teleportMoveTimer = setTimeout(() => {
+            teleportMoveTimer = null;
+            applyTeleportToMap(lng, lat);
+        }, TELEPORT_MAP_DELAY_MS);
+    }
+
+    function resetTeleportAnimations() {
+        if (!teleportOverlay) return;
+        const animated = teleportOverlay.querySelectorAll(
+            ".teleport-backdrop, .teleport-strip, .teleport-buddy-wrap, .teleport-buddy"
+        );
+        for (const el of animated) el.style.animation = "none";
+        void teleportOverlay.offsetWidth;
+        for (const el of animated) el.style.animation = "";
+    }
+
+    function showTeleportTransition() {
+        if (teleportHideTimer) clearTimeout(teleportHideTimer);
+        if (teleportFadeTimer) clearTimeout(teleportFadeTimer);
+        if (!teleportOverlay) return;
+        teleportOverlay.classList.remove("visible", "active", "fading-out");
+        resetTeleportAnimations();
+        void teleportOverlay.offsetWidth;
+        teleportOverlay.classList.add("visible");
+        requestAnimationFrame(() => teleportOverlay.classList.add("active"));
+        teleportOverlay.setAttribute("aria-hidden", "false");
+        teleportFadeTimer = setTimeout(() => {
+            teleportOverlay.classList.add("fading-out");
+            teleportFadeTimer = null;
+        }, TELEPORT_FADE_START_MS);
+        teleportHideTimer = setTimeout(hideTeleportTransition, TELEPORT_TOTAL_MS);
+    }
+
+    function hideTeleportTransition() {
+        if (teleportHideTimer) clearTimeout(teleportHideTimer);
+        if (teleportFadeTimer) clearTimeout(teleportFadeTimer);
+        if (!teleportOverlay) return;
+        teleportOverlay.classList.remove("active", "visible", "fading-out");
+        resetTeleportAnimations();
+        teleportOverlay.setAttribute("aria-hidden", "true");
+        teleportHideTimer = null;
+        teleportFadeTimer = null;
     }
 
     function bindNumber(el, apply) {
@@ -1600,10 +1821,50 @@
     bindNumber(elWalk, v => CONFIG.walkSpeed = v);
     bindNumber(elRun, v => CONFIG.runMultiplier = v);
     bindNumber(elFly, v => CONFIG.flySpeed = v);
+    bindNumber(elFpsLimit, v => { CONFIG.fpsLimit = Math.max(0, Math.round(v)); });
     bindNumber(elDraw, v => {
         CONFIG.sky.fogGroundBlend = Math.max(0, Math.min(1, v));
         persistActiveSkyParams();
         applySky();
+    });
+
+    function syncClipPanelUI() {
+        if (elClip3dFactor) elClip3dFactor.disabled = !elClip3d || !elClip3d.checked;
+    }
+    function syncCarRollPanelUI() {
+        const on = elCarRoll && elCarRoll.checked;
+        if (elCarRollMax) elCarRollMax.disabled = !on;
+        if (elCarRollSec) elCarRollSec.disabled = !on;
+    }
+    if (elClip3d) {
+        elClip3d.addEventListener("change", () => {
+            CONFIG.clip3dEnabled = elClip3d.checked;
+            syncClipPanelUI();
+        });
+    }
+    bindNumber(elClip3dFactor, v => {
+        CONFIG.clip3dFactor = Math.max(0.05, Math.min(1, v));
+    });
+    if (elCarRoll) {
+        elCarRoll.addEventListener("change", () => {
+            CONFIG.carCameraRollEnabled = elCarRoll.checked;
+            syncCarRollPanelUI();
+        });
+    }
+    if (elCarSprite) {
+        elCarSprite.addEventListener("change", () => {
+            applyCarSprite(Number(elCarSprite.value), true);
+        });
+    }
+    bindNumber(elCarRollMax, v => {
+        CONFIG.carCameraRollMax = Math.max(0, Math.min(45, v));
+    });
+    bindNumber(elCarRollSec, v => {
+        CONFIG.carCameraRollSec = Math.max(0.05, v);
+    });
+    bindNumber(elCarWakeMax, v => {
+        CONFIG.carWakeMaxCount = Math.max(1, Math.min(30, v | 0));
+        if (window.GeowalkCarDrive) GeowalkCarDrive.setWakeMaxCount(CONFIG.carWakeMaxCount);
     });
 
     function applySky() {
@@ -1798,19 +2059,11 @@
             const f = data.features && data.features[0];
             if (!f) { elCityStatus.textContent = "не найдено"; return; }
             const [lng, lat] = f.geometry.coordinates;
-            player.lng = lng;
-            player.lat = lat;
-            player.altOffset = altOffsetForTotalEye(totalEyeHeightForMode(CONFIG.movementMode));
-            heightAnim = null;
-            jumpAnim = null;
-            velFwd = 0;
-            velStrafe = 0;
-            fixedElevation = null; // пересчитать базу высоты на новом месте
             const p = f.properties || {};
             elCityStatus.textContent = "→ " + (p.name || name) + (p.country ? ", " + p.country : "");
             dismissOverlay();
-            showVortexTransition();
-            if (ready) applyCamera();
+            showTeleportTransition();
+            scheduleTeleportMove(lng, lat);
         } catch (err) {
             elCityStatus.textContent = "ошибка сети";
         }
@@ -1818,13 +2071,19 @@
     elCityGo.addEventListener("click", () => goToCity(elCity.value));
     elCity.addEventListener("keydown", (e) => { if (e.key === "Enter") goToCity(elCity.value); });
 
-    const elSearchDebugToggle = document.getElementById("search-debug-toggle");
-    if (elSearchDebugToggle) {
-        elSearchDebugToggle.addEventListener("click", (e) => {
-            e.stopPropagation();
-            document.body.classList.toggle("debug-panel-open");
-        });
+    const elPanel = document.getElementById("panel");
+
+    function setDebugPanelOpen(open) {
+        if (elPanel) elPanel.classList.toggle("expanded", open);
+        document.body.classList.toggle("debug-panel-open", open);
     }
+
+    document.querySelectorAll("[data-panel-toggle]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            setDebugPanelOpen(btn.getAttribute("data-panel-toggle") === "open");
+        });
+    });
 
     // ----------------------------------------------------------------------
     // Столкновения со зданиями (footprint из вектора + точка-в-полигоне)
@@ -2025,6 +2284,21 @@
         surfaceCacheTime = 0;
     }
 
+    function applyNearFarClip(tr) {
+        if (!tr || typeof tr.overrideNearFarZ !== "function") return;
+        try {
+            tr.clearNearFarZOverride();
+            const h = tr.height || map.getCanvas().height || 800;
+            const nearZ = Math.max(0.02, h / CONFIG.nearClipDivisor);
+            let farZ = tr.farZ;
+            if (CONFIG.clip3dEnabled && isFinite(farZ)) {
+                const factor = Math.max(0.05, Math.min(1, CONFIG.clip3dFactor || 0.5));
+                farZ = nearZ + (farZ - nearZ) * factor;
+            }
+            if (isFinite(farZ) && farZ > nearZ) tr.overrideNearFarZ(nearZ, farZ);
+        } catch (err) { /* near/far override недоступен */ }
+    }
+
     map.on("load", () => {
         setupStyle();
         ready = true;
@@ -2183,6 +2457,7 @@
 
         updateHeightAnim(dt);
         updateFollowJumpAnim(dt);
+        updateCarCameraRoll(dt, strafe, velFwd);
 
         // Space/X — подъём/спуск только при включённой галочке «игнорировать рельеф»
         if (controlsActive() && !heightAnim && !jumpAnim && isIgnoreMode()) {
@@ -2190,6 +2465,23 @@
             player.altOffset += up * CONFIG.flySpeed * dt;
             if (player.altOffset < 0) player.altOffset = 0;
         }
+    }
+
+    function updateCarCameraRoll(dt, strafe, velFwd) {
+        const rollTau = Math.max(0.02, CONFIG.carCameraRollSec || 0.8);
+        const rollBlend = 1 - Math.exp(-dt / rollTau);
+        if (!isCarMode() || carCameraView === "topdown" || !controlsActive() || CONFIG.carCameraRollEnabled === false) {
+            carCameraRoll += (0 - carCameraRoll) * rollBlend;
+            return;
+        }
+        let turnInput = Math.max(-1, Math.min(1, strafe));
+        if (velFwd < -0.05) turnInput = -turnInput;
+        const speedMin = CONFIG.carCameraRollSpeedMin != null ? CONFIG.carCameraRollSpeedMin : 30;
+        const rollMax = CONFIG.carCameraRollMax != null ? CONFIG.carCameraRollMax : 5;
+        const targetRoll = Math.abs(velFwd) > speedMin && turnInput !== 0
+            ? turnInput * rollMax
+            : 0;
+        carCameraRoll += (targetRoll - carCameraRoll) * rollBlend;
     }
 
     // Камера от первого лица: глаз держим точно в точке игрока.
@@ -2231,7 +2523,8 @@
                 ],
                 zoom,
                 bearing: player.yaw,
-                pitch: camPitch
+                pitch: camPitch,
+                roll: topdown || CONFIG.carCameraRollEnabled === false ? 0 : carCameraRoll
             };
 
             if (map.getCenterClampedToGround()) map.setCenterClampedToGround(false);
@@ -2243,16 +2536,7 @@
             }
 
             try { map.jumpTo(opts); } catch (err) { /* пропускаем редкий сбой кадра */ }
-            try {
-                const tr2 = map.transform;
-                if (typeof tr2.overrideNearFarZ === "function") {
-                    tr2.clearNearFarZOverride();
-                    const farZ = tr2.farZ;
-                    const h = tr2.height || map.getCanvas().height || 800;
-                    const nearZ = Math.max(0.02, h / CONFIG.nearClipDivisor);
-                    if (isFinite(farZ) && farZ > nearZ) tr2.overrideNearFarZ(nearZ, farZ);
-                }
-            } catch (err) { /* near/far override недоступен */ }
+            applyNearFarClip(map.transform);
             return;
         }
 
@@ -2281,7 +2565,8 @@
             center: [player.lng + dLng, player.lat + dLat],
             zoom,
             bearing: player.yaw,
-            pitch: player.pitch
+            pitch: player.pitch,
+            roll: 0
         };
 
         if (isIgnoreMode()) {
@@ -2327,18 +2612,7 @@
             map.jumpTo(opts);
         } catch (err) { /* пропускаем редкий сбой кадра */ }
 
-        // Приближаем ближнюю плоскость отсечения, чтобы близкие к камере объекты
-        // и края карты не обрезались. Дальнюю оставляем как авто-рассчитанную.
-        try {
-            const tr = map.transform;
-            if (typeof tr.overrideNearFarZ === "function") {
-                tr.clearNearFarZOverride();             // авто near/far под текущий кадр
-                const farZ = tr.farZ;
-                const h = tr.height || map.getCanvas().height || 800;
-                const nearZ = Math.max(0.02, h / CONFIG.nearClipDivisor);
-                if (isFinite(farZ) && farZ > nearZ) tr.overrideNearFarZ(nearZ, farZ);
-            }
-        } catch (err) { /* near/far override недоступен — пропускаем */ }
+        applyNearFarClip(map.transform);
     }
 
     function updateHUD() {
@@ -2351,10 +2625,18 @@
         updateSurfaceStatus();
     }
 
-    let lastT = performance.now();
+    let lastSimT = performance.now();
     function frame(now) {
-        const dt = Math.min(0.05, (now - lastT) / 1000);
-        lastT = now;
+        const fps = CONFIG.fpsLimit;
+        if (fps > 0) {
+            const minMs = 1000 / fps;
+            if (now - lastSimT < minMs) {
+                requestAnimationFrame(frame);
+                return;
+            }
+        }
+        const dt = Math.min(0.05, (now - lastSimT) / 1000);
+        lastSimT = now;
         update(dt);
         applyCamera();
         if (window.GeowalkCarDrive && isCarMode() && ready) {
@@ -2379,6 +2661,7 @@
                 dt,
                 turnSpeedDeg: carYawVel,
                 viewMode: carCameraView,
+                cameraRollDeg: (carCameraView === "topdown" || CONFIG.carCameraRollEnabled === false) ? 0 : carCameraRoll,
                 yaw: player.yaw,
                 lng: player.lng,
                 lat: player.lat,

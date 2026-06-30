@@ -11,11 +11,7 @@ function snapshot(jsonPath, jsPath, globalName) {
 }
 
 snapshot("settings.json", "settings.js", "GEOWALK_SETTINGS");
-
-// Стиль карты по умолчанию берём из settings.styleUrl
-const settings = JSON.parse(readFileSync("settings.json", "utf8"));
-const styleFile = settings.styleUrl || "maps/map1.json";
-snapshot(styleFile, "maps/map1.js", "GEOWALK_STYLE");
+snapshot("maps/map1.json", "maps/map1.js", "GEOWALK_STYLE");
 snapshot("maps/map2.json", "maps/map2.js", "GEOWALK_STYLE_MAP2");
 snapshot("maps/map3.json", "maps/map3.js", "GEOWALK_STYLE_MAP3");
 snapshot("maps/mini1.json", "maps/mini1.js", "GEOWALK_MINI_STYLE");

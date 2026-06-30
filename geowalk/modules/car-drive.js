@@ -6,7 +6,7 @@
     const SHEET = { frameWidth: 600, frameHeight: 400, frameCount: 4, rowCount: 2 };
     const WAKE_STEP_M = 3;
     const WAKE_LIFE_SEC = 1;
-    const MAX_WAKE = 5;
+    const WAKE_MAX_LIMIT = 30;
     const M_PER_DEG_LAT = 111320;
     const DEG = Math.PI / 180;
 
@@ -40,10 +40,14 @@
     let fxRoot = null;
     let styleEl = null;
     let visible = false;
+    let lastCarMode = false;
+    let pendingDrop = false;
+    let dropAnim = { active: false, t: 0, duration: 0.72, startOffsetPx: 150 };
     let frameIndex = 0;
     let pivotX = null;
     let pivotY = null;
     let wakeSystems = [];
+    let wakeMaxCount = 5;
 
     function injectStyles() {
         if (styleEl) return;
@@ -51,11 +55,12 @@
         styleEl.textContent = [
             "#geowalk-car {",
             "  position: fixed; left: 0; top: 0;",
-            "  transform: translate(-50%, -50%);",
+            "  transform: translate(-50%, -50%) translateY(var(--car-drop-y, 0px)) rotate(var(--car-roll, 0deg));",
             "  pointer-events: none; opacity: 0; visibility: hidden;",
             "  transition: opacity 0.2s ease, visibility 0.2s ease;",
             "}",
             "#geowalk-car.visible { opacity: 1; visibility: visible; }",
+            "#geowalk-car.dropping { visibility: visible; transition: none; }",
             "#geowalk-car .car-sprite {",
             "  display: block;",
             "  width: var(--car-w);",
@@ -66,7 +71,7 @@
             "    calc(var(--car-frame) * var(--car-w) * -1)",
             "    calc(var(--car-row) * var(--car-w) * var(--car-aspect) * -1);",
             "  will-change: background-position, transform;",
-            "  transform: scaleX(var(--car-flip, 1)) rotate(var(--car-yaw, 0deg));",
+            "  transform: scaleX(var(--car-flip, 1));",
             "}",
             "#geowalk-car-fx {",
             "  position: fixed; left: 0; top: 0; width: 0; height: 0;",
@@ -165,15 +170,25 @@
         return !!motion[profile.motionKey];
     }
 
-    function ensureFxDom() {
-        if (fxRoot) return;
-        fxRoot = document.createElement("div");
-        fxRoot.id = "geowalk-car-fx";
-        fxRoot.setAttribute("aria-hidden", "true");
-        document.body.appendChild(fxRoot);
+    function clampWakeMaxCount(n) {
+        return Math.max(1, Math.min(WAKE_MAX_LIMIT, n | 0));
+    }
+
+    function buildWakePools(count) {
+        wakeMaxCount = clampWakeMaxCount(count);
+        if (!fxRoot) {
+            fxRoot = document.createElement("div");
+            fxRoot.id = "geowalk-car-fx";
+            fxRoot.setAttribute("aria-hidden", "true");
+            document.body.appendChild(fxRoot);
+        }
+        clearWakes();
+        for (const system of wakeSystems) {
+            for (const slot of system.pool) slot.el.remove();
+        }
         wakeSystems = WAKE_PROFILES.map(profile => {
             const pool = [];
-            for (let i = 0; i < MAX_WAKE; i++) {
+            for (let i = 0; i < wakeMaxCount; i++) {
                 const el = document.createElement("img");
                 el.className = "car-wake";
                 el.alt = "";
@@ -193,6 +208,11 @@
             }
             return { profile, pool, distAcc: 0 };
         });
+    }
+
+    function ensureFxDom() {
+        if (fxRoot && wakeSystems.length && wakeSystems[0].pool.length === wakeMaxCount) return;
+        buildWakePools(wakeMaxCount);
     }
 
     function deactivateWake(slot) {
@@ -258,7 +278,7 @@
         if (!fxRoot || !wakeSystems.length) return;
         const speed = motion && motion.speed != null ? motion.speed : 0;
         const viewMode = motion && motion.viewMode ? motion.viewMode : "chase";
-        const canMove = visible && viewMode !== "topdown"
+        const canMove = visible
             && motion.lng != null && motion.lat != null && speed > 0.05;
 
         for (const system of wakeSystems) {
@@ -287,7 +307,7 @@
                     slot.el.style.display = "none";
                     continue;
                 }
-                const carY = carScreenY();
+                const carY = viewMode === "topdown" ? null : carScreenY();
                 if (carY != null && pt.y < carY) {
                     slot.el.style.display = "none";
                     continue;
@@ -332,13 +352,80 @@
         return 2;
     }
 
+    function easeOutBounce(t) {
+        const n1 = 7.5625;
+        const d1 = 2.75;
+        if (t < 1 / d1) return n1 * t * t;
+        if (t < 2 / d1) return n1 * (t -= 1.5 / d1) * t + 0.75;
+        if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
+        return n1 * (t -= 2.625 / d1) * t + 0.984375;
+    }
+
+    function startDropAnim() {
+        dropAnim.active = true;
+        dropAnim.t = 0;
+        if (root) {
+            root.classList.remove("visible");
+            root.classList.add("dropping");
+            root.style.opacity = "0";
+            root.style.setProperty("--car-drop-y", "-" + dropAnim.startOffsetPx + "px");
+        }
+    }
+
+    function finishDropAnim() {
+        dropAnim.active = false;
+        dropAnim.t = 0;
+        if (!root) return;
+        root.classList.remove("dropping");
+        root.classList.add("visible");
+        root.style.opacity = "";
+        root.style.removeProperty("--car-drop-y");
+    }
+
+    function updateDropAnim(dt) {
+        if (!dropAnim.active || !root) return;
+        dropAnim.t += dt;
+        const p = Math.min(1, dropAnim.t / dropAnim.duration);
+        const bounce = easeOutBounce(p);
+        const y = -dropAnim.startOffsetPx * (1 - bounce);
+        const opacity = Math.min(1, p / 0.38);
+        root.style.setProperty("--car-drop-y", y + "px");
+        root.style.opacity = String(opacity);
+        if (p >= 1) finishDropAnim();
+    }
+
+    function resetDropAnim() {
+        dropAnim.active = false;
+        dropAnim.t = 0;
+        pendingDrop = false;
+        if (!root) return;
+        root.classList.remove("dropping");
+        root.style.opacity = "";
+        root.style.removeProperty("--car-drop-y");
+    }
+
     function sync(state) {
         if (!root) return;
-        const show = !!(state && state.carMode && !state.overlayOpen);
+        const carMode = !!(state && state.carMode);
+        const show = carMode && !(state && state.overlayOpen);
+        const wasShowing = visible;
+
+        if (carMode && !lastCarMode) pendingDrop = true;
+        lastCarMode = carMode;
+
         visible = show;
-        root.classList.toggle("visible", show);
         root.setAttribute("aria-hidden", show ? "false" : "true");
-        if (!show) {
+
+        if (show && !wasShowing) {
+            if (pendingDrop) {
+                pendingDrop = false;
+                startDropAnim();
+            } else {
+                root.classList.add("visible");
+            }
+        } else if (!show) {
+            resetDropAnim();
+            root.classList.remove("visible", "dropping");
             frameIndex = 0;
             pivotX = null;
             pivotY = null;
@@ -347,14 +434,27 @@
                 sprite.style.setProperty("--car-frame", "0");
                 sprite.style.setProperty("--car-row", "0");
                 sprite.style.setProperty("--car-flip", "1");
-                sprite.style.setProperty("--car-yaw", "0deg");
             }
+            if (root) root.style.setProperty("--car-roll", "0deg");
+        } else if (show && dropAnim.active) {
+            root.classList.remove("visible");
+            root.classList.add("dropping");
+        } else if (show && !dropAnim.active) {
+            root.classList.add("visible");
+            root.classList.remove("dropping");
         }
+    }
+
+    function applyCarRoll(motion) {
+        if (!root) return;
+        const rollDeg = motion && motion.cameraRollDeg != null ? -motion.cameraRollDeg : 0;
+        root.style.setProperty("--car-roll", rollDeg + "deg");
     }
 
     function tick(motion) {
         if (!root || !sprite || !visible || !opts) return;
         const dt = motion && motion.dt != null ? motion.dt : 0;
+        updateDropAnim(dt);
         const viewMode = motion && motion.viewMode ? motion.viewMode : "chase";
         applySpriteRow(motion && motion.onWater ? 1 : 0);
         updateSurfaceWake(dt, motion);
@@ -362,7 +462,7 @@
         if (viewMode === "topdown") {
             sprite.style.setProperty("--car-frame", String(opts.topFrameIndex));
             sprite.style.setProperty("--car-flip", "1");
-            sprite.style.setProperty("--car-yaw", "0deg");
+            applyCarRoll(null);
             return;
         }
 
@@ -372,7 +472,7 @@
         const frame = Math.round(frameIndex);
         sprite.style.setProperty("--car-frame", String(frame));
         sprite.style.setProperty("--car-flip", turnSpeed < 0 ? "-1" : "1");
-        sprite.style.setProperty("--car-yaw", "0deg");
+        applyCarRoll(motion);
     }
 
     window.GeowalkCarDrive = {
@@ -387,13 +487,29 @@
                 topFrameIndex: options.topFrameIndex != null ? options.topFrameIndex : 3,
                 wakeSrc: options.wakeSrc || "images/fx_1.png",
                 woodWakeSrc: options.woodWakeSrc || "images/fx_2.png",
-                sandWakeSrc: options.sandWakeSrc || "images/fx_3.png"
+                sandWakeSrc: options.sandWakeSrc || "images/fx_3.png",
+                wakeMaxCount: options.wakeMaxCount != null ? options.wakeMaxCount : 5
             };
             ensureDom();
+            buildWakePools(opts.wakeMaxCount);
             applySpriteMetrics();
             for (const system of wakeSystems) {
                 for (const slot of system.pool) slot.el.src = wakeSrcFor(system.profile);
             }
+        },
+        setWakeMaxCount(count) {
+            const n = clampWakeMaxCount(count);
+            if (n === wakeMaxCount && wakeSystems.length) return;
+            ensureDom();
+            buildWakePools(n);
+            if (opts) opts.wakeMaxCount = n;
+        },
+        setSpriteSrc(src) {
+            if (!src) return;
+            ensureDom();
+            if (!opts) opts = {};
+            opts.src = src;
+            applySpriteMetrics();
         },
         sync(state) {
             ensureDom();
@@ -417,6 +533,9 @@
             sprite = null;
             opts = null;
             visible = false;
+            lastCarMode = false;
+            pendingDrop = false;
+            resetDropAnim();
             pivotX = null;
             pivotY = null;
             if (styleEl) { styleEl.remove(); styleEl = null; }
