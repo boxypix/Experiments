@@ -81,13 +81,141 @@
         body.overlay-open #help,
         body.overlay-open #hud,
         body.overlay-open #mini-map-wrap,
-        body.overlay-open #terrain-choose-wrap { display: none; }
+        body.overlay-open #terrain-choose-wrap,
+        body.overlay-open #explore-checklist { display: none; }
         body.car-mode #crosshair { display: none; }
         #help kbd {
             display: inline-block; min-width: 12px; text-align: center; padding: 1px 10px; margin-bottom: 2px;
             border-radius: 12px; background: rgba(1, 1, 1, 0.431);
             /* border: 1px solid rgba(106, 209, 255, 0.35); color: #eaf6ff; */
         }
+
+        /* Чеклист «Освойся на карте» — только широкие экраны */
+        #explore-checklist {
+            display: none;
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 6;
+            pointer-events: auto;
+            max-width: 260px;
+            color: #cfe8ff;
+            font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+        }
+        @media (min-width: 1001px) {
+            #explore-checklist { display: block; }
+        }
+        #explore-checklist .explore-checklist-title {
+            margin: 0 0 10px;
+            color: var(--accent);
+            font: 600 14px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        #explore-checklist ul {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        #explore-checklist li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin: 0 0 8px;
+        }
+        #explore-checklist li:last-child { margin-bottom: 0; }
+        #explore-checklist input[type="checkbox"] {
+            margin: 3px 0 0;
+            flex: 0 0 auto;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        #explore-checklist label {
+            flex: 1 1 auto;
+            cursor: pointer;
+            text-align: left;
+        }
+        #explore-checklist .explore-checklist-tips {
+            display: flex;
+            flex-direction: column;
+            margin-top: 16px;
+        }
+        #explore-checklist .explore-checklist-tip {
+            position: relative;
+            display: grid;
+            grid-template-rows: 0fr;
+            opacity: 0;
+            transform: translateY(14px);
+            margin-top: 0;
+            overflow: visible;
+            pointer-events: none;
+            transition:
+                grid-template-rows 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.4s ease,
+                transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                margin-top 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        #explore-checklist .explore-checklist-tip.is-visible + .explore-checklist-tip.is-visible {
+            margin-top: 16px;
+        }
+        #explore-checklist .explore-checklist-tip.is-visible {
+            grid-template-rows: 1fr;
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        #explore-checklist .explore-checklist-tip.is-visible .explore-checklist-tip-close {
+            opacity: 1;
+        }
+        #explore-checklist .explore-checklist-tip.is-dismissed {
+            display: none;
+        }
+        #explore-checklist .explore-checklist-tip-inner {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            min-height: 0;
+            overflow: hidden;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.55);
+            text-shadow: none;
+        }
+        #explore-checklist .explore-checklist-tip-text {
+            margin: 0;
+            flex: 1 1 auto;
+            color: #eaf6ff;
+            font: 10px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        #explore-checklist .explore-checklist-tip-photo {
+            flex: 0 0 auto;
+            width: 56px;
+            height: 56px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        #explore-checklist .explore-checklist-tip-close {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            z-index: 2;
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.75);
+            color: rgba(255, 255, 255, 0.9);
+            font: 300 18px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+            opacity: 0;
+            transition: opacity 0.25s ease 0.15s;
+        }
+        #explore-checklist .explore-checklist-tip-close:hover { background: rgba(40, 40, 40, 0.9); }
 
         /* Панель настроек */
         #panel {
@@ -281,6 +409,29 @@
             background: var(--ui-bg);
             border: 1px solid rgba(106, 209, 255, 0.25);
             box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+            max-width: min(92vw, 640px);
+        }
+        #car-skin-picker .car-skin-picker-talk {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 16px;
+        }
+        #car-skin-picker .car-skin-picker-talk-photo {
+            flex: 0 0 auto;
+            width: 172px;
+            height: 172px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+        #car-skin-picker .car-skin-picker-talk-text {
+            margin: 0;
+            flex: 1 1 auto;
+            color: #eaf6ff;
+            font: 18px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            text-align: left;
         }
         #car-skin-picker .car-skin-picker-title {
             margin: 0;
@@ -698,10 +849,10 @@
     <div id="panel">
         <img class="panel-logo" src="images/logo_big.png" alt="World Walk Cam" />
         <div class="panel-collapsed">
-            <button type="button" class="panel-debug-toggle" data-panel-toggle="open">Show debug menu</button>
+            <button type="button" class="panel-debug-toggle" data-panel-toggle="open">Show Debug menu</button>
         </div>
         <div class="panel-body">
-            <button type="button" class="panel-debug-toggle" data-panel-toggle="close">Hide debug menu</button>
+            <button type="button" class="panel-debug-toggle" data-panel-toggle="close">Hide Debug menu</button>
             <div class="title">Настройки</div>
         <label>Моя скорость <input id="walk" type="number" min="0" step="0.5" /></label>
         <label>Ускорение (Shift) <input id="run" type="number" min="1" step="1" /></label>
@@ -778,6 +929,10 @@
 
     <div id="car-skin-picker" aria-hidden="true" hidden>
         <div class="car-skin-picker-inner">
+            <div class="car-skin-picker-talk">
+                <img class="car-skin-picker-talk-photo" src="images/ui_talk1.png" alt="" width="72" height="72" />
+                <p class="car-skin-picker-talk-text">путешествовать по этому миру может быть скучно, но с кастомной машинкой это веселее</p>
+            </div>
             <p class="car-skin-picker-title">Скин машины</p>
             <div class="car-skin-picker-row">
                 <button type="button" class="car-skin-btn" data-car-sprite-id="1">
@@ -843,6 +998,48 @@
             <div><kbd>Q</kbd> — выбор скина машины</div>
         </div>
     </div>
+
+    <aside id="explore-checklist" aria-label="Резвись на карте">
+        <p class="explore-checklist-title">Освойся на карте:</p>
+        <ul>
+            <li>
+                <input id="explore-old-home" type="checkbox" />
+                <label for="explore-old-home">найди свой старый дом</label>
+            </li>
+            <li>
+                <input id="explore-travel-places" type="checkbox" />
+                <label for="explore-travel-places">поищи места куда путешествовал</label>
+            </li>
+            <li>
+                <input id="explore-fav-mountain" type="checkbox" />
+                <label for="explore-fav-mountain">взберись на любимую гору</label>
+            </li>
+            <li>
+                <input id="explore-slalom" type="checkbox" />
+                <label for="explore-slalom">устрой слалом через леса и реки</label>
+            </li>
+            <li>
+                <input id="explore-teleport" type="checkbox" />
+                <label for="explore-teleport">телепортируйся в особые места и адреса</label>
+            </li>
+        </ul>
+        <div class="explore-checklist-tips" id="explore-checklist-tips">
+            <div class="explore-checklist-tip" id="explore-checklist-tip">
+                <button type="button" class="explore-checklist-tip-close" aria-label="Закрыть">×</button>
+                <div class="explore-checklist-tip-inner">
+                    <p class="explore-checklist-tip-text">Помни, ты можешь телепортирваться вообще куда угодно!</p>
+                    <img class="explore-checklist-tip-photo" src="images/ui_talk1a.png" alt="" width="56" height="56" />
+                </div>
+            </div>
+            <div class="explore-checklist-tip" id="explore-checklist-tip-2">
+                <button type="button" class="explore-checklist-tip-close" aria-label="Закрыть">×</button>
+                <div class="explore-checklist-tip-inner">
+                    <p class="explore-checklist-tip-text">Летай в тысячу раз быстрее, используй песочницу параметров в Debug menu</p>
+                    <img class="explore-checklist-tip-photo" src="images/ui_talk1a.png" alt="" width="56" height="56" />
+                </div>
+            </div>
+        </div>
+    </aside>
 
     <div id="hud">
         <div class="row"><span>Коорд.</span><b id="hud-coord">—</b></div>
@@ -2492,6 +2689,44 @@
     }
     elCityGo.addEventListener("click", () => goToCity(elCity.value));
     elCity.addEventListener("keydown", (e) => { if (e.key === "Enter") goToCity(elCity.value); });
+
+    // Советы в чеклисте: delayMs — через сколько показать (мс). Картинку каждого совета меняй в src у .explore-checklist-tip-photo.
+    const EXPLORE_CHECKLIST_TIPS = [
+        { id: "explore-checklist-tip", delayMs: 20000 },
+        { id: "explore-checklist-tip-2", delayMs: 60000 },
+    ];
+
+    function showExploreChecklistTip(el) {
+        if (!el || el.classList.contains("is-dismissed") || el.classList.contains("is-visible")) return;
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => el.classList.add("is-visible"));
+        });
+    }
+
+    function dismissExploreChecklistTip(el) {
+        if (!el || el.classList.contains("is-dismissed")) return;
+        el.classList.remove("is-visible");
+        const finish = () => {
+            el.classList.add("is-dismissed");
+            el.removeEventListener("transitionend", finish);
+        };
+        el.addEventListener("transitionend", finish);
+        setTimeout(finish, 650);
+    }
+
+    EXPLORE_CHECKLIST_TIPS.forEach(({ id, delayMs }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        setTimeout(() => showExploreChecklistTip(el), delayMs);
+    });
+
+    document.querySelectorAll("#explore-checklist .explore-checklist-tip-close").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const tip = btn.closest(".explore-checklist-tip");
+            if (tip) dismissExploreChecklistTip(tip);
+        });
+    });
 
     const elPanel = document.getElementById("panel");
 
