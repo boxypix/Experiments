@@ -83,7 +83,7 @@
             "  will-change: transform;",
             "  transform: translate(0, 0);",
             "}",
-            "@media (max-width: 1200px) {",
+            "@media (max-width: 1000px) {",
             "  #geowalk-follow-hands {",
             "    left: 50%; width: 190vw; transform: translateX(-50%); bottom: 0;",
             "  }",
