@@ -44,10 +44,12 @@
     let pendingDrop = false;
     let dropAnim = { active: false, t: 0, duration: 0.72, startOffsetPx: 150 };
     let frameIndex = 0;
+    let cartopTurnDeg = 0;
     let pivotX = null;
     let pivotY = null;
     let wakeSystems = [];
     let wakeMaxCount = 5;
+    let spriteWidthOverride = null;
 
     function injectStyles() {
         if (styleEl) return;
@@ -90,7 +92,8 @@
 
     function applySpriteMetrics() {
         if (!sprite || !opts) return;
-        sprite.style.setProperty("--car-w", opts.widthPx + "px");
+        const w = spriteWidthOverride != null ? spriteWidthOverride : opts.widthPx;
+        sprite.style.setProperty("--car-w", w + "px");
         sprite.style.setProperty("--car-aspect", String(SHEET.frameHeight / SHEET.frameWidth));
         sprite.style.setProperty("--car-frames", String(SHEET.frameCount));
         sprite.style.setProperty("--car-rows", String(SHEET.rowCount));
@@ -436,6 +439,7 @@
                 sprite.style.setProperty("--car-flip", "1");
             }
             if (root) root.style.setProperty("--car-roll", "0deg");
+            cartopTurnDeg = 0;
         } else if (show && dropAnim.active) {
             root.classList.remove("visible");
             root.classList.add("dropping");
@@ -451,6 +455,30 @@
         root.style.setProperty("--car-roll", rollDeg + "deg");
     }
 
+    function cartopTargetLeanDeg(turnSpeedDeg) {
+        const max = opts.topTurnLeanMaxDeg != null ? opts.topTurnLeanMaxDeg : 10;
+        const abs = Math.abs(turnSpeedDeg);
+        const t1 = opts.turnThresholdDeg[0];
+        const t2 = opts.turnThresholdDeg[1];
+        if (abs < t1) return 0;
+        const sign = turnSpeedDeg < 0 ? -1 : 1;
+        if (abs >= t2) return sign * max;
+        const k = (abs - t1) / Math.max(1e-6, t2 - t1);
+        return sign * max * k;
+    }
+
+    function updateCartopTurnLean(dt, turnSpeedDeg) {
+        const tau = Math.max(0.02, opts.topTurnLeanSec != null ? opts.topTurnLeanSec : 0.8);
+        const blend = 1 - Math.exp(-dt / tau);
+        const target = cartopTargetLeanDeg(turnSpeedDeg);
+        cartopTurnDeg += (target - cartopTurnDeg) * blend;
+    }
+
+    function applyCartopTurnLean() {
+        if (!root) return;
+        root.style.setProperty("--car-roll", cartopTurnDeg + "deg");
+    }
+
     function tick(motion) {
         if (!root || !sprite || !visible || !opts) return;
         const dt = motion && motion.dt != null ? motion.dt : 0;
@@ -460,11 +488,15 @@
         updateSurfaceWake(dt, motion);
 
         if (viewMode === "topdown") {
+            const turnSpeed = motion && motion.turnSpeedDeg != null ? motion.turnSpeedDeg : 0;
+            updateCartopTurnLean(dt, turnSpeed);
             sprite.style.setProperty("--car-frame", String(opts.topFrameIndex));
             sprite.style.setProperty("--car-flip", "1");
-            applyCarRoll(null);
+            applyCartopTurnLean();
             return;
         }
+
+        cartopTurnDeg = 0;
 
         const turnSpeed = motion && motion.turnSpeedDeg != null ? motion.turnSpeedDeg : 0;
         const targetFrame = frameFromTurnSpeed(turnSpeed);
@@ -485,6 +517,8 @@
                 pivotOffsetX: options.pivotOffsetX,
                 pivotOffsetY: options.pivotOffsetY,
                 topFrameIndex: options.topFrameIndex != null ? options.topFrameIndex : 3,
+                topTurnLeanMaxDeg: options.topTurnLeanMaxDeg != null ? options.topTurnLeanMaxDeg : 10,
+                topTurnLeanSec: options.topTurnLeanSec != null ? options.topTurnLeanSec : 0.8,
                 wakeSrc: options.wakeSrc || "images/fx_1.png",
                 woodWakeSrc: options.woodWakeSrc || "images/fx_2.png",
                 sandWakeSrc: options.sandWakeSrc || "images/fx_3.png",
@@ -510,6 +544,18 @@
             if (!opts) opts = {};
             opts.src = src;
             applySpriteMetrics();
+        },
+        setSpriteWidthPx(px) {
+            spriteWidthOverride = px != null && isFinite(px) ? px : null;
+            if (sprite && opts) applySpriteMetrics();
+        },
+        getPivot() {
+            if (pivotX == null || pivotY == null) return null;
+            return { x: pivotX, y: pivotY };
+        },
+        playDropAnim() {
+            if (!root || !visible) return;
+            startDropAnim();
         },
         sync(state) {
             ensureDom();
@@ -538,6 +584,7 @@
             resetDropAnim();
             pivotX = null;
             pivotY = null;
+            cartopTurnDeg = 0;
             if (styleEl) { styleEl.remove(); styleEl = null; }
         }
     };

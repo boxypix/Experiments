@@ -121,9 +121,37 @@
         #panel .panel-body { display: none; }
         #panel.expanded {
             width: 204px; max-width: calc(100vw - 28px);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
         #panel.expanded .panel-collapsed { display: none; }
-        #panel.expanded .panel-body { display: block; }
+        #panel.expanded .panel-logo { flex-shrink: 0; }
+        #panel.expanded .panel-body {
+            display: block;
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.55) rgba(0, 0, 0, 0.22);
+        }
+        #panel.expanded .panel-body::-webkit-scrollbar { width: 8px; }
+        #panel.expanded .panel-body::-webkit-scrollbar-track {
+            margin: 2px 0;
+            background: rgba(0, 0, 0, 0.22);
+            border-radius: 8px;
+        }
+        #panel.expanded .panel-body::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(106, 209, 255, 0.12);
+            border-radius: 8px;
+        }
+        #panel.expanded .panel-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.72);
+        }
         #panel .panel-body > .panel-debug-toggle {
             margin-bottom: 8px;
         }
@@ -225,6 +253,89 @@
             76.92% { opacity: 1; }
             100% { opacity: 0; }
         }
+
+        /* Выбор скина машины (Q в режиме car) */
+        #car-skin-picker {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            z-index: 26;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transform: translate(-50%, calc(-100% - 12px));
+            transition: opacity 0.18s ease, visibility 0.18s ease;
+        }
+        #car-skin-picker.open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        #car-skin-picker .car-skin-picker-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px 12px;
+            border-radius: 14px;
+            background: var(--ui-bg);
+            border: 1px solid rgba(106, 209, 255, 0.25);
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+        }
+        #car-skin-picker .car-skin-picker-title {
+            margin: 0;
+            color: #eaf6ff;
+            font: 600 12px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            letter-spacing: 0.3px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        #car-skin-picker .car-skin-picker-row {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+        }
+        #car-skin-picker .car-skin-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            margin: 0;
+            padding: 6px;
+            border: 2px solid rgba(106, 209, 255, 0.22);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.28);
+            cursor: pointer;
+            transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+        }
+        #car-skin-picker .car-skin-btn:hover {
+            transform: scale(1.05);
+            border-color: rgba(106, 209, 255, 0.45);
+            background: rgba(0, 0, 0, 0.42);
+        }
+        #car-skin-picker .car-skin-btn.selected {
+            border-color: #fff;
+            transform: scale(1.06);
+            background: rgba(0, 0, 0, 0.5);
+        }
+        #car-skin-picker .car-skin-thumb {
+            display: block;
+            width: 136px;
+            height: 90px;
+            border-radius: 8px;
+            object-fit: contain;
+            background: rgba(0, 0, 0, 0.22);
+        }
+        #car-skin-picker .car-skin-label {
+            color: #cfe8ff;
+            font: 11px/1.25 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            opacity: 0.92;
+            text-align: center;
+            max-width: 140px;
+        }
+        body.car-skin-picker-open #terrain-choose-wrap { opacity: 0.35; }
+        body.car-skin-picker-open #map { cursor: default; }
+        body.car-skin-picker-open #resume-hint { display: none !important; }
 
         /* Сенсорное управление — экраны ≤800px */
         #touch-controls {
@@ -352,8 +463,8 @@
             #panel.expanded {
                 left: 50%; top: 50%;
                 transform: translate(-50%, -50%);
-                max-height: calc(100vh - 32px);
-                overflow-y: auto;
+                max-height: 80vh;
+                overflow: hidden;
                 z-index: 25;
             }
             #mini-map-wrap {
@@ -594,6 +705,7 @@
             <div class="title">Настройки</div>
         <label>Моя скорость <input id="walk" type="number" min="0" step="0.5" /></label>
         <label>Ускорение (Shift) <input id="run" type="number" min="1" step="1" /></label>
+        <label>FOV (°) <input id="fov" type="number" min="30" max="120" step="1" /></label>
         <label>Взлёт / спуск <input id="fly" type="number" min="0" step="0.5" /></label>
         <label>FPS limit (0=без) <input id="fps-limit" type="number" min="0" step="1" /></label>
         <label>Туман (0–1) <input id="draw" type="number" min="0" max="1" step="0.05" /></label>
@@ -601,10 +713,10 @@
         <label>Дальность 3D (0–1) <input id="clip3d-factor" type="number" min="0.05" max="1" step="0.05" /></label>
         <label>Машина
             <select id="car-sprite">
-                <option value="0">car_0</option>
                 <option value="1">car_1</option>
                 <option value="2">car_2</option>
                 <option value="3">car_3</option>
+                <option value="4">car_4</option>
             </select>
         </label>
         <label>Наклон в car <input id="car-roll" type="checkbox" /></label>
@@ -613,6 +725,8 @@
         <label>Шлейф (шт.) <input id="car-wake-max" type="number" min="1" max="30" step="1" /></label>
         <div class="sep"></div>
         <label>3D рельеф (×, 0=выкл) <input id="relief" type="number" min="0" step="0.5" /></label>
+        <label>3D деревья <input id="trees3d" type="checkbox" /></label>
+        <label>Плотность деревьев <input id="trees3d-density" type="number" min="0.2" max="2" step="0.1" /></label>
         <label>Игнор. рельеф <input id="noterrcol" type="checkbox" /></label>
         <label>RT тени (сломаны) <input id="shadows" type="checkbox" /></label>
         <label>Мини-карта <input id="minimap" type="checkbox" /></label>
@@ -635,16 +749,17 @@
             <p class="style-menu-desc">Выбери стиль карты для путешествий</p>
             <div class="style-menu-actions">
                 <button type="button" class="style-menu-btn" data-style-url="maps/map1.json">Тест – отличный денек</button>
-                <button type="button" class="style-menu-btn" data-style-url="maps/map2.json">Тест – горячий рассвет</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/trees3.json">Тест – горячий рассвет</button>
                 <button type="button" class="style-menu-btn" data-style-url="maps/map3.json">Тест – арктическое зарево</button>
                 <button type="button" class="style-menu-btn" data-style-url="maps/map4.json">Тест - хилшейд</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/trees.json">Trees (лес 3D)</button>
                 <button type="button" class="style-menu-btn style-menu-btn-white" id="style-menu-upload">Загрузить свой</button>
             </div>
         </div>
     </div>
 
     <div id="terrain-choose-wrap">
-        <p class="terrain-choose-hint">Q – менять стиль движения</p>
+        <p class="terrain-choose-hint" id="terrain-choose-hint-q">Q – менять стиль движения</p>
         <p class="terrain-choose-hint" id="terrain-choose-hint-car" hidden>С – вид машины сбоку / сверху</p>
         <div id="terrain-choose">
             <button type="button" id="choose-terrain-ignore" title="Игнорировать рельеф камерой">
@@ -660,6 +775,30 @@
     </div>
 
     <div id="movement-mode-toast" aria-live="polite"></div>
+
+    <div id="car-skin-picker" aria-hidden="true" hidden>
+        <div class="car-skin-picker-inner">
+            <p class="car-skin-picker-title">Скин машины</p>
+            <div class="car-skin-picker-row">
+                <button type="button" class="car-skin-btn" data-car-sprite-id="1">
+                    <img class="car-skin-thumb" src="images/car_1ava.png" alt="Просто машина" width="136" height="90" />
+                    <span class="car-skin-label">Просто машина</span>
+                </button>
+                <button type="button" class="car-skin-btn" data-car-sprite-id="2">
+                    <img class="car-skin-thumb" src="images/car_2ava.png" alt="Багги / Карт" width="136" height="90" />
+                    <span class="car-skin-label">Багги / Карт</span>
+                </button>
+                <button type="button" class="car-skin-btn" data-car-sprite-id="3">
+                    <img class="car-skin-thumb" src="images/car_3ava.png" alt="Джип" width="136" height="90" />
+                    <span class="car-skin-label">Джип</span>
+                </button>
+                <button type="button" class="car-skin-btn" data-car-sprite-id="4">
+                    <img class="car-skin-thumb" src="images/car_4ava.png" alt="Скользкий мужик" width="136" height="90" />
+                    <span class="car-skin-label">Скользкий мужик</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div id="search-wrap">
         <div id="search-bar">
@@ -701,6 +840,7 @@
         <div id="help-car" hidden>
             <div class="help-sep"></div>
             <div><kbd>C</kbd> — сменить камеру авто</div>
+            <div><kbd>Q</kbd> — выбор скина машины</div>
         </div>
     </div>
 
@@ -747,9 +887,11 @@
     <script src="maps/map2.js"></script>
     <script src="maps/map3.js"></script>
     <script src="maps/map4.js"></script>
+    <script src="maps/trees3.js"></script>
     <script src="maps/mini1.js"></script>
     <script src="modules/follow-terrain-hands.js"></script>
     <script src="modules/car-drive.js"></script>
+    <script src="modules/wood-terrain-extrusion.js"></script>
 
     <script>
     "use strict";
@@ -767,7 +909,7 @@
         eyeHeight: 2.3,       // высота глаз, м (рост повыше)
         startHeightMultiplier: 10, // при старте поднимаемся в N раз выше роста
         groundAlt: 0,         // уровень земли, м
-        fov: 90,              // вертикальный угол обзора
+        fov: 85,              // вертикальный угол обзора
         // Ближняя плоскость отсечения: MapLibre по умолчанию height/50, из-за чего
         // у плоской камеры близкие объекты сильно обрезаются. Больше делитель —
         // ближе плоскость — меньше обрезаются объекты у камеры (ценой точности глубины).
@@ -827,9 +969,17 @@
                 horizonFogBlend: 0.5,
                 fogColor: "#cfe3ff",
                 fogGroundBlend: 0.2
+            },
+            "maps/trees3.json": {
+                color: "#32005B",
+                horizonBlend: 0.35,
+                horizonColor: "#C46935",
+                horizonFogBlend: 0.5,
+                fogColor: "#C46935",
+                fogGroundBlend: 0.2
             }
         },
-        styleUrl: "maps/map2.json", // стиль по умолчанию (папка /maps)
+        styleUrl: "maps/trees3.json", // стиль по умолчанию (папка /maps)
         // 3D рельеф (DEM от AWS, terrarium). 0 = выключен.
         terrainExaggeration: 1,
         // «Игнорировать рельеф камерой»: вкл — фикс. высота (не меняется при подъёме).
@@ -850,6 +1000,8 @@
         carTopCameraPitch: 5,
         carTopLookAheadM: 0,
         carTopZoom: 18.5,
+        carSkinPickerLiftM: 4,
+        carSkinPickerLiftSec: 0.45,
         carTurnSpeedDeg: 110,
         carSpeed: 55,
         carAccelSec: 0.65,             // разгон, сек (больше — инертнее)
@@ -861,8 +1013,8 @@
         carCameraRollSpeedMin: 30,
         carCameraRollSec: 0.8,
         carWakeMaxCount: 5,
-        carSpriteId: 0,
-        carSpriteSrc: "images/car_0.png",
+        carSpriteId: 1,
+        carSpriteSrc: "images/car_1.png",
         carSpriteWidthPx: 280,
         carSpritePivotOffsetX: 0,
         carSpritePivotOffsetY: 0,
@@ -872,6 +1024,8 @@
         demEncoding: "terrarium",
         // Тени зданий в реальном времени (CustomLayer, проекция следа + AO).
         shadows: false,
+        trees3dEnabled: true,
+        trees3dDensity: 2,
         minimapEnabled: true,
         surfaceProbeEnabled: true,
         shadowModuleUrl: "https://cdn.jsdelivr.net/gh/wallabyway/maplibre-building-shadows@main/ao-shadow.mjs",
@@ -932,26 +1086,27 @@
     }
     CONFIG.ignoreTerrainCollision = CONFIG.movementMode === "ignore";
 
-    const CAR_SPRITE_PATHS = [
-        "images/car_0.png",
-        "images/car_1.png",
-        "images/car_2.png",
-        "images/car_3.png"
-    ];
-    const CAR_SPRITE_DEFAULT_ID = 0;
+    const CAR_SPRITE_IDS = [1, 2, 3, 4];
+    const CAR_SPRITE_DEFAULT_ID = 1;
 
     function carSpritePath(id) {
         const n = id | 0;
-        return CAR_SPRITE_PATHS[n >= 0 && n < CAR_SPRITE_PATHS.length ? n : CAR_SPRITE_DEFAULT_ID];
+        if (CAR_SPRITE_IDS.indexOf(n) >= 0) return "images/car_" + n + ".png";
+        return "images/car_" + CAR_SPRITE_DEFAULT_ID + ".png";
+    }
+
+    function normalizeCarSpriteId(id) {
+        const n = id | 0;
+        if (n === 0) return CAR_SPRITE_DEFAULT_ID;
+        if (CAR_SPRITE_IDS.indexOf(n) >= 0) return n;
+        return CAR_SPRITE_DEFAULT_ID;
     }
 
     function carSpriteIdFromConfig() {
-        if (CONFIG.carSpriteId != null) {
-            const n = CONFIG.carSpriteId | 0;
-            if (n >= 0 && n < CAR_SPRITE_PATHS.length) return n;
-        }
-        const idx = CAR_SPRITE_PATHS.indexOf(CONFIG.carSpriteSrc);
-        return idx >= 0 ? idx : CAR_SPRITE_DEFAULT_ID;
+        if (CONFIG.carSpriteId != null) return normalizeCarSpriteId(CONFIG.carSpriteId);
+        const m = CONFIG.carSpriteSrc && CONFIG.carSpriteSrc.match(/car_(\d+)\.png$/);
+        if (m) return normalizeCarSpriteId(m[1] | 0);
+        return CAR_SPRITE_DEFAULT_ID;
     }
 
     function probeCarSpriteSrc(src) {
@@ -964,18 +1119,23 @@
     }
 
     async function applyCarSprite(id, syncSelect) {
-        const requestedId = id | 0;
+        const prevId = carSpriteIdFromConfig();
+        const requestedId = normalizeCarSpriteId(id);
         let resolvedId = requestedId;
         let src = carSpritePath(resolvedId);
         if (!(await probeCarSpriteSrc(src))) {
             resolvedId = CAR_SPRITE_DEFAULT_ID;
-            src = CAR_SPRITE_PATHS[CAR_SPRITE_DEFAULT_ID];
-            if (!(await probeCarSpriteSrc(src))) src = CAR_SPRITE_PATHS[CAR_SPRITE_DEFAULT_ID];
+            src = carSpritePath(CAR_SPRITE_DEFAULT_ID);
+            if (!(await probeCarSpriteSrc(src))) src = carSpritePath(CAR_SPRITE_DEFAULT_ID);
         }
         CONFIG.carSpriteId = resolvedId;
         CONFIG.carSpriteSrc = src;
         if (syncSelect !== false && elCarSprite) elCarSprite.value = String(resolvedId);
         if (window.GeowalkCarDrive) GeowalkCarDrive.setSpriteSrc(src);
+        if (resolvedId !== prevId && isCarMode() && carCameraView !== "topdown" &&
+            window.GeowalkCarDrive && GeowalkCarDrive.playDropAnim) {
+            GeowalkCarDrive.playDropAnim();
+        }
         return resolvedId;
     }
 
@@ -1057,6 +1217,7 @@
     // Сразу применяем settings.json к полям панели и подсказкам (до init карты)
     const elWalk = document.getElementById("walk");
     const elRun = document.getElementById("run");
+    const elFov = document.getElementById("fov");
     const elFly = document.getElementById("fly");
     const elFpsLimit = document.getElementById("fps-limit");
     const elDraw = document.getElementById("draw");
@@ -1068,6 +1229,8 @@
     const elCarRollSec = document.getElementById("car-roll-sec");
     const elCarWakeMax = document.getElementById("car-wake-max");
     const elRelief = document.getElementById("relief");
+    const elTrees3d = document.getElementById("trees3d");
+    const elTrees3dDensity = document.getElementById("trees3d-density");
     const elNoTerrCol = document.getElementById("noterrcol");
     const elMinimap = document.getElementById("minimap");
     const elSurfaceProbe = document.getElementById("surface-probe");
@@ -1089,12 +1252,15 @@
     const elHelpShift = document.getElementById("help-shift");
     const elHelpCar = document.getElementById("help-car");
     const elTerrainChooseHintCar = document.getElementById("terrain-choose-hint-car");
+    const elTerrainChooseHintQ = document.getElementById("terrain-choose-hint-q");
+    const elCarSkinPicker = document.getElementById("car-skin-picker");
     const elMovementModeToast = document.getElementById("movement-mode-toast");
     const elOverlayHint = document.getElementById("overlay-hint");
 
     function applyConfigToUI() {
         elWalk.value = CONFIG.walkSpeed;
         elRun.value = CONFIG.runMultiplier;
+        if (elFov) elFov.value = CONFIG.fov;
         elFly.value = CONFIG.flySpeed;
         if (elFpsLimit) elFpsLimit.value = CONFIG.fpsLimit;
         elDraw.value = CONFIG.sky.fogGroundBlend;
@@ -1108,6 +1274,8 @@
         syncClipPanelUI();
         syncCarRollPanelUI();
         elRelief.value = CONFIG.terrainExaggeration;
+        if (elTrees3d) elTrees3d.checked = CONFIG.trees3dEnabled !== false;
+        if (elTrees3dDensity) elTrees3dDensity.value = CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 2;
         elNoTerrCol.checked = CONFIG.ignoreTerrainCollision;
         elShadows.checked = CONFIG.shadows;
         if (elMinimap) elMinimap.checked = CONFIG.minimapEnabled !== false;
@@ -1128,8 +1296,30 @@
             pivotOffsetX: CONFIG.carSpritePivotOffsetX,
             pivotOffsetY: CONFIG.carSpritePivotOffsetY,
             topFrameIndex: CONFIG.carSpriteTopFrameIndex,
+            topTurnLeanMaxDeg: 10,
+            topTurnLeanSec: CONFIG.carCameraRollSec != null ? CONFIG.carCameraRollSec : 0.8,
             wakeMaxCount: CONFIG.carWakeMaxCount
         };
+    }
+
+    function woodTerrainOptionsFromConfig() {
+        return {
+            enabled: CONFIG.trees3dEnabled !== false,
+            terrainOn: CONFIG.terrainExaggeration > 0,
+            density: CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 2,
+            vectorSource: CONFIG.buildingsSourceId || "openmaptiles",
+            fillLayerId: "landcover_wood"
+        };
+    }
+
+    function syncWoodTerrainFromConfig(force) {
+        if (!window.GeowalkWoodTerrainExtrude) return;
+        GeowalkWoodTerrainExtrude.sync({
+            enabled: CONFIG.trees3dEnabled !== false,
+            terrainOn: CONFIG.terrainExaggeration > 0,
+            density: CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 2,
+            force: !!force
+        });
     }
 
     function initCarDriveModule() {
@@ -1139,6 +1329,119 @@
     initCarDriveModule();
     applyCarSprite(carSpriteIdFromConfig(), true);
 
+    function syncCarSkinPickerSelection() {
+        if (!elCarSkinPicker) return;
+        const cur = carSpriteIdFromConfig();
+        elCarSkinPicker.querySelectorAll("[data-car-sprite-id]").forEach(btn => {
+            btn.classList.toggle("selected", (btn.getAttribute("data-car-sprite-id") | 0) === cur);
+        });
+    }
+
+    function updateCarSkinPickerPosition() {
+        if (!elCarSkinPicker || !carSkinPickerOpen || !ready) return;
+        let x = null;
+        let y = null;
+        if (window.GeowalkCarDrive && GeowalkCarDrive.getPivot) {
+            const p = GeowalkCarDrive.getPivot();
+            if (p) { x = p.x; y = p.y; }
+        }
+        if (x == null) {
+            const rect = map.getCanvas().getBoundingClientRect();
+            const pt = map.project([player.lng, player.lat]);
+            x = rect.left + pt.x;
+            y = rect.top + pt.y;
+        }
+        const carW = CONFIG.carSpriteWidthPx || 280;
+        const offsetY = carW * (400 / 600) * 0.52 + 96;
+        elCarSkinPicker.style.left = x + "px";
+        elCarSkinPicker.style.top = y + "px";
+        elCarSkinPicker.style.transform = "translate(-50%, calc(-100% - " + offsetY + "px))";
+    }
+
+    function carSkinPickerLiftTarget() {
+        return CONFIG.carSkinPickerLiftM != null ? CONFIG.carSkinPickerLiftM : 4;
+    }
+
+    function startCarSkinPickerLiftAnim(to, onDone) {
+        carSkinPickerLiftAnim = {
+            from: carSkinPickerLift,
+            to,
+            elapsed: 0,
+            duration: Math.max(0.15, CONFIG.carSkinPickerLiftSec != null ? CONFIG.carSkinPickerLiftSec : 0.45),
+            onDone: onDone || null
+        };
+    }
+
+    function updateCarSkinPickerLiftAnim(dt) {
+        if (!carSkinPickerLiftAnim) return;
+        carSkinPickerLiftAnim.elapsed += dt;
+        const u = Math.min(1, carSkinPickerLiftAnim.elapsed / carSkinPickerLiftAnim.duration);
+        const ease = u * u * (3 - 2 * u);
+        carSkinPickerLift = carSkinPickerLiftAnim.from +
+            (carSkinPickerLiftAnim.to - carSkinPickerLiftAnim.from) * ease;
+        if (u >= 1) {
+            carSkinPickerLift = carSkinPickerLiftAnim.to;
+            const done = carSkinPickerLiftAnim.onDone;
+            carSkinPickerLiftAnim = null;
+            if (done) done();
+        }
+    }
+
+    function openCarSkinPicker() {
+        if (!isCarMode() || carSkinPickerOpen) return;
+        carSkinPickerOpen = true;
+        velFwd = 0;
+        velStrafe = 0;
+        carYawVel = 0;
+        player.speed = 0;
+        document.body.classList.add("car-skin-picker-open");
+        if (elCarSkinPicker) {
+            elCarSkinPicker.hidden = false;
+            elCarSkinPicker.classList.add("open");
+            elCarSkinPicker.setAttribute("aria-hidden", "false");
+        }
+        syncCarSkinPickerSelection();
+        document.exitPointerLock?.();
+        if (resumeHint) resumeHint.style.display = "none";
+        updateCarSkinPickerPosition();
+        startCarSkinPickerLiftAnim(carSkinPickerLiftTarget());
+    }
+
+    function closeCarSkinPicker(relock) {
+        if (!carSkinPickerOpen) return;
+        carSkinPickerOpen = false;
+        document.body.classList.remove("car-skin-picker-open");
+        if (elCarSkinPicker) {
+            elCarSkinPicker.classList.remove("open");
+            elCarSkinPicker.hidden = true;
+            elCarSkinPicker.setAttribute("aria-hidden", "true");
+        }
+        const doRelock = relock !== false && !window.matchMedia("(max-width: 800px)").matches;
+        startCarSkinPickerLiftAnim(0, () => {
+            if (doRelock) requestLock();
+        });
+    }
+
+    function toggleCarSkinPicker() {
+        if (!isCarMode()) return;
+        if (carSkinPickerOpen) closeCarSkinPicker(true);
+        else openCarSkinPicker();
+    }
+
+    function initCarSkinPickerUI() {
+        if (!elCarSkinPicker) return;
+        elCarSkinPicker.querySelectorAll("[data-car-sprite-id]").forEach(btn => {
+            btn.addEventListener("click", async (e) => {
+                e.stopPropagation();
+                const id = btn.getAttribute("data-car-sprite-id") | 0;
+                await applyCarSprite(id, true);
+                syncCarSkinPickerSelection();
+                closeCarSkinPicker(true);
+            });
+        });
+    }
+    initCarSkinPickerUI();
+
     function syncMovementChooseUI() {
         MOVEMENT_MODES.forEach(mode => {
             mode.button.classList.toggle("selected", CONFIG.movementMode === mode.id);
@@ -1146,6 +1449,11 @@
         document.body.classList.toggle("car-mode", isCarMode());
         if (elHelpCar) elHelpCar.hidden = !isCarMode();
         if (elTerrainChooseHintCar) elTerrainChooseHintCar.hidden = !isCarMode();
+        if (elTerrainChooseHintQ) {
+            elTerrainChooseHintQ.textContent = isCarMode()
+                ? "Q – выбор скина машины"
+                : "Q – менять стиль движения";
+        }
         syncFollowTerrainHandsModule();
         syncCarDriveModule();
         syncTouchCrossUI();
@@ -1189,9 +1497,13 @@
         carYawVel = 0;
         carCameraRoll = 0;
         carCameraView = "chase";
+        carSkinPickerOpen = false;
+        carSkinPickerLift = 0;
+        carSkinPickerLiftAnim = null;
         try { map.setCenterClampedToGround(false); } catch (e) {}
         startHeightAnimForMode(modeId);
         syncMovementChooseUI();
+        applyCarModeVisuals();
         if (changed) showMovementModeToast(modeId);
     }
 
@@ -1243,7 +1555,9 @@
                 "maps/map1.json": window.GEOWALK_STYLE,
                 "maps/map2.json": window.GEOWALK_STYLE_MAP2,
                 "maps/map3.json": window.GEOWALK_STYLE_MAP3,
-                "maps/map4.json": window.GEOWALK_STYLE_MAP4
+                "maps/map4.json": window.GEOWALK_STYLE_MAP4,
+                "maps/trees.json": window.GEOWALK_STYLE_TREES,
+                "maps/trees3.json": window.GEOWALK_STYLE_TREES3
             };
             const embedded = embeddedByUrl[CONFIG.styleUrl];
             if (embedded) return styleWithSkyFromConfig(embedded);
@@ -1410,6 +1724,68 @@
     let carYawVel = 0;
     let carCameraRoll = 0;
     let carCameraView = "chase"; // chase | topdown (клавиша C)
+    let carSkinPickerOpen = false;
+    let carSkinPickerLift = 0;
+    let carSkinPickerLiftAnim = null;
+    let modeVisualsBase = null;
+
+    const CAR_MODE_FOG = 0.9;
+    const CAR_TOP_CLIP3D_FACTOR = 1;
+    const CAR_TOP_WAKE_MAX = 14;
+
+    function syncModeVisualsPanel() {
+        if (elDraw) elDraw.value = CONFIG.sky.fogGroundBlend;
+        if (elClip3dFactor) elClip3dFactor.value = CONFIG.clip3dFactor;
+        if (elCarWakeMax) elCarWakeMax.value = CONFIG.carWakeMaxCount;
+    }
+
+    function syncCarWakeMax() {
+        if (window.GeowalkCarDrive) GeowalkCarDrive.setWakeMaxCount(CONFIG.carWakeMaxCount);
+    }
+
+    function applyCarModeVisuals() {
+        if (!isCarMode()) {
+            if (!modeVisualsBase) return;
+            CONFIG.sky.fogGroundBlend = modeVisualsBase.fogGroundBlend;
+            CONFIG.clip3dFactor = modeVisualsBase.clip3dFactor;
+            CONFIG.carWakeMaxCount = modeVisualsBase.carWakeMaxCount;
+            modeVisualsBase = null;
+            syncModeVisualsPanel();
+            persistActiveSkyParams();
+            if (map) applySky();
+            syncCarWakeMax();
+            return;
+        }
+        if (!modeVisualsBase) {
+            modeVisualsBase = {
+                fogGroundBlend: CONFIG.sky.fogGroundBlend,
+                clip3dFactor: CONFIG.clip3dFactor,
+                carWakeMaxCount: CONFIG.carWakeMaxCount
+            };
+        }
+        CONFIG.sky.fogGroundBlend = CAR_MODE_FOG;
+        if (carCameraView === "topdown") {
+            CONFIG.clip3dFactor = CAR_TOP_CLIP3D_FACTOR;
+            CONFIG.carWakeMaxCount = CAR_TOP_WAKE_MAX;
+        } else {
+            CONFIG.clip3dFactor = modeVisualsBase.clip3dFactor;
+            CONFIG.carWakeMaxCount = modeVisualsBase.carWakeMaxCount;
+        }
+        syncModeVisualsPanel();
+        persistActiveSkyParams();
+        if (map) applySky();
+        syncCarWakeMax();
+    }
+
+    function toggleCarCameraView() {
+        if (!isCarMode()) return;
+        if (carSkinPickerOpen) {
+            closeCarSkinPicker(true);
+            return;
+        }
+        carCameraView = carCameraView === "chase" ? "topdown" : "chase";
+        applyCarModeVisuals();
+    }
     let heightAnim = null;
     let jumpAnim = null;
 
@@ -1637,8 +2013,7 @@
         if (elCam) {
             elCam.addEventListener("pointerdown", (e) => {
                 e.preventDefault();
-                if (!isCarMode()) return;
-                carCameraView = carCameraView === "chase" ? "topdown" : "chase";
+                toggleCarCameraView();
             });
         }
 
@@ -1655,7 +2030,10 @@
         syncTouchControlsAria();
     }
 
-    function requestLock() { canvasEl.requestPointerLock?.(); }
+    function requestLock() {
+        if (carSkinPickerOpen) return;
+        canvasEl.requestPointerLock?.();
+    }
 
     function dismissOverlay() {
         started = true;
@@ -1670,6 +2048,7 @@
         else requestLock();
     });
     canvasEl.addEventListener("click", () => {
+        if (carSkinPickerOpen) return;
         if (window.matchMedia("(max-width: 800px)").matches) {
             if (overlayVisible()) dismissOverlay();
             return;
@@ -1687,7 +2066,8 @@
         } else {
             flightHint.style.display = "none";
             // после старта не показываем большую заставку, чтобы был доступ к полям
-            if (started) resumeHint.style.display = "block";
+            if (started && !carSkinPickerOpen) resumeHint.style.display = "block";
+            else if (started && carSkinPickerOpen && resumeHint) resumeHint.style.display = "none";
             else overlay.classList.remove("hidden");
         }
         syncOverlayChrome();
@@ -1724,6 +2104,10 @@
         }
         if (e.code === "KeyQ") {
             e.preventDefault();
+            if (isCarMode() && !e.repeat) {
+                toggleCarSkinPicker();
+                return;
+            }
             cycleTerrainChoose();
             return;
         }
@@ -1732,9 +2116,9 @@
             toggleMiniMapExpanded();
             return;
         }
-        if (e.code === "KeyC" && locked && isCarMode() && !e.repeat) {
+        if (e.code === "KeyC" && locked && isCarMode() && !e.repeat && !carSkinPickerOpen) {
             e.preventDefault();
-            carCameraView = carCameraView === "chase" ? "topdown" : "chase";
+            toggleCarCameraView();
             return;
         }
         if (e.code === "Space" && controlsActive() && isFollowMode() && !e.repeat) {
@@ -1774,6 +2158,7 @@
         velFwd = 0;
         velStrafe = 0;
         fixedElevation = null;
+        if (window.GeowalkWoodTerrainExtrude) GeowalkWoodTerrainExtrude.reset(lng, lat);
         if (ready) applyCamera();
     }
 
@@ -1831,6 +2216,12 @@
     }
     bindNumber(elWalk, v => CONFIG.walkSpeed = v);
     bindNumber(elRun, v => CONFIG.runMultiplier = v);
+    function clampFov(v) { return Math.max(30, Math.min(120, v)); }
+    function applyFov() {
+        if (!map) return;
+        try { map.setVerticalFieldOfView(clampFov(CONFIG.fov)); } catch (err) { console.warn("FOV:", err); }
+    }
+    bindNumber(elFov, v => { CONFIG.fov = clampFov(v); applyFov(); });
     bindNumber(elFly, v => CONFIG.flySpeed = v);
     bindNumber(elFpsLimit, v => { CONFIG.fpsLimit = Math.max(0, Math.round(v)); });
     bindNumber(elDraw, v => {
@@ -1891,6 +2282,7 @@
             if (ex && ex > 0) map.setTerrain({ source: "terrain-dem", exaggeration: ex });
             else map.setTerrain(null);
         } catch (e) { console.warn("terrain:", e); }
+        if (window.GeowalkWoodTerrainExtrude) syncWoodTerrainFromConfig(true);
     }
 
     function applyTerrainCollision(ignore) {
@@ -1923,6 +2315,19 @@
         const v = parseFloat(elRelief.value);
         if (!isNaN(v)) { CONFIG.terrainExaggeration = v; applyTerrain(v); }
     });
+    if (elTrees3d) {
+        elTrees3d.addEventListener("change", () => {
+            CONFIG.trees3dEnabled = elTrees3d.checked;
+            syncWoodTerrainFromConfig(true);
+        });
+    }
+    if (elTrees3dDensity) {
+        bindNumber(elTrees3dDensity, v => {
+            CONFIG.trees3dDensity = Math.max(0.2, Math.min(2, v));
+            elTrees3dDensity.value = CONFIG.trees3dDensity;
+            syncWoodTerrainFromConfig(true);
+        });
+    }
     elNoTerrCol.addEventListener("change", () => setIgnoreTerrain(elNoTerrCol.checked));
     elMinimap.addEventListener("change", () => {
         CONFIG.minimapEnabled = elMinimap.checked;
@@ -1954,13 +2359,17 @@
         "maps/map1.json": "map1",
         "maps/map2.json": "map2",
         "maps/map3.json": "map3",
-        "maps/map4.json": "map4"
+        "maps/map4.json": "map4",
+        "maps/trees.json": "trees",
+        "maps/trees3.json": "map2"
     };
     const EMBEDDED_STYLE_BY_URL = {
         "maps/map1.json": "GEOWALK_STYLE",
         "maps/map2.json": "GEOWALK_STYLE_MAP2",
         "maps/map3.json": "GEOWALK_STYLE_MAP3",
-        "maps/map4.json": "GEOWALK_STYLE_MAP4"
+        "maps/map4.json": "GEOWALK_STYLE_MAP4",
+        "maps/trees.json": "GEOWALK_STYLE_TREES",
+        "maps/trees3.json": "GEOWALK_STYLE_TREES3"
     };
 
     function getEmbeddedStyle(url) {
@@ -2266,7 +2675,7 @@
     // ----------------------------------------------------------------------
     // Применяет все наши настройки поверх (свеже)загруженного стиля карты.
     function setupStyle() {
-        try { map.setVerticalFieldOfView(CONFIG.fov); } catch (err) { console.warn("FOV:", err); }
+        applyFov();
         stripIconLayers();
         applySky();
 
@@ -2295,6 +2704,12 @@
         cacheTime = 0;
         surfaceCache = emptySurfaceCache();
         surfaceCacheTime = 0;
+
+        if (window.GeowalkWoodTerrainExtrude) {
+            try {
+                GeowalkWoodTerrainExtrude.setup(map, woodTerrainOptionsFromConfig());
+            } catch (err) { console.warn("Wood terrain extrude:", err); }
+        }
     }
 
     function applyNearFarClip(tr) {
@@ -2314,6 +2729,8 @@
 
     map.on("load", () => {
         setupStyle();
+        applyCarModeVisuals();
+        if (window.GeowalkWoodTerrainExtrude) GeowalkWoodTerrainExtrude.bindMapEvents(map);
         ready = true;
         applyCamera();
     });
@@ -2379,7 +2796,7 @@
         let maxSpeed = (keys["ShiftLeft"] || keys["ShiftRight"]) ? CONFIG.walkSpeed * CONFIG.runMultiplier : CONFIG.walkSpeed;
         let targetFwd = 0, targetStrafe = 0;
 
-        if (isCarMode() && controlsActive() && !overlayWalk) {
+        if (isCarMode() && controlsActive() && !overlayWalk && !carSkinPickerOpen) {
             let turnInput = Math.max(-1, Math.min(1, strafe));
             if (velFwd < -0.05) turnInput = -turnInput;
             const maxTurnRate = CONFIG.carTurnSpeedDeg;
@@ -2470,6 +2887,7 @@
 
         updateHeightAnim(dt);
         updateFollowJumpAnim(dt);
+        updateCarSkinPickerLiftAnim(dt);
         updateCarCameraRoll(dt, strafe, velFwd);
 
         // Space/X — подъём/спуск только при включённой галочке «игнорировать рельеф»
@@ -2506,6 +2924,7 @@
 
         if (isCarMode()) {
             const topdown = carCameraView === "topdown";
+            const liftM = carSkinPickerLift;
             const b = player.yaw * DEG;
             let zoom, camPitch, aheadM, targetEye;
 
@@ -2543,9 +2962,9 @@
             if (map.getCenterClampedToGround()) map.setCenterClampedToGround(false);
             if (map.getTerrain() && map.isSourceLoaded("terrain-dem")) {
                 const te = map.queryTerrainElevation([player.lng, player.lat]);
-                if (typeof te === "number" && isFinite(te)) opts.elevation = te;
+                if (typeof te === "number" && isFinite(te)) opts.elevation = te + liftM;
             } else if (!map.getTerrain()) {
-                opts.elevation = 0;
+                opts.elevation = liftM;
             }
 
             try { map.jumpTo(opts); } catch (err) { /* пропускаем редкий сбой кадра */ }
@@ -2652,11 +3071,15 @@
         lastSimT = now;
         update(dt);
         applyCamera();
+        if (window.GeowalkWoodTerrainExtrude && ready) {
+            GeowalkWoodTerrainExtrude.tick({ lng: player.lng, lat: player.lat, ready: true });
+        }
         if (window.GeowalkCarDrive && isCarMode() && ready) {
             const rect = map.getCanvas().getBoundingClientRect();
             // Ось машины — позиция игрока; carLookAheadM смещает только центр камеры вперёд.
             const pt = map.project([player.lng, player.lat]);
             GeowalkCarDrive.setPivot(rect.left + pt.x, rect.top + pt.y);
+            if (carSkinPickerOpen) updateCarSkinPickerPosition();
         }
         updateHUD();
         updateMiniMap();

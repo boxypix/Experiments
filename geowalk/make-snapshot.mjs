@@ -16,3 +16,5 @@ snapshot("maps/map2.json", "maps/map2.js", "GEOWALK_STYLE_MAP2");
 snapshot("maps/map3.json", "maps/map3.js", "GEOWALK_STYLE_MAP3");
 snapshot("maps/map4.json", "maps/map4.js", "GEOWALK_STYLE_MAP4");
 snapshot("maps/mini1.json", "maps/mini1.js", "GEOWALK_MINI_STYLE");
+snapshot("maps/trees.json", "maps/trees.js", "GEOWALK_STYLE_TREES");
+snapshot("maps/trees3.json", "maps/trees3.js", "GEOWALK_STYLE_TREES3");

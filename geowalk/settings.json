@@ -7,7 +7,7 @@
   "eyeHeight": 2.8,
   "startHeightMultiplier": 10,
   "groundAlt": 0,
-  "fov": 90,
+  "fov": 85,
   "nearClipDivisor": 4000,
   "walkSpeed": 40,
   "runMultiplier": 10,
@@ -61,9 +61,17 @@
       "horizonFogBlend": 0.5,
       "fogColor": "#cfe3ff",
       "fogGroundBlend": 0.2
+    },
+    "maps/trees3.json": {
+      "color": "#32005B",
+      "horizonBlend": 0.35,
+      "horizonColor": "#C46935",
+      "horizonFogBlend": 0.5,
+      "fogColor": "#C46935",
+      "fogGroundBlend": 0.2
     }
   },
-  "styleUrl": "maps/map2.json",
+  "styleUrl": "maps/trees3.json",
   "terrainExaggeration": 1,
   "ignoreTerrainCollision": true,
   "followTerrainEyeHeight": 2.8,
@@ -91,8 +99,8 @@
   "carCameraRollSpeedMin": 30,
   "carCameraRollSec": 0.8,
   "carWakeMaxCount": 5,
-  "carSpriteId": 0,
-  "carSpriteSrc": "images/car_0.png",
+  "carSpriteId": 1,
+  "carSpriteSrc": "images/car_1.png",
   "carSpriteWidthPx": 180,
   "carSpritePivotOffsetX": 0,
   "carSpritePivotOffsetY": 0,
@@ -109,5 +117,7 @@
   "buildingsSourceLayer": "building",
   "collisionHeight": 10,
   "clip3dEnabled": true,
-  "clip3dFactor": 0.38
+  "clip3dFactor": 0.38,
+  "trees3dEnabled": true,
+  "trees3dDensity": 2
 }
