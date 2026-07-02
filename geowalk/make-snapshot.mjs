@@ -14,4 +14,5 @@ snapshot("settings.json", "settings.js", "GEOWALK_SETTINGS");
 snapshot("maps/map1.json", "maps/map1.js", "GEOWALK_STYLE");
 snapshot("maps/map2.json", "maps/map2.js", "GEOWALK_STYLE_MAP2");
 snapshot("maps/map3.json", "maps/map3.js", "GEOWALK_STYLE_MAP3");
+snapshot("maps/map4.json", "maps/map4.js", "GEOWALK_STYLE_MAP4");
 snapshot("maps/mini1.json", "maps/mini1.js", "GEOWALK_MINI_STYLE");

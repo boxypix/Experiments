@@ -13,14 +13,6 @@
     "openmaptiles": {
       "type": "vector",
       "url": "https://tiles.openfreemap.org/planet"
-    },
-    "terrarium": {
-      "type": "raster-dem",
-      "tiles": ["https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"],
-      "minzoom": 0,
-      "maxzoom": 14,
-      "tileSize": 512,
-      "encoding": "terrarium"
     }
   },
   "sprite": "https://tiles.openfreemap.org/sprites/ofm_f384/ofm",
@@ -251,44 +243,13 @@
       }
     },
     {
-      "id": "hillshade",
-      "type": "hillshade",
-      "source": "terrarium",
-      "layout": {"visibility": "visible"},
-      "paint": {
-        "hillshade-method": "standard",
-        "hillshade-exaggeration": 1,
-        "hillshade-shadow-color": ["rgba(41, 65, 35, 1)"],
-        "resampling": "linear",
-        "hillshade-illumination-altitude": [1],
-        "hillshade-illumination-direction": [45],
-        "hillshade-highlight-color": ["rgba(92, 98, 77, 1)"],
-        "hillshade-illumination-anchor": "map"
-      }
-    },
-    {
-      "id": "water-2",
-      "type": "fill",
-      "source": "openmaptiles",
-      "source-layer": "water",
-      "minzoom": 17,
-      "filter": ["!=", ["get", "brunnel"], "tunnel"],
-      "layout": {"visibility": "visible"},
-      "paint": {
-        "fill-color": "rgba(0, 17, 26, 1)",
-        "fill-antialias": false,
-        "fill-translate": [0, -15],
-        "fill-translate-anchor": "viewport"
-      }
-    },
-    {
       "id": "water",
       "type": "fill",
       "source": "openmaptiles",
       "source-layer": "water",
       "filter": ["!=", ["get", "brunnel"], "tunnel"],
       "layout": {"visibility": "visible"},
-      "paint": {"fill-color": "rgba(11, 34, 46, 1)", "fill-antialias": false}
+      "paint": {"fill-color": "rgba(8, 30, 44, 1)", "fill-antialias": false}
     },
     {
       "id": "landcover_sand",

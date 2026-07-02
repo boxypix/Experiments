@@ -637,6 +637,7 @@
                 <button type="button" class="style-menu-btn" data-style-url="maps/map1.json">Тест – отличный денек</button>
                 <button type="button" class="style-menu-btn" data-style-url="maps/map2.json">Тест – горячий рассвет</button>
                 <button type="button" class="style-menu-btn" data-style-url="maps/map3.json">Тест – арктическое зарево</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/map4.json">Тест - хилшейд</button>
                 <button type="button" class="style-menu-btn style-menu-btn-white" id="style-menu-upload">Загрузить свой</button>
             </div>
         </div>
@@ -745,6 +746,7 @@
     <script src="maps/map1.js"></script>
     <script src="maps/map2.js"></script>
     <script src="maps/map3.js"></script>
+    <script src="maps/map4.js"></script>
     <script src="maps/mini1.js"></script>
     <script src="modules/follow-terrain-hands.js"></script>
     <script src="modules/car-drive.js"></script>
@@ -816,6 +818,14 @@
                 horizonColor: "#271BD8",
                 horizonFogBlend: 0.55,
                 fogColor: "#747F82",
+                fogGroundBlend: 0.2
+            },
+            "maps/map4.json": {
+                color: "#0350B2",
+                horizonBlend: 0.35,
+                horizonColor: "#9fc8ff",
+                horizonFogBlend: 0.5,
+                fogColor: "#cfe3ff",
                 fogGroundBlend: 0.2
             }
         },
@@ -1232,7 +1242,8 @@
             const embeddedByUrl = {
                 "maps/map1.json": window.GEOWALK_STYLE,
                 "maps/map2.json": window.GEOWALK_STYLE_MAP2,
-                "maps/map3.json": window.GEOWALK_STYLE_MAP3
+                "maps/map3.json": window.GEOWALK_STYLE_MAP3,
+                "maps/map4.json": window.GEOWALK_STYLE_MAP4
             };
             const embedded = embeddedByUrl[CONFIG.styleUrl];
             if (embedded) return styleWithSkyFromConfig(embedded);
@@ -1942,12 +1953,14 @@
     const STYLE_PRESETS = {
         "maps/map1.json": "map1",
         "maps/map2.json": "map2",
-        "maps/map3.json": "map3"
+        "maps/map3.json": "map3",
+        "maps/map4.json": "map4"
     };
     const EMBEDDED_STYLE_BY_URL = {
         "maps/map1.json": "GEOWALK_STYLE",
         "maps/map2.json": "GEOWALK_STYLE_MAP2",
-        "maps/map3.json": "GEOWALK_STYLE_MAP3"
+        "maps/map3.json": "GEOWALK_STYLE_MAP3",
+        "maps/map4.json": "GEOWALK_STYLE_MAP4"
     };
 
     function getEmbeddedStyle(url) {

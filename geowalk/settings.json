@@ -53,6 +53,14 @@
       "horizonFogBlend": 0.55,
       "fogColor": "#747F82",
       "fogGroundBlend": 0.2
+    },
+    "maps/map4.json": {
+      "color": "#0350B2",
+      "horizonBlend": 0.35,
+      "horizonColor": "#9fc8ff",
+      "horizonFogBlend": 0.5,
+      "fogColor": "#cfe3ff",
+      "fogGroundBlend": 0.2
     }
   },
   "styleUrl": "maps/map2.json",
