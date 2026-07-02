@@ -357,7 +357,7 @@
             display: block; width: 80px; height: 80px;
             image-rendering: pixelated; border-radius: 12px;
         }
-        @media (max-width: 700px) {
+        @media (max-width: 1200px) {
             #terrain-choose-wrap .terrain-choose-hint,
             #terrain-choose-hint-car { display: none !important; }
             #terrain-choose img { width: 60px; height: 60px; }
@@ -488,14 +488,14 @@
         body.car-skin-picker-open #map { cursor: default; }
         body.car-skin-picker-open #resume-hint { display: none !important; }
 
-        /* Сенсорное управление — экраны ≤800px */
+        /* Сенсорное управление — экраны ≤1200px */
         #touch-controls {
             display: none;
             position: absolute; inset: 0; z-index: 15;
             pointer-events: none; touch-action: none;
             user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
         }
-        @media (max-width: 800px) {
+        @media (max-width: 1200px) {
             body:not(.overlay-open) #touch-controls { display: block; }
             body:not(.overlay-open) #resume-hint,
             body:not(.overlay-open) #flight-hint { display: none !important; }
@@ -607,7 +607,7 @@
             font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             text-align: center; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
         }
-        @media (max-width: 800px) {
+        @media (max-width: 1200px) {
             #search-wrap { width: 95vw; }
             #city-go { display: none; }
             #help, #hud { display: none !important; }
@@ -1613,7 +1613,7 @@
             elCarSkinPicker.hidden = true;
             elCarSkinPicker.setAttribute("aria-hidden", "true");
         }
-        const doRelock = relock !== false && !window.matchMedia("(max-width: 800px)").matches;
+        const doRelock = relock !== false && !window.matchMedia("(max-width: 1200px)").matches;
         startCarSkinPickerLiftAnim(0, () => {
             if (doRelock) requestLock();
         });
@@ -2062,7 +2062,7 @@
     }
 
     function isTouchUiActive() {
-        return window.matchMedia("(max-width: 800px)").matches && !overlayVisible();
+        return window.matchMedia("(max-width: 1200px)").matches && !overlayVisible();
     }
 
     function isTouchUiTextInput(el) {
@@ -2241,12 +2241,12 @@
     }
 
     overlay.addEventListener("click", () => {
-        if (window.matchMedia("(max-width: 800px)").matches) dismissOverlay();
+        if (window.matchMedia("(max-width: 1200px)").matches) dismissOverlay();
         else requestLock();
     });
     canvasEl.addEventListener("click", () => {
         if (carSkinPickerOpen) return;
-        if (window.matchMedia("(max-width: 800px)").matches) {
+        if (window.matchMedia("(max-width: 1200px)").matches) {
             if (overlayVisible()) dismissOverlay();
             return;
         }
