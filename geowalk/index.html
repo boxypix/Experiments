@@ -50,6 +50,47 @@
         #hud { left: 14px; bottom: 14px; min-width: 190px; }
         #hud b { color: var(--accent); font-weight: 600; }
         #hud .row { display: flex; justify-content: space-between; gap: 14px; }
+        /* Stats — круговые диаграммы снизу слева */
+        #stats {
+            position: absolute; left: 14px; bottom: 14px; z-index: 6;
+            display: flex; gap: 16px; pointer-events: none;
+        }
+        #stats .stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        #stats .stat-ring { position: relative; width: 60px; height: 60px; }
+        #stats .stat-ring svg { display: block; transform: rotate(-90deg); }
+        #stats circle.track { fill: none; stroke: rgba(255, 255, 255, 0.15); stroke-width: 8; }
+        #stats circle.prog {
+            fill: none; stroke-width: 8; stroke-linecap: round;
+            transition: stroke-dashoffset 0.3s ease;
+        }
+        #stats .stat-num {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; line-height: 1;
+        }
+        #stats .stat-num .stat-val {
+            font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #fff;
+        }
+        #stats .stat-num .stat-max {
+            margin-top: 2px;
+            font: 400 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #fff; opacity: 0.6;
+        }
+        #stats .stat-label {
+            font: 400 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #fff;
+        }
+        body.overlay-open #stats { display: none; }
+
+        /* HUD внутри раскрытой панели — снизу, как отдельный блок */
+        #panel #hud {
+            position: static; z-index: auto;
+            width: 100%; min-width: 0;
+            margin-top: 10px; padding: 10px 0 0;
+            border: none; border-top: 1px solid rgba(106, 209, 255, 0.2);
+            border-radius: 0; background: transparent;
+        }
         #mini-map-wrap {
             position: absolute; right: 14px; bottom: 24px; z-index: 6;
             width: 200px; height: 200px; overflow: hidden; pointer-events: none;
@@ -216,6 +257,74 @@
             transition: opacity 0.25s ease 0.15s;
         }
         #explore-checklist .explore-checklist-tip-close:hover { background: rgba(40, 40, 40, 0.9); }
+
+        /* Debug dots (клавиша F) — по центру экрана, на 100px выше центра */
+        #debug-menu {
+            position: absolute; left: 50%; top: 50%;
+            transform: translate(-50%, calc(-50% - 100px)); z-index: 9;
+            font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #cfe8ff; background: var(--ui-bg);
+            border: 1px solid rgba(106, 209, 255, 0.25); border-radius: 10px;
+            padding: 10px 12px; pointer-events: auto;
+            width: auto; max-width: 92vw;
+        }
+        #debug-menu .dbg-pin-table { border-collapse: collapse; width: 100%; }
+        #debug-menu .dbg-pin-table th,
+        #debug-menu .dbg-pin-table td {
+            padding: 3px 6px; text-align: right; white-space: nowrap;
+        }
+        #debug-menu .dbg-pin-table th { font-weight: 600; }
+        #debug-menu .dbg-pin-table td.dbg-row-label,
+        #debug-menu .dbg-pin-table th.dbg-corner { text-align: left; color: rgba(160,200,230,0.85); }
+        #debug-menu .dbg-pin-table .dbg-type-head {
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        #debug-menu .dbg-pin-table .dbg-type-swatch {
+            width: 12px; height: 12px; border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.35); display: inline-block;
+        }
+        #debug-menu .dbg-pin-table input[type="number"] {
+            width: 64px; background: rgba(0, 0, 0, 0.35);
+            color: #eaf6ff; border: 1px solid rgba(106, 209, 255, 0.25);
+            border-radius: 6px; padding: 3px 6px; font: inherit; text-align: right;
+        }
+        #debug-menu[hidden] { display: none; }
+        #debug-menu .debug-menu-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        #debug-menu .debug-menu-title {
+            font-weight: 600; color: #eaf6ff; letter-spacing: 0.02em;
+        }
+        #debug-menu .debug-menu-close {
+            appearance: none; -webkit-appearance: none;
+            width: 22px; height: 22px; padding: 0; line-height: 1;
+            border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
+            background: rgba(0, 0, 0, 0.4); color: rgba(255, 255, 255, 0.9);
+            font-size: 16px; cursor: pointer;
+        }
+        #debug-menu .debug-menu-close:hover { background: rgba(40, 40, 40, 0.9); }
+        #debug-menu label {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 8px; margin: 6px 0;
+        }
+        #debug-menu input[type="number"] {
+            width: 74px; background: rgba(0, 0, 0, 0.35);
+            color: #eaf6ff; border: 1px solid rgba(106, 209, 255, 0.25);
+            border-radius: 6px; padding: 3px 6px; font: inherit;
+        }
+        #debug-menu .hint {
+            margin-top: 8px; color: rgba(160, 200, 230, 0.7); font-size: 11px;
+        }
+        #debug-menu .debug-menu-sep {
+            height: 1px; margin: 8px 0;
+            background: rgba(106, 209, 255, 0.2);
+        }
+        #debug-menu .debug-menu-subtitle {
+            color: rgba(160, 200, 230, 0.85); font-size: 11px;
+            text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px;
+        }
+        #debug-menu label input[type="checkbox"] { margin: 0; }
 
         /* Панель настроек */
         #panel {
@@ -840,6 +949,36 @@
             background: #fff; color: #171717; border-color: #fff;
         }
         #style-menu-overlay .style-menu-btn-white:hover { background: #f0f0f0; }
+        #style-menu-overlay .style-menu-cancel {
+            width: 100%; margin-top: 18px; padding: 12px 18px; cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06); color: rgba(234, 246, 255, 0.75);
+            font: 500 15px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+        #style-menu-overlay .style-menu-cancel:hover { background: rgba(255, 255, 255, 0.12); color: #eaf6ff; }
+        #style-menu-overlay .style-menu-cancel:active { transform: scale(0.98); }
+        #reality-hint {
+            position: fixed; left: 50%; top: 50%;
+            transform: translate(-50%, -50%) translateY(64px);
+            padding: 10px 18px; border-radius: 999px;
+            background: rgba(0, 0, 0, 0.55); color: #fff;
+            font: 500 15px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(6px); pointer-events: none; z-index: 9;
+            opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease;
+            white-space: nowrap;
+        }
+        #reality-hint.visible { opacity: 1; visibility: visible; }
+        #reality-hint b { font-weight: 700; }
+        #reality-swap {
+            position: fixed; inset: 0; z-index: 10000;
+            pointer-events: none; opacity: 0; display: none;
+            background: #000;
+        }
+        #reality-swap img {
+            width: 100%; height: 100%; object-fit: fill; display: block;
+        }
     </style>
 </head>
 <body class="overlay-open">
@@ -890,6 +1029,70 @@
         <label>Понимать покрытия <input id="surface-probe" type="checkbox" /></label>
         <div id="surface-status" class="surface-status"></div>
         <div class="hint">Esc — освободить курсор, чтобы менять поля</div>
+        <div id="hud">
+            <div class="row"><span>Коорд.</span><b id="hud-coord">—</b></div>
+            <div class="row"><span>Курс</span><b id="hud-bearing">—</b></div>
+            <div class="row"><span>Взгляд</span><b id="hud-look">—</b></div>
+            <div class="row"><span>Высота</span><b id="hud-alt">—</b></div>
+            <div class="row"><span>Скорость</span><b id="hud-speed">—</b></div>
+            <div class="row"><span>Стены</span><b id="hud-collision">—</b></div>
+        </div>
+        </div>
+    </div>
+
+    <div id="debug-menu" aria-hidden="true" hidden>
+        <div class="debug-menu-header">
+            <span class="debug-menu-title">debug dots</span>
+            <button type="button" class="debug-menu-close" id="debug-menu-close" aria-label="Закрыть">×</button>
+        </div>
+        <div id="dbg-pin-table" class="dbg-pin-table"></div>
+        <div class="debug-menu-sep"></div>
+        <div class="debug-menu-subtitle">Показывать в режимах</div>
+        <label>Режим голубя <input id="dbg-pin-mode-ignore" type="checkbox" checked /></label>
+        <label>Прогулка <input id="dbg-pin-mode-follow" type="checkbox" checked /></label>
+        <label>Машинка <input id="dbg-pin-mode-car" type="checkbox" checked /></label>
+        <div class="hint">F — открыть / закрыть</div>
+    </div>
+
+    <div id="stats">
+        <div class="stat">
+            <div class="stat-ring">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                    <circle class="track" cx="30" cy="30" r="26" />
+                    <circle class="prog" id="stat-prog-green" cx="30" cy="30" r="26" style="stroke:#C8FF00" />
+                </svg>
+                <div class="stat-num">
+                    <span class="stat-val" id="stat-num-green">0</span>
+                    <span class="stat-max" id="stat-max-green"></span>
+                </div>
+            </div>
+            <div class="stat-label">Обычные</div>
+        </div>
+        <div class="stat">
+            <div class="stat-ring">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                    <circle class="track" cx="30" cy="30" r="26" />
+                    <circle class="prog" id="stat-prog-orange" cx="30" cy="30" r="26" style="stroke:#FF6F00" />
+                </svg>
+                <div class="stat-num">
+                    <span class="stat-val" id="stat-num-orange">0</span>
+                    <span class="stat-max" id="stat-max-orange"></span>
+                </div>
+            </div>
+            <div class="stat-label">Редкие</div>
+        </div>
+        <div class="stat">
+            <div class="stat-ring">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                    <circle class="track" cx="30" cy="30" r="26" />
+                    <circle class="prog" id="stat-prog-blue" cx="30" cy="30" r="26" style="stroke:#006FFF" />
+                </svg>
+                <div class="stat-num">
+                    <span class="stat-val" id="stat-num-blue">0</span>
+                    <span class="stat-max" id="stat-max-blue"></span>
+                </div>
+            </div>
+            <div class="stat-label">Поймай их</div>
         </div>
     </div>
 
@@ -906,8 +1109,13 @@
                 <button type="button" class="style-menu-btn" data-style-url="maps/trees.json">Trees (лес 3D)</button>
                 <button type="button" class="style-menu-btn style-menu-btn-white" id="style-menu-upload">Загрузить свой</button>
             </div>
+            <button type="button" class="style-menu-cancel" id="style-menu-cancel">Остаться в этой реальности</button>
         </div>
     </div>
+
+    <div id="reality-hint" aria-hidden="true">Нажми <b>E</b> чтобы сменить реальность</div>
+
+    <div id="reality-swap" aria-hidden="true"><img src="images/ui_swapreal.gif" alt="" /></div>
 
     <div id="terrain-choose-wrap">
         <p class="terrain-choose-hint" id="terrain-choose-hint-q">Q – менять стиль движения</p>
@@ -1041,15 +1249,6 @@
         </div>
     </aside>
 
-    <div id="hud">
-        <div class="row"><span>Коорд.</span><b id="hud-coord">—</b></div>
-        <div class="row"><span>Курс</span><b id="hud-bearing">—</b></div>
-        <div class="row"><span>Взгляд</span><b id="hud-look">—</b></div>
-        <div class="row"><span>Высота</span><b id="hud-alt">—</b></div>
-        <div class="row"><span>Скорость</span><b id="hud-speed">—</b></div>
-        <div class="row"><span>Стены</span><b id="hud-collision">—</b></div>
-    </div>
-
     <div id="mini-map-wrap">
         <div id="mini-map"></div>
         <div id="mini-map-ui">
@@ -1088,6 +1287,9 @@
     <script src="maps/mini1.js"></script>
     <script src="modules/follow-terrain-hands.js"></script>
     <script src="modules/car-drive.js"></script>
+    <script src="modules/effects-overlay.js"></script>
+    <script src="modules/car-pins.js"></script>
+    <script src="modules/giant-mob.js"></script>
     <script src="modules/wood-terrain-extrusion.js"></script>
 
     <script>
@@ -1444,6 +1646,12 @@
         follow: "Прогулка",
         car: "Машинка"
     };
+    // Показывать ли debug dots в каждом режиме передвижения (по умолчанию — везде).
+    const pinModeEnabled = { ignore: true, follow: true, car: true };
+    function pinsActiveForCurrentMode() {
+        return !!pinModeEnabled[CONFIG.movementMode]
+            && !document.body.classList.contains("overlay-open");
+    }
     const elShadows = document.getElementById("shadows");
     const elStyleStatus = document.getElementById("style-status");
     const elHelpShift = document.getElementById("help-shift");
@@ -1524,6 +1732,51 @@
         GeowalkCarDrive.init(carDriveOptionsFromConfig());
     }
     initCarDriveModule();
+
+    function initEffectsModule() {
+        if (!window.GeowalkEffects) return;
+        GeowalkEffects.init({
+            borderColor: CONFIG.fxCollectBorderColor || "#22e05a",
+            borderWidthPx: CONFIG.fxCollectBorderWidthPx != null ? CONFIG.fxCollectBorderWidthPx : 30,
+            borderDurationSec: CONFIG.fxCollectBorderSec != null ? CONFIG.fxCollectBorderSec : 1
+        });
+    }
+    initEffectsModule();
+
+    function initCarPinsModule() {
+        if (!window.GeowalkCarPins) return;
+        const defaultPinTypes = [
+            { id: "it_green", color: "#C8FF00", count: 5, spawnMaxM: 800, hitRadiusM: 20, sizeM: 3, baseM: 2, spinEnabled: false },
+            { id: "it_orange", color: "#FF6F00", count: 1, spawnMaxM: 500, hitRadiusM: 10, sizeM: 3, baseM: 1, spinEnabled: false },
+            { id: "it_blue", color: "#006FFF", count: 2, spawnMaxM: 1000, hitRadiusM: 4, sizeM: 2, baseM: 2, spinEnabled: false, moveSpeedM: 35, trailCount: 2, trailSpacingM: 3 }
+        ];
+        GeowalkCarPins.init({
+            types: Array.isArray(CONFIG.carPinTypes) && CONFIG.carPinTypes.length
+                ? CONFIG.carPinTypes : defaultPinTypes,
+            spinDegPerSec: CONFIG.carPinSpinDegPerSec != null ? CONFIG.carPinSpinDegPerSec : 90,
+            onCollect(typeId) {
+                addPinStat(typeId);
+                if (!window.GeowalkEffects) return;
+                if (typeId === "it_orange") GeowalkEffects.flashBorder({ color: "#FF6F00" });
+                else if (typeId === "it_blue") GeowalkEffects.flashBorder({ color: "#0099FF" });
+                else GeowalkEffects.flashBorder();
+            }
+        });
+    }
+    initCarPinsModule();
+
+    function initGiantMobModule() {
+        if (!window.GeowalkGiantMob) return;
+        GeowalkGiantMob.init({
+            src: CONFIG.sprite1Src || "images/mo_1a.png",
+            enabled: CONFIG.sprite1Enabled !== false,
+            spawnRadiusM: CONFIG.sprite1SpawnRadiusM != null ? CONFIG.sprite1SpawnRadiusM : 1000,
+            count: CONFIG.sprite1Count != null ? CONFIG.sprite1Count : 1,
+            sizeM: CONFIG.sprite1SizeM != null ? CONFIG.sprite1SizeM : 120
+        });
+    }
+    initGiantMobModule();
+
     applyCarSprite(carSpriteIdFromConfig(), true);
 
     function syncCarSkinPickerSelection() {
@@ -1660,6 +1913,15 @@
         if (!window.GeowalkCarDrive) return;
         GeowalkCarDrive.sync({
             carMode: isCarMode(),
+            overlayOpen: document.body.classList.contains("overlay-open")
+        });
+        syncCarPinsModule();
+    }
+
+    function syncCarPinsModule() {
+        if (!window.GeowalkCarPins) return;
+        GeowalkCarPins.sync({
+            carMode: pinsActiveForCurrentMode(),
             overlayOpen: document.body.classList.contains("overlay-open")
         });
     }
@@ -2282,8 +2544,17 @@
     }
 
     const HANDLED = ["Space","KeyX","KeyW","KeyA","KeyS","KeyD","KeyC","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","ShiftLeft","ShiftRight","KeyQ","Digit1","Digit2","Digit3"];
+    let sprite1InRange = false;
     window.addEventListener("keydown", (e) => {
         if (isTyping(e)) return;            // не мешаем вводу в поля
+        if (e.code === "KeyE" && !e.repeat && sprite1InRange &&
+            !(elStyleMenu && elStyleMenu.classList.contains("visible"))) {
+            e.preventDefault();
+            document.exitPointerLock?.();
+            openStyleMenu();
+            hideRealityHint();
+            return;
+        }
         if (e.code === "Digit1" && !e.repeat) {
             e.preventDefault();
             applyMovementChooseIndex(0);
@@ -2311,6 +2582,11 @@
         if (e.code === "KeyM" && !e.repeat) {
             e.preventDefault();
             toggleMiniMapExpanded();
+            return;
+        }
+        if (e.code === "KeyF" && !e.repeat) {
+            e.preventDefault();
+            toggleDebugMenu();
             return;
         }
         if (e.code === "KeyC" && locked && isCarMode() && !e.repeat && !carSkinPickerOpen) {
@@ -2466,6 +2742,249 @@
         if (window.GeowalkCarDrive) GeowalkCarDrive.setWakeMaxCount(CONFIG.carWakeMaxCount);
     });
 
+    // ---- Debug-меню точек (клавиша F) ----
+    const elDebugMenu = document.getElementById("debug-menu");
+    const elDebugMenuClose = document.getElementById("debug-menu-close");
+    const elDbgPinTable = document.getElementById("dbg-pin-table");
+    let debugMenuOpen = false;
+
+    // Строки таблицы параметров (ключ setParam, подпись, min, step).
+    const PIN_PARAM_ROWS = [
+        { key: "spawnRadius", field: "spawnMaxM", label: "Радиус генерации (м)", min: 2, step: 1 },
+        { key: "count", field: "count", label: "Кол-во точек", min: 1, max: 50, step: 1 },
+        { key: "hitRadius", field: "hitRadiusM", label: "Радиус сбора (м)", min: 0.5, step: 0.5 },
+        { key: "size", field: "sizeM", label: "Размер кубика (м)", min: 0.1, step: 0.5 },
+        { key: "base", field: "baseM", label: "Высота над землёй (м)", min: 0, step: 0.5 },
+        { key: "spin", field: "spinEnabled", label: "Вращение", type: "bool" }
+    ];
+
+    // Строки блока движения/шлейфа (только для подвижных типов, moveSpeedM > 0).
+    const PIN_MOVE_ROWS = [
+        { key: "moveSpeed", field: "moveSpeedM", label: "Скорость (м/с)", min: 0, step: 1 },
+        { key: "turnMin", field: "turnMinSec", label: "Смена угла: мин (с)", min: 0.05, step: 0.1 },
+        { key: "turnMax", field: "turnMaxSec", label: "Смена угла: макс (с)", min: 0.05, step: 0.1 },
+        { key: "trailEnabled", field: "trailEnabled", label: "Шлейф вкл", type: "bool" },
+        { key: "trailCount", field: "trailCount", label: "Шлейф: кубиков", min: 0, max: 10, step: 1 },
+        { key: "trailSpacing", field: "trailSpacingM", label: "Шлейф: шаг (м)", min: 0.2, step: 0.5 }
+    ];
+
+    function buildTypeHead(t) {
+        const th = document.createElement("th");
+        const wrap = document.createElement("span");
+        wrap.className = "dbg-type-head";
+        const sw = document.createElement("span");
+        sw.className = "dbg-type-swatch";
+        sw.style.background = t.color;
+        wrap.appendChild(sw);
+        wrap.appendChild(document.createTextNode(t.id));
+        th.appendChild(wrap);
+        return th;
+    }
+
+    function makePinTable(rows, list) {
+        const table = document.createElement("table");
+        table.className = "dbg-pin-table";
+        const thead = document.createElement("thead");
+        const htr = document.createElement("tr");
+        const corner = document.createElement("th");
+        corner.className = "dbg-corner";
+        corner.textContent = "Параметр";
+        htr.appendChild(corner);
+        for (const t of list) htr.appendChild(buildTypeHead(t));
+        thead.appendChild(htr);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        for (const row of rows) {
+            const tr = document.createElement("tr");
+            const label = document.createElement("td");
+            label.className = "dbg-row-label";
+            label.textContent = row.label;
+            tr.appendChild(label);
+            for (const t of list) {
+                const td = document.createElement("td");
+                const input = document.createElement("input");
+                if (row.type === "bool") {
+                    input.type = "checkbox";
+                    input.checked = !!t[row.field];
+                    input.addEventListener("change", () => {
+                        if (window.GeowalkCarPins) GeowalkCarPins.setParam(t.id, row.key, input.checked);
+                    });
+                } else {
+                    input.type = "number";
+                    input.min = row.min;
+                    if (row.max != null) input.max = row.max;
+                    input.step = row.step;
+                    input.value = t[row.field];
+                    input.addEventListener("input", () => {
+                        const v = parseFloat(input.value);
+                        if (isNaN(v)) return;
+                        if (window.GeowalkCarPins) GeowalkCarPins.setParam(t.id, row.key, v);
+                    });
+                }
+                td.appendChild(input);
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        }
+        table.appendChild(tbody);
+        return table;
+    }
+
+    function buildPinParamTable() {
+        if (!elDbgPinTable) return;
+        const list = (window.GeowalkCarPins && GeowalkCarPins.getTypes)
+            ? GeowalkCarPins.getTypes() : [];
+        elDbgPinTable.innerHTML = "";
+        if (!list.length) return;
+
+        elDbgPinTable.appendChild(makePinTable(PIN_PARAM_ROWS, list));
+
+        // Отдельный блок движения/шлейфа только для подвижных типов.
+        const moving = list.filter(t => t.moveSpeedM > 0);
+        if (moving.length) {
+            const sep = document.createElement("div");
+            sep.className = "debug-menu-sep";
+            elDbgPinTable.appendChild(sep);
+            const sub = document.createElement("div");
+            sub.className = "debug-menu-subtitle";
+            sub.textContent = "Движение и шлейф";
+            elDbgPinTable.appendChild(sub);
+            elDbgPinTable.appendChild(makePinTable(PIN_MOVE_ROWS, moving));
+        }
+
+        buildSprite1Block();
+    }
+
+    // Строки блока спрайт-моба it_sprite1 (отдельный модуль GeowalkGiantMob).
+    const SPRITE1_ROWS = [
+        { key: "enabled", field: "enabled", label: "Вкл", type: "bool" },
+        { key: "spawnRadius", field: "spawnRadiusM", label: "Радиус появления (м)", min: 10, step: 10 },
+        { key: "count", field: "count", label: "Количество", min: 0, max: 50, step: 1 },
+        { key: "size", field: "sizeM", label: "Размер ширины (м)", min: 1, step: 1 }
+    ];
+
+    function buildSprite1Block() {
+        if (!window.GeowalkGiantMob || !GeowalkGiantMob.getParams) return;
+        const p = GeowalkGiantMob.getParams();
+
+        const sep = document.createElement("div");
+        sep.className = "debug-menu-sep";
+        elDbgPinTable.appendChild(sep);
+        const sub = document.createElement("div");
+        sub.className = "debug-menu-subtitle";
+        sub.textContent = "Спрайт it_sprite1";
+        elDbgPinTable.appendChild(sub);
+
+        const table = document.createElement("table");
+        table.className = "dbg-pin-table";
+        const thead = document.createElement("thead");
+        const htr = document.createElement("tr");
+        const corner = document.createElement("th");
+        corner.className = "dbg-corner";
+        corner.textContent = "Параметр";
+        htr.appendChild(corner);
+        const th = document.createElement("th");
+        const wrap = document.createElement("span");
+        wrap.className = "dbg-type-head";
+        wrap.appendChild(document.createTextNode(p.id || "it_sprite1"));
+        th.appendChild(wrap);
+        htr.appendChild(th);
+        thead.appendChild(htr);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        for (const row of SPRITE1_ROWS) {
+            const tr = document.createElement("tr");
+            const label = document.createElement("td");
+            label.className = "dbg-row-label";
+            label.textContent = row.label;
+            tr.appendChild(label);
+            const td = document.createElement("td");
+            const input = document.createElement("input");
+            if (row.type === "bool") {
+                input.type = "checkbox";
+                input.checked = !!p[row.field];
+                input.addEventListener("change", () => GeowalkGiantMob.setParam(row.key, input.checked));
+            } else {
+                input.type = "number";
+                input.min = row.min;
+                if (row.max != null) input.max = row.max;
+                input.step = row.step;
+                input.value = p[row.field];
+                input.addEventListener("input", () => {
+                    const v = parseFloat(input.value);
+                    if (isNaN(v)) return;
+                    GeowalkGiantMob.setParam(row.key, v);
+                });
+            }
+            td.appendChild(input);
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+        }
+        table.appendChild(tbody);
+        elDbgPinTable.appendChild(table);
+    }
+
+    function setDebugMenuOpen(open) {
+        if (!elDebugMenu) return;
+        debugMenuOpen = !!open;
+        elDebugMenu.hidden = !debugMenuOpen;
+        elDebugMenu.setAttribute("aria-hidden", debugMenuOpen ? "false" : "true");
+        if (debugMenuOpen) {
+            buildPinParamTable();
+            document.exitPointerLock?.();
+        }
+    }
+
+    function toggleDebugMenu() { setDebugMenuOpen(!debugMenuOpen); }
+
+    if (elDebugMenuClose) {
+        elDebugMenuClose.addEventListener("click", () => setDebugMenuOpen(false));
+    }
+
+    const pinModeCheckboxes = {
+        ignore: document.getElementById("dbg-pin-mode-ignore"),
+        follow: document.getElementById("dbg-pin-mode-follow"),
+        car: document.getElementById("dbg-pin-mode-car")
+    };
+    Object.keys(pinModeCheckboxes).forEach(modeId => {
+        const cb = pinModeCheckboxes[modeId];
+        if (!cb) return;
+        cb.checked = pinModeEnabled[modeId] !== false;
+        cb.addEventListener("change", () => {
+            pinModeEnabled[modeId] = cb.checked;
+            syncCarPinsModule();
+        });
+    });
+
+    // ---- Stats: круговые диаграммы (собранные кубики) ----
+    const STAT_RING_R = 26;
+    const STAT_RING_C = 2 * Math.PI * STAT_RING_R;
+    const PIN_STATS = {
+        it_green: { max: 240, value: 0, prog: document.getElementById("stat-prog-green"), num: document.getElementById("stat-num-green"), maxEl: document.getElementById("stat-max-green") },
+        it_orange: { max: 50, value: 0, prog: document.getElementById("stat-prog-orange"), num: document.getElementById("stat-num-orange"), maxEl: document.getElementById("stat-max-orange") },
+        it_blue: { max: 10, value: 0, prog: document.getElementById("stat-prog-blue"), num: document.getElementById("stat-num-blue"), maxEl: document.getElementById("stat-max-blue") }
+    };
+    function updatePinStatRing(typeId) {
+        const s = PIN_STATS[typeId];
+        if (!s) return;
+        const frac = Math.max(0, Math.min(1, s.max ? s.value / s.max : 0));
+        if (s.prog) {
+            s.prog.style.strokeDasharray = STAT_RING_C;
+            s.prog.style.strokeDashoffset = STAT_RING_C * (1 - frac);
+        }
+        if (s.num) s.num.textContent = String(s.value);
+        if (s.maxEl) s.maxEl.textContent = String(s.max);
+    }
+    function addPinStat(typeId) {
+        const s = PIN_STATS[typeId];
+        if (!s) return;
+        s.value = Math.min(s.max, s.value + 1);
+        updatePinStatRing(typeId);
+    }
+    Object.keys(PIN_STATS).forEach(updatePinStatRing);
+
     function applySky() {
         try {
             const sky = getActiveSky();
@@ -2551,6 +3070,21 @@
     const elStyleFile = document.getElementById("style-file");
     const elStyleMenu = document.getElementById("style-menu-overlay");
     const elStyleMenuClose = document.getElementById("style-menu-close");
+    const elRealityHint = document.getElementById("reality-hint");
+    const SPRITE1_INTERACT_M = CONFIG.sprite1InteractM != null ? CONFIG.sprite1InteractM : 10;
+
+    function hideRealityHint() {
+        if (elRealityHint) elRealityHint.classList.remove("visible");
+    }
+
+    function updateRealityHint() {
+        if (!elRealityHint) return;
+        const styleMenuOpen = elStyleMenu && elStyleMenu.classList.contains("visible");
+        const near = window.GeowalkGiantMob && ready &&
+            GeowalkGiantMob.nearestDistM(player.lng, player.lat) <= SPRITE1_INTERACT_M;
+        sprite1InRange = !!near;
+        elRealityHint.classList.toggle("visible", sprite1InRange && !styleMenuOpen);
+    }
     const elStyleMenuUpload = document.getElementById("style-menu-upload");
     const STYLE_PRESETS = {
         "maps/map1.json": "map1",
@@ -2615,6 +3149,8 @@
     });
 
     if (elStyleMenuClose) elStyleMenuClose.addEventListener("click", closeStyleMenu);
+    const elStyleMenuCancel = document.getElementById("style-menu-cancel");
+    if (elStyleMenuCancel) elStyleMenuCancel.addEventListener("click", closeStyleMenu);
     if (elStyleMenu) {
         elStyleMenu.addEventListener("click", (e) => {
             if (e.target === elStyleMenu) closeStyleMenu();
@@ -2761,6 +3297,9 @@
             const polys = g.type === "Polygon" ? [g.coordinates]
                 : g.type === "MultiPolygon" ? g.coordinates : null;
             if (!polys) continue;
+            const props = f.properties || {};
+            const rawH = props.render_height != null ? props.render_height : props.height;
+            const height = (rawH != null && isFinite(+rawH)) ? +rawH : 12;
             for (const poly of polys) {
                 const ring = poly[0];
                 if (!ring || ring.length < 3) continue;
@@ -2770,7 +3309,7 @@
                     if (p[1] < miny) miny = p[1]; if (p[1] > maxy) maxy = p[1];
                 }
                 if (maxx < lng0 - pad || minx > lng0 + pad || maxy < lat0 - pad || miny > lat0 + pad) continue;
-                out.push({ ring, minx, miny, maxx, maxy });
+                out.push({ ring, minx, miny, maxx, maxy, height });
             }
         }
         buildingCache = out;
@@ -2945,6 +3484,16 @@
                 GeowalkWoodTerrainExtrude.setup(map, woodTerrainOptionsFromConfig());
             } catch (err) { console.warn("Wood terrain extrude:", err); }
         }
+        if (window.GeowalkCarPins) {
+            try {
+                GeowalkCarPins.setup(map);
+            } catch (err) { console.warn("Car pins:", err); }
+        }
+        if (window.GeowalkGiantMob) {
+            try {
+                GeowalkGiantMob.setup(map);
+            } catch (err) { console.warn("Sprite1 cubes:", err); }
+        }
     }
 
     function applyNearFarClip(tr) {
@@ -2971,29 +3520,54 @@
     });
 
     // Замена стиля карты в рамках сессии (из выбранного JSON-файла)
+    const elRealitySwap = document.getElementById("reality-swap");
+    let realitySwapAnim = null;
+    function playRealitySwap() {
+        if (!elRealitySwap) return;
+        if (realitySwapAnim) { try { realitySwapAnim.cancel(); } catch (e) {} }
+        elRealitySwap.style.display = "block";
+        // 1 c проявление, 3 c держим, 1 c уход в прозрачность (всего 5 c).
+        realitySwapAnim = elRealitySwap.animate([
+            { opacity: 0, offset: 0 },
+            { opacity: 1, offset: 0.2 },
+            { opacity: 1, offset: 0.8 },
+            { opacity: 0, offset: 1 }
+        ], { duration: 5000, easing: "linear" });
+        realitySwapAnim.onfinish = () => {
+            elRealitySwap.style.display = "none";
+            realitySwapAnim = null;
+        };
+    }
+
+    const REALITY_SWAP_DELAY_MS = 2000;
     function swapStyle(styleObj, label, styleSkyKey) {
-        try {
-            setActiveStyleSkyKey(styleSkyKey);
-            if (elDraw) elDraw.value = CONFIG.sky.fogGroundBlend;
-            ready = false;
-            map.setStyle(styleWithSkyFromConfig(styleObj), { diff: false });
-            map.once("style.load", () => {
-                setupStyle();
-                ready = true;
-                if (elStyleStatus) elStyleStatus.textContent = label ? ("стиль: " + label) : "стиль заменён";
-            });
-            map.once("error", (e) => {
-                if (!ready) {
+        // Проигрываем оверлей-переход, а саму замену стиля делаем через 2 c —
+        // пока экран уже перекрыт гифкой.
+        playRealitySwap();
+        setTimeout(() => {
+            try {
+                setActiveStyleSkyKey(styleSkyKey);
+                if (elDraw) elDraw.value = CONFIG.sky.fogGroundBlend;
+                ready = false;
+                map.setStyle(styleWithSkyFromConfig(styleObj), { diff: false });
+                map.once("style.load", () => {
+                    setupStyle();
                     ready = true;
-                    console.warn("swapStyle load error:", e && e.error);
-                    if (elStyleStatus) elStyleStatus.textContent = "ошибка стиля";
-                }
-            });
-        } catch (err) {
-            console.warn("swapStyle:", err);
-            ready = true;
-            if (elStyleStatus) elStyleStatus.textContent = "ошибка стиля";
-        }
+                    if (elStyleStatus) elStyleStatus.textContent = label ? ("стиль: " + label) : "стиль заменён";
+                });
+                map.once("error", (e) => {
+                    if (!ready) {
+                        ready = true;
+                        console.warn("swapStyle load error:", e && e.error);
+                        if (elStyleStatus) elStyleStatus.textContent = "ошибка стиля";
+                    }
+                });
+            } catch (err) {
+                console.warn("swapStyle:", err);
+                ready = true;
+                if (elStyleStatus) elStyleStatus.textContent = "ошибка стиля";
+            }
+        }, REALITY_SWAP_DELAY_MS);
     }
 
     function update(dt) {
@@ -3345,6 +3919,27 @@
                 }
             });
         }
+        if (window.GeowalkCarPins && pinsActiveForCurrentMode() && ready) {
+            GeowalkCarPins.tick({
+                lng: player.lng,
+                lat: player.lat,
+                yaw: player.yaw,
+                dt
+            });
+        }
+        if (window.GeowalkGiantMob && ready) {
+            const mobRect = map.getCanvas().getBoundingClientRect();
+            GeowalkGiantMob.tick({
+                lng: player.lng,
+                lat: player.lat,
+                bearing: map.getBearing(),
+                projectPoint(lng, lat) {
+                    const pt = map.project([lng, lat]);
+                    return { x: mobRect.left + pt.x, y: mobRect.top + pt.y };
+                }
+            });
+        }
+        updateRealityHint();
         requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);

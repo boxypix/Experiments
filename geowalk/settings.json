@@ -1,9 +1,9 @@
 {
   "start": {
-    "lng": 44.80148,
-    "lat": 41.69354
+    "lng": 44.803,
+    "lat": 41.622
   },
-  "startBearing": 35,
+  "startBearing": 17,
   "eyeHeight": 2.8,
   "startHeightMultiplier": 10,
   "groundAlt": 0,
@@ -12,7 +12,7 @@
   "walkSpeed": 40,
   "runMultiplier": 10,
   "flySpeed": 60,
-  "fpsLimit": 60,
+  "fpsLimit": 35,
   "inertiaEnabled": true,
   "inertia": 0.14,
   "mouseYaw": 0.16,
@@ -75,7 +75,7 @@
   "terrainExaggeration": 1,
   "ignoreTerrainCollision": true,
   "followTerrainEyeHeight": 2.8,
-  "ignoreTerrainEyeHeight": 23,
+  "ignoreTerrainEyeHeight": 25,
   "heightAnimSec": 2,
   "followTerrainJumpHeight": 14,
   "followTerrainJumpSec": 1.4,
@@ -106,6 +106,21 @@
   "carSpritePivotOffsetY": 0,
   "carSpriteTurnThresholdDeg": [15, 30],
   "carSpriteTopFrameIndex": 3,
+  "carPinSpinDegPerSec": 90,
+  "carPinTypes": [
+    { "id": "it_green", "color": "#C8FF00", "count": 5, "spawnMaxM": 800, "hitRadiusM": 20, "sizeM": 3, "baseM": 2, "spinEnabled": false },
+    { "id": "it_orange", "color": "#FF6F00", "count": 1, "spawnMaxM": 500, "hitRadiusM": 10, "sizeM": 3, "baseM": 1, "spinEnabled": false },
+    { "id": "it_blue", "color": "#006FFF", "count": 2, "spawnMaxM": 1000, "hitRadiusM": 4, "sizeM": 2, "baseM": 2, "spinEnabled": false, "moveSpeedM": 35, "trailCount": 2, "trailSpacingM": 3 }
+  ],
+  "sprite1Enabled": true,
+  "sprite1Src": "images/mo_1a.png",
+  "sprite1SpawnRadiusM": 1000,
+  "sprite1Count": 1,
+  "sprite1SizeM": 120,
+  "sprite1InteractM": 10,
+  "fxCollectBorderColor": "#22e05a",
+  "fxCollectBorderWidthPx": 30,
+  "fxCollectBorderSec": 1,
   "demUrl": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
   "demEncoding": "terrarium",
   "shadows": false,
