@@ -2,7 +2,7 @@
 // Подключение: <script src="modules/follow-terrain-hands.js"></script>
 // GeowalkFollowTerrainHands.init();
 // GeowalkFollowTerrainHands.sync({ followTerrain, overlayOpen });
-// GeowalkFollowTerrainHands.tick({ speed, dt }); — каждый кадр из игрового цикла
+// GeowalkFollowTerrainHands.tick({ speed, dt, surfaceLayers });
 (function () {
     "use strict";
 
@@ -12,15 +12,18 @@
         maxWidthPx: 1000,
         zIndex: 7,
         bottomOffsetPx: -20,
-        // Медленное плавное покачивание: фаза и амплитуда через сглаженную скорость
-        bobRefSpeed: 20,
-        bobPhaseRate: 0.22,
-        bobHorizPx: 22,
-        bobVertPx: 14,
+        // Покачивание «∞» с постоянной угловой скоростью; при ускорении — сдвиг вниз
+        bobPhaseRatePerSec: 4.4,
+        bobHorizPx: 40,
+        bobVertPx: 26,
         bobSpeedSmoothSec: 0.55,
         bobStrengthSmoothSec: 0.75,
         bobPosSmoothSec: 0.18,
-        bobStopThreshold: 0.04
+        bobReturnSmoothSec: 0.12,
+        bobStopThreshold: 0.04,
+        sprintDropPercent: 25,
+        sprintDropSmoothSec: 0.35,
+        jumpDropSec: 1
     };
 
     let opts = { ...DEFAULTS };
@@ -31,6 +34,9 @@
     let bobPhase = 0;
     let bobStrength = 0;
     let smoothSpeed = 0;
+    let sprintDropY = 0;
+    let jumpDropTime = 0;
+    let wasJumping = false;
     let dispX = 0;
     let dispY = 0;
     let activeSrc = null;
@@ -116,6 +122,11 @@
         return 1 - Math.exp(-dt / Math.max(0.001, tauSec));
     }
 
+    function sprintDropPx() {
+        const pct = Math.max(0, Math.min(100, opts.sprintDropPercent != null ? opts.sprintDropPercent : 25));
+        return (window.innerHeight || 800) * (pct / 100);
+    }
+
     function applyBob(x, y) {
         if (!img) return;
         img.style.transform = "translate(" + x.toFixed(3) + "px, " + y.toFixed(3) + "px)";
@@ -125,6 +136,9 @@
         bobPhase = 0;
         bobStrength = 0;
         smoothSpeed = 0;
+        sprintDropY = 0;
+        jumpDropTime = 0;
+        wasJumping = false;
         dispX = 0;
         dispY = 0;
         applyBob(0, 0);
@@ -153,24 +167,53 @@
         const dt = motion && motion.dt != null ? motion.dt : 0;
         if (dt <= 0) return;
 
-        smoothSpeed += (speed - smoothSpeed) * expBlend(dt, opts.bobSpeedSmoothSec);
+        const jumping = !!(motion && motion.jumping);
+        const moving = speed > opts.bobStopThreshold;
 
-        const speedNorm = Math.min(smoothSpeed / opts.bobRefSpeed, 1.2);
-        const targetStrength = speedNorm > opts.bobStopThreshold ? speedNorm : 0;
-        bobStrength += (targetStrength - bobStrength) * expBlend(dt, opts.bobStrengthSmoothSec);
+        if (jumping && !wasJumping) jumpDropTime = 0;
+        if (jumping) jumpDropTime += dt;
+        wasJumping = jumping;
+        const jumpDropping = jumping && jumpDropTime < (opts.jumpDropSec != null ? opts.jumpDropSec : 1);
 
-        if (smoothSpeed > opts.bobStopThreshold) {
-            bobPhase += smoothSpeed * dt * opts.bobPhaseRate;
+        if (!moving && !jumping) {
+            smoothSpeed = 0;
+            bobPhase = 0;
+            bobStrength = 0;
+            const returnBlend = expBlend(dt, opts.bobReturnSmoothSec);
+            sprintDropY += (0 - sprintDropY) * returnBlend;
+            dispX += (0 - dispX) * returnBlend;
+            dispY += (0 - dispY) * returnBlend;
+            applyBob(dispX, dispY);
+            return;
         }
 
-        const targetX = Math.cos(bobPhase) * opts.bobHorizPx * bobStrength;
-        const targetY = Math.sin(bobPhase) * opts.bobVertPx * bobStrength;
+        if (moving) {
+            bobStrength += (1 - bobStrength) * expBlend(dt, opts.bobStrengthSmoothSec);
+            bobPhase += dt * opts.bobPhaseRatePerSec;
+        } else {
+            bobPhase = 0;
+            bobStrength = 0;
+        }
+
+        const sprinting = !!(motion && motion.sprinting);
+        const targetDrop = (sprinting || jumpDropping) ? sprintDropPx() : 0;
+        sprintDropY += (targetDrop - sprintDropY) * expBlend(dt, opts.sprintDropSmoothSec);
+
+        const targetX = moving
+            ? Math.sin(bobPhase) * opts.bobHorizPx * bobStrength
+            : 0;
+        const targetY = (moving
+            ? Math.sin(2 * bobPhase) * opts.bobVertPx * 0.5 * bobStrength
+            : 0) + sprintDropY;
         dispX += (targetX - dispX) * expBlend(dt, opts.bobPosSmoothSec);
         dispY += (targetY - dispY) * expBlend(dt, opts.bobPosSmoothSec);
         applyBob(dispX, dispY);
     }
 
     window.GeowalkFollowTerrainHands = {
+        configure(options) {
+            if (options) Object.assign(opts, options);
+        },
         init(options) {
             opts = Object.assign({}, DEFAULTS, options || {});
             activeSrc = null;

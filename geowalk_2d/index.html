@@ -1,0 +1,3953 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <title>World Walk Cam</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <link rel="icon" href="images/favicon.ico" sizes="any" />
+
+    <meta name="description" content="World Walk Cam — 3D-бродилка от первого лица по реальной карте мира." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="World Walk Cam" />
+    <meta property="og:description" content="3D-бродилка от первого лица по реальной карте мира. Гуляй между зданий, взлетай и осматривайся." />
+    <meta property="og:image" content="images/cover.jpg" />
+    <meta property="og:image:width" content="1068" />
+    <meta property="og:image:height" content="562" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="World Walk Cam" />
+    <meta name="twitter:description" content="3D-бродилка от первого лица по реальной карте мира." />
+    <meta name="twitter:image" content="images/cover.jpg" />
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" />
+    <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+    <style>
+        :root { --accent: #6ad1ff; --ui-bg: rgba(0, 0, 0, 0.35); }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0a0e14; }
+        html, body { -webkit-tap-highlight-color: transparent; }
+        #map { position: absolute; inset: 0; }
+        #map canvas { outline: none; }
+
+        /* Прицел */
+        #crosshair {
+            position: absolute; left: 50%; top: 50%;
+            width: 22px; height: 22px; margin: -11px 0 0 -11px;
+            pointer-events: none; z-index: 5; opacity: 0.85;
+        }
+        #crosshair::before, #crosshair::after {
+            content: ""; position: absolute; background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 3px rgba(0,0,0,0.8);
+        }
+        #crosshair::before { left: 50%; top: 0; width: 2px; height: 100%; margin-left: -1px; }
+        #crosshair::after  { top: 50%; left: 0; height: 2px; width: 100%; margin-top: -1px; }
+
+        #hud, #help {
+            position: absolute; z-index: 6;
+            font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #cfe8ff; background: var(--ui-bg);
+            border: 1px solid rgba(106, 209, 255, 0.25); border-radius: 10px;
+            padding: 10px 12px; pointer-events: none;
+        }
+        #hud { left: 14px; bottom: 14px; min-width: 190px; }
+        #hud b { color: var(--accent); font-weight: 600; }
+        #hud .row { display: flex; justify-content: space-between; gap: 14px; }
+        /* Stats — круговые диаграммы снизу слева */
+        #stats {
+            position: absolute; left: 14px; bottom: 14px; z-index: 6;
+            display: flex; gap: 16px; pointer-events: none;
+        }
+        #stats .stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        #stats .stat-ring { position: relative; width: 60px; height: 60px; }
+        #stats .stat-ring svg { display: block; transform: rotate(-90deg); }
+        #stats circle.track { fill: none; stroke: rgba(255, 255, 255, 0.15); stroke-width: 8; }
+        #stats circle.prog {
+            fill: none; stroke-width: 8; stroke-linecap: round;
+            transition: stroke-dashoffset 0.3s ease;
+        }
+        #stats .stat-num {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; line-height: 1;
+        }
+        #stats .stat-num .stat-val {
+            font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #fff;
+        }
+        #stats .stat-num .stat-max {
+            margin-top: 2px;
+            font: 400 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #fff; opacity: 0.6;
+        }
+        #stats .stat-label {
+            font: 400 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #fff;
+        }
+        body.overlay-open #stats { display: none; }
+
+        /* HUD внутри раскрытой панели — снизу, как отдельный блок */
+        #panel #hud {
+            position: static; z-index: auto;
+            width: 100%; min-width: 0;
+            margin-top: 10px; padding: 10px 0 0;
+            border: none; border-top: 1px solid rgba(106, 209, 255, 0.2);
+            border-radius: 0; background: transparent;
+        }
+        #mini-map-wrap {
+            position: absolute; right: 14px; bottom: 24px; z-index: 6;
+            width: 200px; height: 200px; overflow: hidden; pointer-events: none;
+            border-radius: 10px;
+        }
+        #mini-map { position: relative; z-index: 0; width: 200px; height: 200px; }
+        #mini-map-ui {
+            position: absolute; inset: 0; z-index: 1; pointer-events: none;
+        }
+        #mini-map-marker {
+            position: absolute; left: 50%; top: 50%;
+            width: 80px; height: 80px;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 1;
+        }
+        #mini-map-compass {
+            position: absolute; left: 50%; top: 50%;
+            width: 140px; height: 140px;
+            transform: translate(-50%, -50%);
+            transform-origin: center center;
+            pointer-events: none; z-index: 2;
+        }
+        #help { right: 14px; top: 14px; line-height: 1.6; }
+        #help .help-sep {
+            margin-top: 8px; padding-top: 8px;
+            border-top: 1px solid rgba(106, 209, 255, 0.15);
+        }
+        body.overlay-open #panel,
+        body.overlay-open #help,
+        body.overlay-open #hud,
+        body.overlay-open #mini-map-wrap,
+        body.overlay-open #terrain-choose-wrap,
+        body.overlay-open #explore-checklist { display: none; }
+        body.car-mode #crosshair { display: none; }
+        #help kbd {
+            display: inline-block; min-width: 12px; text-align: center; padding: 1px 10px; margin-bottom: 2px;
+            border-radius: 12px; background: rgba(1, 1, 1, 0.431);
+            /* border: 1px solid rgba(106, 209, 255, 0.35); color: #eaf6ff; */
+        }
+
+        /* Чеклист «Освойся на карте» — только широкие экраны */
+        #explore-checklist {
+            display: none;
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 6;
+            pointer-events: auto;
+            max-width: 260px;
+            color: #cfe8ff;
+            font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+        }
+        @media (min-width: 1001px) {
+            #explore-checklist { display: block; }
+        }
+        #explore-checklist .explore-checklist-title {
+            margin: 0 0 10px;
+            color: var(--accent);
+            font: 600 14px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        #explore-checklist ul {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        #explore-checklist li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin: 0 0 8px;
+        }
+        #explore-checklist li:last-child { margin-bottom: 0; }
+        #explore-checklist input[type="checkbox"] {
+            margin: 3px 0 0;
+            flex: 0 0 auto;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        #explore-checklist label {
+            flex: 1 1 auto;
+            cursor: pointer;
+            text-align: left;
+        }
+        #explore-checklist .explore-checklist-tips {
+            display: flex;
+            flex-direction: column;
+            margin-top: 16px;
+        }
+        #explore-checklist .explore-checklist-tip {
+            position: relative;
+            display: grid;
+            grid-template-rows: 0fr;
+            opacity: 0;
+            transform: translateY(14px);
+            margin-top: 0;
+            overflow: visible;
+            pointer-events: none;
+            transition:
+                grid-template-rows 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.4s ease,
+                transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                margin-top 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        #explore-checklist .explore-checklist-tip.is-visible + .explore-checklist-tip.is-visible {
+            margin-top: 16px;
+        }
+        #explore-checklist .explore-checklist-tip.is-visible {
+            grid-template-rows: 1fr;
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        #explore-checklist .explore-checklist-tip.is-visible .explore-checklist-tip-close {
+            opacity: 1;
+        }
+        #explore-checklist .explore-checklist-tip.is-dismissed {
+            display: none;
+        }
+        #explore-checklist .explore-checklist-tip-inner {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            min-height: 0;
+            overflow: hidden;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.55);
+            text-shadow: none;
+        }
+        #explore-checklist .explore-checklist-tip-text {
+            margin: 0;
+            flex: 1 1 auto;
+            color: #eaf6ff;
+            font: 10px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        #explore-checklist .explore-checklist-tip-photo {
+            flex: 0 0 auto;
+            width: 56px;
+            height: 56px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        #explore-checklist .explore-checklist-tip-close {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            z-index: 2;
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.75);
+            color: rgba(255, 255, 255, 0.9);
+            font: 300 18px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+            opacity: 0;
+            transition: opacity 0.25s ease 0.15s;
+        }
+        #explore-checklist .explore-checklist-tip-close:hover { background: rgba(40, 40, 40, 0.9); }
+
+        /* Debug dots (клавиша F) — по центру экрана, на 100px выше центра */
+        #debug-menu {
+            position: absolute; left: 50%; top: 50%;
+            transform: translate(-50%, calc(-50% - 100px)); z-index: 9;
+            font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #cfe8ff; background: var(--ui-bg);
+            border: 1px solid rgba(106, 209, 255, 0.25); border-radius: 10px;
+            padding: 10px 12px; pointer-events: auto;
+            width: auto; max-width: 92vw;
+        }
+        #debug-menu .dbg-pin-table { border-collapse: collapse; width: 100%; }
+        #debug-menu .dbg-pin-table th,
+        #debug-menu .dbg-pin-table td {
+            padding: 3px 6px; text-align: right; white-space: nowrap;
+        }
+        #debug-menu .dbg-pin-table th { font-weight: 600; }
+        #debug-menu .dbg-pin-table td.dbg-row-label,
+        #debug-menu .dbg-pin-table th.dbg-corner { text-align: left; color: rgba(160,200,230,0.85); }
+        #debug-menu .dbg-pin-table .dbg-type-head {
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        #debug-menu .dbg-pin-table .dbg-type-swatch {
+            width: 12px; height: 12px; border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.35); display: inline-block;
+        }
+        #debug-menu .dbg-pin-table input[type="number"] {
+            width: 64px; background: rgba(0, 0, 0, 0.35);
+            color: #eaf6ff; border: 1px solid rgba(106, 209, 255, 0.25);
+            border-radius: 6px; padding: 3px 6px; font: inherit; text-align: right;
+        }
+        #debug-menu[hidden] { display: none; }
+        #debug-menu .debug-menu-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        #debug-menu .debug-menu-title {
+            font-weight: 600; color: #eaf6ff; letter-spacing: 0.02em;
+        }
+        #debug-menu .debug-menu-close {
+            appearance: none; -webkit-appearance: none;
+            width: 22px; height: 22px; padding: 0; line-height: 1;
+            border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
+            background: rgba(0, 0, 0, 0.4); color: rgba(255, 255, 255, 0.9);
+            font-size: 16px; cursor: pointer;
+        }
+        #debug-menu .debug-menu-close:hover { background: rgba(40, 40, 40, 0.9); }
+        #debug-menu label {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 8px; margin: 6px 0;
+        }
+        #debug-menu input[type="number"] {
+            width: 74px; background: rgba(0, 0, 0, 0.35);
+            color: #eaf6ff; border: 1px solid rgba(106, 209, 255, 0.25);
+            border-radius: 6px; padding: 3px 6px; font: inherit;
+        }
+        #debug-menu .hint {
+            margin-top: 8px; color: rgba(160, 200, 230, 0.7); font-size: 11px;
+        }
+        #debug-menu .debug-menu-sep {
+            height: 1px; margin: 8px 0;
+            background: rgba(106, 209, 255, 0.2);
+        }
+        #debug-menu .debug-menu-subtitle {
+            color: rgba(160, 200, 230, 0.85); font-size: 11px;
+            text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px;
+        }
+        #debug-menu label input[type="checkbox"] { margin: 0; }
+
+        /* Панель настроек */
+        #panel {
+            position: absolute; left: 14px; top: 14px; z-index: 8;
+            font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #cfe8ff; background: var(--ui-bg);
+            border: 1px solid rgba(106, 209, 255, 0.25); border-radius: 10px;
+            padding: 10px 12px;
+            pointer-events: auto; width: auto; max-width: 204px;
+        }
+        #panel .panel-logo {
+            display: block; width: 180px; max-width: 100%; height: auto;
+            margin: 0 0 6px; border-radius: 6px;
+        }
+        #panel .panel-collapsed .panel-debug-toggle {
+            margin-bottom: 0;
+        }
+        #panel .panel-debug-toggle {
+            display: block;
+            margin: 0; padding: 0;
+            border: none; background: transparent; box-shadow: none;
+            appearance: none; -webkit-appearance: none;
+            color: rgba(160, 160, 160, 0.95); cursor: pointer;
+            font: 400 11px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            text-align: left; text-decoration: none;
+            pointer-events: auto;
+        }
+        #panel .panel-debug-toggle:hover { color: rgba(190, 190, 190, 1); }
+        #panel .panel-debug-toggle:active,
+        #panel .panel-debug-toggle:focus { outline: none; background: transparent; }
+        #panel .panel-body { display: none; }
+        #panel.expanded {
+            width: 204px; max-width: calc(100vw - 28px);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #panel.expanded .panel-collapsed { display: none; }
+        #panel.expanded .panel-logo { flex-shrink: 0; }
+        #panel.expanded .panel-body {
+            display: block;
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.55) rgba(0, 0, 0, 0.22);
+        }
+        #panel.expanded .panel-body::-webkit-scrollbar { width: 8px; }
+        #panel.expanded .panel-body::-webkit-scrollbar-track {
+            margin: 2px 0;
+            background: rgba(0, 0, 0, 0.22);
+            border-radius: 8px;
+        }
+        #panel.expanded .panel-body::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(106, 209, 255, 0.12);
+            border-radius: 8px;
+        }
+        #panel.expanded .panel-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.72);
+        }
+        #panel .panel-body > .panel-debug-toggle {
+            margin-bottom: 8px;
+        }
+        #panel .title { color: var(--accent); font-weight: 600; margin-bottom: 8px; letter-spacing: 0.5px; }
+        #panel label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
+        #panel input {
+            width: 78px; padding: 4px 6px; text-align: right;
+            background: rgba(0,0,0,0.35); color: #eaf6ff;
+            border: 1px solid rgba(106,209,255,0.3); border-radius: 6px;
+            font: inherit; outline: none;
+        }
+        #panel input[type=checkbox] { width: auto; }
+        #panel select {
+            width: 110px; padding: 4px 6px;
+            background: rgba(0,0,0,0.35); color: #eaf6ff;
+            border: 1px solid rgba(106,209,255,0.3); border-radius: 6px;
+            font: inherit; outline: none;
+        }
+        #panel select:focus { border-color: var(--accent); }
+        #panel input:focus { border-color: var(--accent); }
+        #panel .sep { margin-top: 9px; padding-top: 7px; border-top: 1px solid rgba(106,209,255,0.15); }
+        #panel button {
+            flex: 1; padding: 5px 8px; cursor: pointer;
+            background: rgba(106,209,255,0.16); color: #eaf6ff;
+            border: 1px solid rgba(106,209,255,0.4); border-radius: 6px; font: inherit;
+        }
+        #panel button:hover { background: rgba(106,209,255,0.28); }
+        #panel .hint { opacity: 0.55; margin-top: 8px; font-size: 11px; }
+        #panel .style-row { display: flex; flex-direction: column; align-items: stretch; gap: 6px; margin-top: 4px; }
+        #panel button.mini { flex: 0 0 auto; padding: 5px 9px; font-size: 13px; border-radius: 5px; }
+        #panel button.style-swap {
+            background: #fff; color: #000;
+            border: none; outline: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            font-weight: 700;
+        }
+        #panel button.style-swap:hover { background: #f0f0f0; }
+        #panel button.style-swap:active { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); }
+        #panel button.style-swap:focus { outline: none; }
+        #panel #style-status {
+            color: var(--accent); font-size: 11px; opacity: 0.8;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        #panel .surface-status {
+            opacity: 0.55; margin-top: 8px; font-size: 10px; line-height: 1.35;
+        }
+
+        /* Выбор режима рельефа — две клетки снизу по центру */
+        #terrain-choose-wrap {
+            position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%);
+            z-index: 22; display: flex; flex-direction: column; align-items: center; gap: 10px;
+            padding: 12px; border-radius: 20px;
+            background: var(--ui-bg);
+            pointer-events: none;
+        }
+        #terrain-choose-wrap .terrain-choose-hint {
+            margin: 0; color: #eaf6ff; text-align: center; pointer-events: none;
+            font: 14px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            opacity: 0.9; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+        }
+        #terrain-choose {
+            display: flex; gap: 14px; pointer-events: auto;
+        }
+        #terrain-choose button {
+            padding: 0; margin: 0; border: 3px solid transparent; border-radius: 14px;
+            background: none; cursor: pointer; line-height: 0; opacity: 1;
+            transition: border-color 0.15s ease, border-width 0.15s ease, transform 0.15s ease;
+        }
+        #terrain-choose button:hover:not(.selected) { transform: scale(1.1); }
+        #terrain-choose button.selected {
+            border: 4px solid #fff;
+            transform: scale(1.1);
+        }
+        #terrain-choose img {
+            display: block; width: 80px; height: 80px;
+            image-rendering: pixelated; border-radius: 12px;
+        }
+        @media (max-width: 1000px) {
+            #terrain-choose-wrap .terrain-choose-hint,
+            #terrain-choose-hint-car { display: none !important; }
+            #terrain-choose img { width: 60px; height: 60px; }
+        }
+
+        #movement-mode-toast {
+            position: absolute; left: 50%; top: calc(50% - 20vh); transform: translate(-50%, -50%);
+            z-index: 24; pointer-events: none;
+            font: 700 98px/1.15 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #fff; text-align: center; white-space: nowrap;
+            text-shadow: 0 2px 24px rgba(0, 0, 0, 0.85);
+            opacity: 0; visibility: hidden;
+        }
+        #movement-mode-toast.show {
+            visibility: visible;
+            animation: movement-mode-toast-fade 1.3s ease forwards;
+        }
+        @keyframes movement-mode-toast-fade {
+            0% { opacity: 0; }
+            23.08% { opacity: 1; }
+            76.92% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Выбор скина машины (Q в режиме car) */
+        #car-skin-picker {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            z-index: 26;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transform: translate(-50%, calc(-100% - 12px));
+            transition: opacity 0.18s ease, visibility 0.18s ease;
+        }
+        #car-skin-picker.open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        #car-skin-picker .car-skin-picker-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px 12px;
+            border-radius: 14px;
+            background: var(--ui-bg);
+            border: 1px solid rgba(106, 209, 255, 0.25);
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+            max-width: min(92vw, 640px);
+        }
+        #car-skin-picker .car-skin-picker-talk {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 16px;
+        }
+        #car-skin-picker .car-skin-picker-talk-photo {
+            flex: 0 0 auto;
+            width: 172px;
+            height: 172px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+        #car-skin-picker .car-skin-picker-talk-text {
+            margin: 0;
+            flex: 1 1 auto;
+            color: #eaf6ff;
+            font: 18px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            text-align: left;
+        }
+        #car-skin-picker .car-skin-picker-title {
+            margin: 0;
+            color: #eaf6ff;
+            font: 600 12px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            letter-spacing: 0.3px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        #car-skin-picker .car-skin-picker-row {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+        }
+        #car-skin-picker .car-skin-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            margin: 0;
+            padding: 6px;
+            border: 2px solid rgba(106, 209, 255, 0.22);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.28);
+            cursor: pointer;
+            transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+        }
+        #car-skin-picker .car-skin-btn:hover {
+            transform: scale(1.05);
+            border-color: rgba(106, 209, 255, 0.45);
+            background: rgba(0, 0, 0, 0.42);
+        }
+        #car-skin-picker .car-skin-btn.selected {
+            border-color: #fff;
+            transform: scale(1.06);
+            background: rgba(0, 0, 0, 0.5);
+        }
+        #car-skin-picker .car-skin-thumb {
+            display: block;
+            width: 136px;
+            height: 90px;
+            border-radius: 8px;
+            object-fit: contain;
+            background: rgba(0, 0, 0, 0.22);
+        }
+        #car-skin-picker .car-skin-label {
+            color: #cfe8ff;
+            font: 11px/1.25 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            opacity: 0.92;
+            text-align: center;
+            max-width: 140px;
+        }
+        body.car-skin-picker-open #terrain-choose-wrap { opacity: 0.35; }
+        body.car-skin-picker-open #map { cursor: default; }
+        body.car-skin-picker-open #resume-hint { display: none !important; }
+
+        /* Сенсорное управление — экраны ≤1000px */
+        #touch-controls {
+            display: none;
+            position: absolute; inset: 0; z-index: 15;
+            pointer-events: none; touch-action: none;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+        }
+        @media (max-width: 1000px) {
+            body:not(.overlay-open) #touch-controls { display: block; }
+            body:not(.overlay-open) #resume-hint,
+            body:not(.overlay-open) #flight-hint { display: none !important; }
+            body:not(.overlay-open) {
+                user-select: none;
+                -webkit-user-select: none;
+                -webkit-touch-callout: none;
+                touch-action: none;
+            }
+            body:not(.overlay-open) #search-bar input,
+            body:not(.overlay-open) #panel input,
+            body:not(.overlay-open) #panel textarea {
+                user-select: text;
+                -webkit-user-select: text;
+                touch-action: manipulation;
+            }
+        }
+        .touch-btn {
+            width: 56px; height: 56px; padding: 0; margin: 0;
+            border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 14px;
+            background: var(--ui-bg); color: #eaf6ff;
+            font: 700 22px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            cursor: pointer; user-select: none; -webkit-user-select: none;
+            -webkit-touch-callout: none; -webkit-user-drag: none;
+            pointer-events: auto; touch-action: none;
+        }
+        .touch-btn:active,
+        .touch-btn.pressed { border-color: #fff; background: rgba(0, 0, 0, 0.92); }
+        .touch-btn.touch-btn-disabled,
+        .touch-btn:disabled {
+            opacity: 0.3; pointer-events: none;
+        }
+        .touch-cross {
+            position: absolute; left: 16px; bottom: 140px;
+            display: grid;
+            grid-template-columns: 56px 56px 56px;
+            grid-template-rows: 56px 56px 56px;
+            gap: 6px; pointer-events: none;
+        }
+        .touch-cross .touch-btn:nth-child(1) { grid-column: 2; grid-row: 1; }
+        .touch-cross .touch-btn:nth-child(2) { grid-column: 1; grid-row: 2; }
+        .touch-cross .touch-btn:nth-child(3) { grid-column: 3; grid-row: 2; }
+        .touch-cross .touch-btn:nth-child(4) { grid-column: 2; grid-row: 3; }
+        .touch-joystick {
+            position: absolute; right: 16px; bottom: 165px;
+            width: 120px; height: 120px;
+            pointer-events: auto; touch-action: none;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+        }
+        .touch-joystick-base {
+            position: absolute; inset: 0; border-radius: 50%;
+            background: var(--ui-bg); border: 2px solid rgba(255, 255, 255, 0.25);
+        }
+        .touch-joystick-stick {
+            position: absolute; left: 50%; top: 50%;
+            width: 52px; height: 52px; margin: 0;
+            border-radius: 50%; background: rgba(255, 255, 255, 0.9);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .touch-car-actions {
+            position: absolute; right: 16px; bottom: 140px;
+            display: none; flex-direction: column; gap: 10px;
+            align-items: stretch; pointer-events: none;
+        }
+        body.car-mode .touch-joystick { display: none; }
+        body.car-mode .touch-car-actions { display: flex; }
+        .touch-btn-wide {
+            width: 120px; height: 48px;
+            font: 600 16px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .touch-btn-go {
+            width: 120px; height: 120px; border-radius: 20px;
+            font: 700 28px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* Поиск места — сверху по центру */
+        #search-wrap {
+            position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+            z-index: 22; display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+            width: min(560px, calc(100vw - 280px));
+        }
+        #search-bar {
+            pointer-events: auto;
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            width: 100%;
+        }
+        #search-bar .search-row {
+            display: flex; align-items: stretch; gap: 10px; width: 100%;
+        }
+        #search-bar input {
+            flex: 1; min-width: 0; padding: 11px 16px;
+            font: 16px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #eaf6ff; background: var(--ui-bg);
+            border: 1px solid rgba(106, 209, 255, 0.35); border-radius: 10px;
+            outline: none;
+        }
+        #search-bar input::placeholder { color: rgba(207, 232, 255, 0.45); }
+        #search-bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(106, 209, 255, 0.15); }
+        #search-bar button {
+            flex: 0 0 auto; padding: 11px 22px; cursor: pointer;
+            font: 600 15px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #eaf6ff; background: var(--ui-bg);
+            border: 1px solid rgba(106, 209, 255, 0.45); border-radius: 10px;
+        }
+        #search-bar button:hover { background: rgba(0, 0, 0, 0.92); }
+        #search-bar #city-status {
+            min-height: 16px; color: var(--accent);
+            font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            text-align: center; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+        }
+        @media (max-width: 1000px) {
+            #search-wrap { width: 95vw; }
+            #city-go { display: none; }
+            #help, #hud { display: none !important; }
+            #panel.expanded {
+                left: 50%; top: 50%;
+                transform: translate(-50%, -50%);
+                max-height: 80vh;
+                overflow: hidden;
+                z-index: 25;
+            }
+            #mini-map-wrap {
+                right: 14px; top: 88px; bottom: auto;
+                width: 100px; height: 100px;
+            }
+            #mini-map { width: 100px; height: 100px; }
+            #mini-map-marker { width: 40px; height: 40px; }
+            #mini-map-compass { width: 70px; height: 70px; }
+            #movement-mode-toast { font-size: 44px; }
+            #mini-map-wrap.expanded #mini-map-ui { width: 100px; height: 100px; }
+        }
+
+        #mini-map-wrap.expanded {
+            left: 50%; top: 50%; right: auto; bottom: auto;
+            transform: translate(-50%, -50%);
+            width: 90vw; height: 80vh;
+            z-index: 20;
+            border-radius: 16px;
+        }
+        #mini-map-wrap.expanded #mini-map { width: 100%; height: 100%; }
+        #mini-map-wrap.expanded #mini-map-ui {
+            inset: auto;
+            left: 50%; top: 50%;
+            width: 200px; height: 200px;
+            transform: translate(-50%, -50%);
+        }
+
+        #resume-hint {
+            position: absolute; left: 50%; top: 88px; transform: translateX(-50%);
+            z-index: 10; display: none; pointer-events: none;
+            font: 12px/1 ui-monospace, monospace; color: #eaf6ff;
+            background: var(--ui-bg); border: 1px solid rgba(106,209,255,0.3);
+            border-radius: 999px; padding: 7px 14px;
+        }
+        #flight-hint {
+            position: absolute; left: 50%; top: 88px; transform: translateX(-50%);
+            z-index: 10; display: none; pointer-events: none;
+            font: 13px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #eaf6ff; background: var(--ui-bg);
+            border: 1px solid rgba(106, 209, 255, 0.35); border-radius: 999px;
+            padding: 8px 16px;
+        }
+        #flight-hint kbd {
+            display: inline-block; min-width: 12px; text-align: center; padding: 3px 12px; margin-bottom: 2px;
+            border-radius: 12px; background: rgba(1, 1, 1, 0.355);
+        }
+
+        #overlay {
+            position: absolute; inset: 0; z-index: 20;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 16px; padding: 24px 16px; overflow-y: auto;
+            background: var(--ui-bg);
+            color: #eaf6ff; text-align: center; cursor: pointer;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            transition: opacity 0.25s ease;
+        }
+        #overlay .logo {
+            width: min(900px, 90vw); max-width: 100%; height: auto; display: block; flex-shrink: 0;
+        }
+        #overlay p { margin: 0; opacity: 0.85; font-size: 15px; max-width: 460px; line-height: 1.45; }
+        #overlay .play {
+            padding: 12px 28px; border-radius: 999px; flex-shrink: 0;
+            border: 1px solid rgb(233, 233, 233); background: rgb(228, 228, 228);
+            font-size: 16px; font-weight: 600; color: #171717;
+        }
+        #overlay.hidden { opacity: 0; pointer-events: none; }
+        .muted { opacity: 0.6; font-size: 12px; line-height: 1.4; }
+        #loading {
+            margin: 0; color: #9fd0ff; font-size: 13px; line-height: 1.4;
+            font-family: ui-monospace, monospace; max-width: 460px;
+        }
+
+        /* Переход после поиска: затемнение + полоса телепорта снизу вверх */
+        #teleport-overlay {
+            position: absolute; inset: 0; z-index: 30;
+            overflow: hidden; pointer-events: none;
+            opacity: 0; visibility: hidden;
+        }
+        #teleport-overlay.visible {
+            opacity: 1; visibility: visible;
+            transition: none;
+        }
+        #teleport-overlay.visible.fading-out {
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+        #teleport-overlay .teleport-backdrop {
+            position: absolute; inset: 0; z-index: 0;
+            background: #000; opacity: 0;
+        }
+        #teleport-overlay.active .teleport-backdrop {
+            animation: teleport-fade-black 1s ease forwards;
+        }
+        #teleport-overlay .teleport-strip {
+            position: absolute; left: 0; top: 0; z-index: 1;
+            display: block; width: 100%; height: auto;
+            transform: translateY(-100%);
+            will-change: transform;
+        }
+        #teleport-overlay.active .teleport-strip {
+            animation: teleport-strip-cycle 4s forwards;
+        }
+        #teleport-overlay .teleport-caption {
+            position: absolute; left: 50%; top: 32px;
+            transform: translateX(-50%); z-index: 4;
+            margin: 0; color: #fff; font-weight: 700; text-align: center;
+            font-size: clamp(32px, 5vw, 52px); line-height: 1.15;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            letter-spacing: 0.01em;
+            text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
+        }
+        #teleport-overlay .teleport-buddy-wrap {
+            position: absolute; left: 50%; top: 50%; z-index: 3;
+            width: min(360px, 52vw);
+            transform: translate(-50%, calc(-50% + 100vh));
+            opacity: 0; pointer-events: none;
+            will-change: transform, opacity;
+            animation: teleport-buddy-move 5s forwards paused;
+        }
+        #teleport-overlay .teleport-buddy {
+            display: block; width: 100%; height: auto;
+            transform: rotate(0deg);
+            transform-origin: center center;
+            will-change: transform;
+            animation: teleport-buddy-spin 5s linear forwards paused;
+        }
+        #teleport-overlay.active .teleport-buddy-wrap,
+        #teleport-overlay.active .teleport-buddy {
+            animation-play-state: running;
+        }
+        @keyframes teleport-fade-black {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes teleport-strip-cycle {
+            0% {
+                transform: translateY(-100%);
+                animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            75% {
+                transform: translateY(0);
+                animation-timing-function: cubic-bezier(0.4, 0, 1, 1);
+            }
+            100% { transform: translateY(-100%); }
+        }
+        @keyframes teleport-buddy-move {
+            0%, 19.99% {
+                transform: translate(-50%, calc(-50% + 100vh));
+                opacity: 0;
+            }
+            20% {
+                transform: translate(-50%, calc(-50% + 100vh));
+                opacity: 1;
+                animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            35% {
+                transform: translate(-50%, -50%);
+                opacity: 1;
+            }
+            60% {
+                transform: translate(-50%, -50%);
+                opacity: 1;
+                animation-timing-function: cubic-bezier(0.4, 0, 1, 1);
+            }
+            75%, 100% {
+                transform: translate(-50%, calc(-50% + 100vh));
+                opacity: 0;
+            }
+        }
+        @keyframes teleport-buddy-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-90deg); }
+        }
+
+        /* Меню выбора стиля карты */
+        #style-menu-overlay {
+            position: absolute; inset: 0; z-index: 35;
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px 16px;
+            background: rgba(0, 0, 0, 0.88);
+            opacity: 0; visibility: hidden; pointer-events: none;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        #style-menu-overlay.visible {
+            opacity: 1; visibility: visible; pointer-events: auto;
+        }
+        #style-menu-overlay .style-menu-close {
+            position: absolute; top: 16px; right: 16px;
+            width: 44px; height: 44px; padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08); color: #fff;
+            font: 300 32px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            cursor: pointer; appearance: none; -webkit-appearance: none;
+        }
+        #style-menu-overlay .style-menu-close:hover { background: rgba(255, 255, 255, 0.16); }
+        #style-menu-overlay .style-menu-inner {
+            width: min(420px, 100%); display: flex; flex-direction: column;
+            align-items: stretch; gap: 20px; text-align: center;
+        }
+        #style-menu-overlay .style-menu-title {
+            margin: 0; color: #fff; font-weight: 700;
+            font: 700 clamp(28px, 6vw, 40px)/1.15 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        #style-menu-overlay .style-menu-desc {
+            margin: 0; color: rgba(255, 255, 255, 0.72);
+            font: 400 clamp(15px, 3.5vw, 18px)/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        #style-menu-overlay .style-menu-actions {
+            display: flex; flex-direction: column; gap: 12px; margin-top: 8px;
+        }
+        #style-menu-overlay .style-menu-btn {
+            width: 100%; padding: 14px 18px; cursor: pointer;
+            border: 1px solid rgba(106, 209, 255, 0.45); border-radius: 12px;
+            background: rgba(106, 209, 255, 0.14); color: #eaf6ff;
+            font: 600 16px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+        #style-menu-overlay .style-menu-btn:hover { background: rgba(106, 209, 255, 0.26); }
+        #style-menu-overlay .style-menu-btn:active { transform: scale(0.98); }
+        #style-menu-overlay .style-menu-btn-white {
+            background: #fff; color: #171717; border-color: #fff;
+        }
+        #style-menu-overlay .style-menu-btn-white:hover { background: #f0f0f0; }
+        #style-menu-overlay .style-menu-cancel {
+            width: 100%; margin-top: 18px; padding: 12px 18px; cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06); color: rgba(234, 246, 255, 0.75);
+            font: 500 15px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+        #style-menu-overlay .style-menu-cancel:hover { background: rgba(255, 255, 255, 0.12); color: #eaf6ff; }
+        #style-menu-overlay .style-menu-cancel:active { transform: scale(0.98); }
+        #reality-hint {
+            position: fixed; left: 50%; top: 50%;
+            transform: translate(-50%, -50%) translateY(64px);
+            padding: 10px 18px; border-radius: 999px;
+            background: rgba(0, 0, 0, 0.55); color: #fff;
+            font: 500 15px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(6px); pointer-events: none; z-index: 9;
+            opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease;
+            white-space: nowrap;
+        }
+        #reality-hint.visible { opacity: 1; visibility: visible; }
+        #reality-hint b { font-weight: 700; }
+        #reality-swap {
+            position: fixed; inset: 0; z-index: 10000;
+            pointer-events: none; opacity: 0; display: none;
+            background: #000;
+        }
+        #reality-swap img {
+            width: 100%; height: 100%; object-fit: fill; display: block;
+        }
+    </style>
+</head>
+<body class="overlay-open">
+    <div id="map"></div>
+    <div id="crosshair"></div>
+
+    <div id="panel">
+        <img class="panel-logo" src="images/logo_big.png" alt="World Walk Cam" />
+        <div class="panel-collapsed">
+            <button type="button" class="panel-debug-toggle" data-panel-toggle="open">Show Debug menu</button>
+        </div>
+        <div class="panel-body">
+            <button type="button" class="panel-debug-toggle" data-panel-toggle="close">Hide Debug menu</button>
+            <div class="title">Настройки</div>
+        <label>Моя скорость <input id="walk" type="number" min="0" step="0.5" /></label>
+        <label>Ускорение (Shift) <input id="run" type="number" min="1" step="1" /></label>
+        <label>FOV (°) <input id="fov" type="number" min="30" max="120" step="1" /></label>
+        <label>Взлёт / спуск <input id="fly" type="number" min="0" step="0.5" /></label>
+        <label>FPS limit (0=без) <input id="fps-limit" type="number" min="0" step="1" /></label>
+        <label>Туман (0–1) <input id="draw" type="number" min="0" max="1" step="0.05" /></label>
+        <label>Cutoff 3D <input id="clip3d" type="checkbox" /></label>
+        <label>Дальность 3D (0–1) <input id="clip3d-factor" type="number" min="0.05" max="1" step="0.05" /></label>
+        <label>Машина
+            <select id="car-sprite">
+                <option value="1">car_1</option>
+                <option value="2">car_2</option>
+                <option value="3">car_3</option>
+                <option value="4">car_4</option>
+            </select>
+        </label>
+        <label>Наклон в car <input id="car-roll" type="checkbox" /></label>
+        <label>Угол наклона (°) <input id="car-roll-max" type="number" min="0" max="45" step="1" /></label>
+        <label>Время наклона (с) <input id="car-roll-sec" type="number" min="0.05" step="0.05" /></label>
+        <label>Шлейф (шт.) <input id="car-wake-max" type="number" min="1" max="30" step="1" /></label>
+        <div class="sep"></div>
+        <label>3D рельеф (×, 0=выкл) <input id="relief" type="number" min="0" step="0.5" /></label>
+        <label>3D деревья <input id="trees3d" type="checkbox" /></label>
+        <label>Плотность деревьев <input id="trees3d-density" type="number" min="0.2" max="2" step="0.1" /></label>
+        <label>Игнор. рельеф <input id="noterrcol" type="checkbox" /></label>
+        <label>RT тени (сломаны) <input id="shadows" type="checkbox" /></label>
+        <label>Мини-карта <input id="minimap" type="checkbox" /></label>
+        <div class="sep"></div>
+        <div class="style-row">
+            <button id="style-swap" class="mini style-swap" type="button">Стиль реальности</button>
+            <span id="style-status"></span>
+        </div>
+        <input id="style-file" type="file" accept=".json,application/json" hidden />
+        <label>Понимать покрытия <input id="surface-probe" type="checkbox" /></label>
+        <div id="surface-status" class="surface-status"></div>
+        <div class="hint">Esc — освободить курсор, чтобы менять поля</div>
+        <div id="hud">
+            <div class="row"><span>Коорд.</span><b id="hud-coord">—</b></div>
+            <div class="row"><span>Курс</span><b id="hud-bearing">—</b></div>
+            <div class="row"><span>Взгляд</span><b id="hud-look">—</b></div>
+            <div class="row"><span>Высота</span><b id="hud-alt">—</b></div>
+            <div class="row"><span>Скорость</span><b id="hud-speed">—</b></div>
+            <div class="row"><span>Стены</span><b id="hud-collision">—</b></div>
+        </div>
+        </div>
+    </div>
+
+    <div id="debug-menu" aria-hidden="true" hidden>
+        <div class="debug-menu-header">
+            <span class="debug-menu-title">debug dots</span>
+            <button type="button" class="debug-menu-close" id="debug-menu-close" aria-label="Закрыть">×</button>
+        </div>
+        <div id="dbg-pin-table" class="dbg-pin-table"></div>
+        <div class="debug-menu-sep"></div>
+        <div class="debug-menu-subtitle">Показывать в режимах</div>
+        <label>Режим голубя <input id="dbg-pin-mode-ignore" type="checkbox" checked /></label>
+        <label>Прогулка <input id="dbg-pin-mode-follow" type="checkbox" checked /></label>
+        <label>Машинка <input id="dbg-pin-mode-car" type="checkbox" checked /></label>
+        <div class="hint">F — открыть / закрыть</div>
+    </div>
+
+    <div id="stats">
+        <div class="stat">
+            <div class="stat-ring">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                    <circle class="track" cx="30" cy="30" r="26" />
+                    <circle class="prog" id="stat-prog-green" cx="30" cy="30" r="26" style="stroke:#C8FF00" />
+                </svg>
+                <div class="stat-num">
+                    <span class="stat-val" id="stat-num-green">0</span>
+                    <span class="stat-max" id="stat-max-green"></span>
+                </div>
+            </div>
+            <div class="stat-label">Обычные</div>
+        </div>
+        <div class="stat">
+            <div class="stat-ring">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                    <circle class="track" cx="30" cy="30" r="26" />
+                    <circle class="prog" id="stat-prog-orange" cx="30" cy="30" r="26" style="stroke:#FF6F00" />
+                </svg>
+                <div class="stat-num">
+                    <span class="stat-val" id="stat-num-orange">0</span>
+                    <span class="stat-max" id="stat-max-orange"></span>
+                </div>
+            </div>
+            <div class="stat-label">Редкие</div>
+        </div>
+        <div class="stat">
+            <div class="stat-ring">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                    <circle class="track" cx="30" cy="30" r="26" />
+                    <circle class="prog" id="stat-prog-blue" cx="30" cy="30" r="26" style="stroke:#006FFF" />
+                </svg>
+                <div class="stat-num">
+                    <span class="stat-val" id="stat-num-blue">0</span>
+                    <span class="stat-max" id="stat-max-blue"></span>
+                </div>
+            </div>
+            <div class="stat-label">Поймай их</div>
+        </div>
+    </div>
+
+    <div id="style-menu-overlay" aria-hidden="true" hidden>
+        <button type="button" class="style-menu-close" id="style-menu-close" aria-label="Закрыть">×</button>
+        <div class="style-menu-inner">
+            <h2 class="style-menu-title">Стиль реальности</h2>
+            <p class="style-menu-desc">Выбери стиль карты для путешествий</p>
+            <div class="style-menu-actions">
+                <button type="button" class="style-menu-btn" data-style-url="maps/map1.json">Тест – отличный денек</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/trees3.json">Тест – горячий рассвет</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/map3.json">Тест – арктическое зарево</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/map4.json">Тест - хилшейд</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/trees.json">Trees (лес 3D)</button>
+                <button type="button" class="style-menu-btn style-menu-btn-white" id="style-menu-upload">Загрузить свой</button>
+            </div>
+            <button type="button" class="style-menu-cancel" id="style-menu-cancel">Остаться в этой реальности</button>
+        </div>
+    </div>
+
+    <div id="reality-hint" aria-hidden="true">Нажми <b>E</b> чтобы сменить реальность</div>
+
+    <div id="reality-swap" aria-hidden="true"><img src="images/ui_swapreal.gif" alt="" /></div>
+
+    <div id="terrain-choose-wrap">
+        <p class="terrain-choose-hint" id="terrain-choose-hint-q">Q – менять стиль движения</p>
+        <p class="terrain-choose-hint" id="terrain-choose-hint-car" hidden>С – вид машины сбоку / сверху</p>
+        <div id="terrain-choose">
+            <button type="button" id="choose-terrain-ignore" title="Игнорировать рельеф камерой">
+                <img src="images/ui_choose1.png" width="80" height="80" alt="Игнорировать рельеф" />
+            </button>
+            <button type="button" id="choose-terrain-follow" title="Следовать рельефу">
+                <img src="images/ui_choose2.png" width="80" height="80" alt="Следовать рельефу" />
+            </button>
+            <button type="button" id="choose-terrain-car" title="Езда на машине">
+                <img src="images/ui_choose3.png" width="80" height="80" alt="Машина" />
+            </button>
+        </div>
+    </div>
+
+    <div id="movement-mode-toast" aria-live="polite"></div>
+
+    <div id="car-skin-picker" aria-hidden="true" hidden>
+        <div class="car-skin-picker-inner">
+            <div class="car-skin-picker-talk">
+                <img class="car-skin-picker-talk-photo" src="images/ui_talk1.png" alt="" width="72" height="72" />
+                <p class="car-skin-picker-talk-text">путешествовать по этому миру может быть скучно, но с кастомной машинкой это веселее</p>
+            </div>
+            <p class="car-skin-picker-title">Скин машины</p>
+            <div class="car-skin-picker-row">
+                <button type="button" class="car-skin-btn" data-car-sprite-id="1">
+                    <img class="car-skin-thumb" src="images/car_1ava.png" alt="Просто машина" width="136" height="90" />
+                    <span class="car-skin-label">Просто машина</span>
+                </button>
+                <button type="button" class="car-skin-btn" data-car-sprite-id="2">
+                    <img class="car-skin-thumb" src="images/car_2ava.png" alt="Багги / Карт" width="136" height="90" />
+                    <span class="car-skin-label">Багги / Карт</span>
+                </button>
+                <button type="button" class="car-skin-btn" data-car-sprite-id="3">
+                    <img class="car-skin-thumb" src="images/car_3ava.png" alt="Джип" width="136" height="90" />
+                    <span class="car-skin-label">Джип</span>
+                </button>
+                <button type="button" class="car-skin-btn" data-car-sprite-id="4">
+                    <img class="car-skin-thumb" src="images/car_4ava.png" alt="Скользкий мужик" width="136" height="90" />
+                    <span class="car-skin-label">Скользкий мужик</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="search-wrap">
+        <div id="search-bar">
+            <div class="search-row">
+                <input id="city" type="search" placeholder="Попади в любой город или место…" autocomplete="off" spellcheck="false" />
+                <button id="city-go" type="button">Телепорт</button>
+            </div>
+            <div id="city-status"></div>
+        </div>
+    </div>
+
+    <div id="resume-hint">Кликни по карте, чтобы вернуться к обзору</div>
+    <div id="flight-hint"><kbd>Esc</kbd> выйти</div>
+
+    <div id="touch-controls" aria-hidden="true">
+        <div class="touch-cross">
+            <button type="button" class="touch-btn" id="touch-up" aria-label="Вверх">↑</button>
+            <button type="button" class="touch-btn" id="touch-left" aria-label="Стрейф влево">←</button>
+            <button type="button" class="touch-btn" id="touch-right" aria-label="Стрейф вправо">→</button>
+            <button type="button" class="touch-btn" id="touch-down" aria-label="Вниз">↓</button>
+        </div>
+        <div class="touch-joystick" id="touch-joystick">
+            <div class="touch-joystick-base"></div>
+            <div class="touch-joystick-stick" id="touch-joystick-stick"></div>
+        </div>
+        <div class="touch-car-actions">
+            <button type="button" class="touch-btn touch-btn-wide" id="touch-cam" aria-label="Сменить камеру">Cam</button>
+            <button type="button" class="touch-btn touch-btn-go" id="touch-go" aria-label="Ехать вперёд">Go</button>
+        </div>
+    </div>
+
+    <div id="help">
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — ходьба</div>
+        <div><kbd>Мышь</kbd> — обзор</div>
+        <div><kbd>Space</kbd> — вверх/прыгать/тормоз · <kbd>X</kbd> — вниз</div>
+        <div id="help-shift"><kbd>Shift</kbd> — мощно ускориться</div>
+        <div><kbd>Esc</kbd> — освободить курсор</div>
+        <div><kbd>M</kbd> — показать карту города</div>
+        <div id="help-car" hidden>
+            <div class="help-sep"></div>
+            <div><kbd>C</kbd> — сменить камеру авто</div>
+            <div><kbd>Q</kbd> — выбор скина машины</div>
+        </div>
+    </div>
+
+    <aside id="explore-checklist" aria-label="Резвись на карте">
+        <p class="explore-checklist-title">Освойся на карте:</p>
+        <ul>
+            <li>
+                <input id="explore-old-home" type="checkbox" />
+                <label for="explore-old-home">Найди свой старый дом</label>
+            </li>
+            <li>
+                <input id="explore-travel-places" type="checkbox" />
+                <label for="explore-travel-places">Поищи места куда путешествовал</label>
+            </li>
+            <li>
+                <input id="explore-fav-mountain" type="checkbox" />
+                <label for="explore-fav-mountain">Взберись на любимую гору</label>
+            </li>
+            <li>
+                <input id="explore-slalom" type="checkbox" />
+                <label for="explore-slalom">Устрой слалом через леса и реки</label>
+            </li>
+            <li>
+                <input id="explore-teleport" type="checkbox" />
+                <label for="explore-teleport">Телепортируйся в особые места и адреса</label>
+            </li>
+        </ul>
+        <div class="explore-checklist-tips" id="explore-checklist-tips">
+            <div class="explore-checklist-tip" id="explore-checklist-tip">
+                <button type="button" class="explore-checklist-tip-close" aria-label="Закрыть">×</button>
+                <div class="explore-checklist-tip-inner">
+                    <p class="explore-checklist-tip-text">Помни, ты можешь телепортирваться вообще куда угодно!</p>
+                    <img class="explore-checklist-tip-photo" src="images/ui_talk1a.png" alt="" width="56" height="56" />
+                </div>
+            </div>
+            <div class="explore-checklist-tip" id="explore-checklist-tip-2">
+                <button type="button" class="explore-checklist-tip-close" aria-label="Закрыть">×</button>
+                <div class="explore-checklist-tip-inner">
+                    <p class="explore-checklist-tip-text">Летай в тысячу раз быстрее, используй песочницу параметров в Debug menu</p>
+                    <img class="explore-checklist-tip-photo" src="images/ui_talk1a.png" alt="" width="56" height="56" />
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="mini-map-wrap">
+        <div id="mini-map"></div>
+        <div id="mini-map-ui">
+            <img id="mini-map-marker" src="images/ui_minimap_1.png" width="50" height="50" alt="" />
+            <img id="mini-map-compass" src="images/ui_minimap_n.png" width="140" height="140" alt="Север" />
+        </div>
+    </div>
+
+    <div id="teleport-overlay" aria-hidden="true">
+        <div class="teleport-backdrop"></div>
+        <img class="teleport-strip" src="images/ui_teleport_1.png" alt="" />
+        <div class="teleport-buddy-wrap" aria-hidden="true">
+            <img class="teleport-buddy" src="images/ui_buddy.png" alt="" />
+        </div>
+        <p class="teleport-caption">Телепортируем тебя...</p>
+    </div>
+
+    <div id="overlay">
+        <img class="logo" src="images/logo_big.png" width="900" alt="World Geo Walk" />
+        <p>3D-бродилка от первого лица по реальной карте. Гуляй между зданий, взлетай и осматривайся.</p>
+        <div class="play">Кликни, чтобы начать ▶</div>
+        <div id="loading">Это копия реального мира. 148,9 млн км² уже загружены!</div>
+        <p class="muted" id="overlay-hint"></p>
+    </div>
+
+    <!-- Запасные данные для открытия через file:// (двойным кликом), когда
+         браузер блокирует загрузку локальных settings.json и maps/*.json.
+         Генерируются из JSON командой `npm run snapshot`. При запуске через
+         http-сервер эти файлы можно игнорировать. -->
+    <script src="settings.js"></script>
+    <script src="maps/map1.js"></script>
+    <script src="maps/map2.js"></script>
+    <script src="maps/map3.js"></script>
+    <script src="maps/map4.js"></script>
+    <script src="maps/trees3.js"></script>
+    <script src="maps/mini1.js"></script>
+    <script src="modules/follow-terrain-hands.js"></script>
+    <script src="modules/car-drive.js"></script>
+    <script src="modules/effects-overlay.js"></script>
+    <script src="modules/car-pins.js"></script>
+    <script src="modules/giant-mob.js"></script>
+    <script src="modules/wood-terrain-extrusion.js"></script>
+
+    <script>
+    "use strict";
+
+    // ----------------------------------------------------------------------
+    // Настройки.
+    // Значения берутся из settings.json в корне проекта (его и правим);
+    // объект ниже — встроенные значения по умолчанию на случай, если файл
+    // недоступен (например, при открытии через file://).
+    // ----------------------------------------------------------------------
+    const CONFIG = (function () {
+        const defaults = {
+        start: { lng: 44.80148, lat: 41.69354 }, // Тбилиси (проспект Руставели)
+        startBearing: 35,
+        eyeHeight: 2.3,       // высота глаз, м (рост повыше)
+        startHeightMultiplier: 10, // при старте поднимаемся в N раз выше роста
+        groundAlt: 0,         // уровень земли, м
+        fov: 85,              // вертикальный угол обзора
+        // Ближняя плоскость отсечения: MapLibre по умолчанию height/50, из-за чего
+        // у плоской камеры близкие объекты сильно обрезаются. Больше делитель —
+        // ближе плоскость — меньше обрезаются объекты у камеры (ценой точности глубины).
+        nearClipDivisor: 4000,
+        walkSpeed: 20,        // м/с
+        runMultiplier: 50,    // ускорение по Shift (переопределяется settings.json)
+        flySpeed: 20,         // м/с — подъём (Space) / спуск (X)
+        fpsLimit: 60,         // лимит кадров/с (0 = без лимита)
+        inertiaEnabled: true,   // инерция горизонтального движения (только settings.json)
+        inertia: 0.14,          // степень инертности, сек (больше — плавнее разгон/торможение)
+        mouseYaw: 0.16,       // чувств. поворота, град/пиксель
+        mousePitch: 0.10,     // чувств. наклона, град/пиксель
+        // Наклон камеры (0 = вниз, 90 = горизонт). MapLibre у земли стабилен
+        // только в этом диапазоне, иначе рендер мерцает/падает.
+        pitchMin: 85,         // смотрим вниз (≈5° ниже горизонта)
+        pitchMax: 88,         // самый ровный наклон без артефактов (≈2° вниз)
+        pitchStart: 88,       // смотрим прямо и чуть вниз
+        maxSafeZoom: 20,      // выше — нестабильно у горизонта
+        // Небо + туман (градиент и дальность прорисовки) — править в settings.json → sky
+        sky: {
+            color: "#1f7ae0",
+            horizonBlend: 0.35,
+            horizonColor: "#9fc8ff",
+            horizonFogBlend: 0.5,
+            fogColor: "#cfe3ff",
+            fogGroundBlend: 0.2
+        },
+        skyByStyle: {
+            "maps/map1.json": {
+                color: "#0350B2",
+                horizonBlend: 0.35,
+                horizonColor: "#9fc8ff",
+                horizonFogBlend: 0.5,
+                fogColor: "#cfe3ff",
+                fogGroundBlend: 0.2
+            },
+            "maps/map2.json": {
+                color: "#32005B",
+                horizonBlend: 0.35,
+                horizonColor: "#C46935",
+                horizonFogBlend: 0.5,
+                fogColor: "#C46935",
+                fogGroundBlend: 0.2
+            },
+            "maps/map3.json": {
+                color: "#000227",
+                horizonBlend: 0.4,
+                horizonColor: "#271BD8",
+                horizonFogBlend: 0.55,
+                fogColor: "#747F82",
+                fogGroundBlend: 0.2
+            },
+            "maps/map4.json": {
+                color: "#0350B2",
+                horizonBlend: 0.35,
+                horizonColor: "#9fc8ff",
+                horizonFogBlend: 0.5,
+                fogColor: "#cfe3ff",
+                fogGroundBlend: 0.2
+            },
+            "maps/trees3.json": {
+                color: "#32005B",
+                horizonBlend: 0.35,
+                horizonColor: "#C46935",
+                horizonFogBlend: 0.5,
+                fogColor: "#C46935",
+                fogGroundBlend: 0.2
+            }
+        },
+        styleUrl: "maps/trees3.json", // стиль по умолчанию (папка /maps)
+        // 3D рельеф (DEM от AWS, terrarium). 0 = выключен.
+        terrainExaggeration: 1,
+        // «Игнорировать рельеф камерой»: вкл — фикс. высота (не меняется при подъёме).
+        // Выкл — высота по рельефу под игроком, не под точкой прицела впереди.
+        ignoreTerrainCollision: true,
+        followTerrainEyeHeight: 2.8,   // высота глаз, м — галочка «игнорировать рельеф» выкл
+        ignoreTerrainEyeHeight: 23,     // высота глаз, м — галочка вкл
+        heightAnimSec: 2,              // длительность анимации смены высоты, сек
+        followTerrainJumpHeight: 14,   // прыжок Space в режиме «следовать рельефу», м
+        followTerrainJumpSec: 1.4,     // длительность прыжка вверх-вниз, сек
+        movementMode: "ignore",        // ignore | follow | car
+        // car* — править только в settings.json (ниже — запас для offline)
+        carEyeHeight: 2.2,
+        carCameraHeight: 5,
+        carCameraPitch: 64,
+        carLookAheadM: 15,
+        carTopCameraHeight: 14,
+        carTopCameraPitch: 5,
+        carTopLookAheadM: 0,
+        carTopZoom: 18.5,
+        carSkinPickerLiftM: 4,
+        carSkinPickerLiftSec: 0.45,
+        carTurnSpeedDeg: 110,
+        carSpeed: 55,
+        carAccelSec: 0.65,             // разгон, сек (больше — инертнее)
+        carBrakeSec: 1.05,             // торможение / отпускание газа, сек
+        carHandbrakeSec: 0.22,         // Space — резкий тормоз, сек
+        carTurnInertiaSec: 0.5,
+        carCameraRollEnabled: true,
+        carCameraRollMax: 5,
+        carCameraRollSpeedMin: 30,
+        carCameraRollSec: 0.8,
+        carWakeMaxCount: 5,
+        carSpriteId: 1,
+        carSpriteSrc: "images/car_1.png",
+        carSpriteWidthPx: 280,
+        carSpritePivotOffsetX: 0,
+        carSpritePivotOffsetY: 0,
+        carSpriteTurnThresholdDeg: [20, 40],
+        carSpriteTopFrameIndex: 3,
+        demUrl: "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
+        demEncoding: "terrarium",
+        // Тени зданий в реальном времени (CustomLayer, проекция следа + AO).
+        shadows: false,
+        trees3dEnabled: true,
+        trees3dDensity: 2,
+        minimapEnabled: true,
+        surfaceProbeEnabled: true,
+        shadowModuleUrl: "https://cdn.jsdelivr.net/gh/wallabyway/maplibre-building-shadows@main/ao-shadow.mjs",
+        buildingsLayerId: "building-3d",
+        buildingsSourceId: "openmaptiles",
+        buildingsSourceLayer: "building",
+        // Столкновения со зданиями: active, пока высота над землёй ≤ этого значения.
+        // Выше — пролетаем сквозь дома.
+        collisionHeight: 10,
+        // Cutoff 3D: уменьшает дальнюю плоскость отсечения (доля авто farZ, 0–1).
+        clip3dEnabled: true,
+        clip3dFactor: 0.38
+        };
+
+        function merge(o, source) {
+            const m = Object.assign({}, defaults, o);
+            if (o && o.start) m.start = Object.assign({}, defaults.start, o.start);
+            // sky — только из settings.json / settings.js, без подмешивания встроенных цветов
+            if (o && o.sky) m.sky = o.sky;
+            else m.sky = Object.assign({}, defaults.sky);
+            if (o && o.skyByStyle) {
+                m.skyByStyle = {};
+                for (const k of Object.keys(o.skyByStyle)) {
+                    m.skyByStyle[k] = Object.assign({}, o.skyByStyle[k]);
+                }
+            } else if (defaults.skyByStyle) {
+                m.skyByStyle = {};
+                for (const k of Object.keys(defaults.skyByStyle)) {
+                    m.skyByStyle[k] = Object.assign({}, defaults.skyByStyle[k]);
+                }
+            } else {
+                m.skyByStyle = {};
+            }
+            const map1Key = m.styleUrl || "maps/map1.json";
+            if (!m.skyByStyle[map1Key]) m.skyByStyle[map1Key] = Object.assign({}, m.sky);
+            if (source) m._source = source;
+            return m;
+        }
+        // 1) settings.json — основной источник (работает через http-сервер)
+        if (location.protocol !== "file:") {
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open("GET", "settings.json", false);
+                xhr.send(null);
+                if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+                    return merge(JSON.parse(xhr.responseText), "settings.json");
+                }
+            } catch (e) { /* запасной вариант ниже */ }
+        }
+        // 2) settings.js — снимок settings.json для file:// (npm run snapshot)
+        if (window.GEOWALK_SETTINGS) return merge(window.GEOWALK_SETTINGS, "settings.js");
+        // 3) встроенные значения по умолчанию
+        return merge({}, "defaults");
+    })();
+
+    if (!CONFIG.movementMode) {
+        CONFIG.movementMode = CONFIG.ignoreTerrainCollision ? "ignore" : "follow";
+    }
+    CONFIG.ignoreTerrainCollision = CONFIG.movementMode === "ignore";
+
+    const CAR_SPRITE_IDS = [1, 2, 3, 4];
+    const CAR_SPRITE_DEFAULT_ID = 1;
+
+    function carSpritePath(id) {
+        const n = id | 0;
+        if (CAR_SPRITE_IDS.indexOf(n) >= 0) return "images/car_" + n + ".png";
+        return "images/car_" + CAR_SPRITE_DEFAULT_ID + ".png";
+    }
+
+    function normalizeCarSpriteId(id) {
+        const n = id | 0;
+        if (n === 0) return CAR_SPRITE_DEFAULT_ID;
+        if (CAR_SPRITE_IDS.indexOf(n) >= 0) return n;
+        return CAR_SPRITE_DEFAULT_ID;
+    }
+
+    function carSpriteIdFromConfig() {
+        if (CONFIG.carSpriteId != null) return normalizeCarSpriteId(CONFIG.carSpriteId);
+        const m = CONFIG.carSpriteSrc && CONFIG.carSpriteSrc.match(/car_(\d+)\.png$/);
+        if (m) return normalizeCarSpriteId(m[1] | 0);
+        return CAR_SPRITE_DEFAULT_ID;
+    }
+
+    function probeCarSpriteSrc(src) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => resolve(src);
+            img.onerror = () => resolve(null);
+            img.src = src;
+        });
+    }
+
+    async function applyCarSprite(id, syncSelect) {
+        const prevId = carSpriteIdFromConfig();
+        const requestedId = normalizeCarSpriteId(id);
+        let resolvedId = requestedId;
+        let src = carSpritePath(resolvedId);
+        if (!(await probeCarSpriteSrc(src))) {
+            resolvedId = CAR_SPRITE_DEFAULT_ID;
+            src = carSpritePath(CAR_SPRITE_DEFAULT_ID);
+            if (!(await probeCarSpriteSrc(src))) src = carSpritePath(CAR_SPRITE_DEFAULT_ID);
+        }
+        CONFIG.carSpriteId = resolvedId;
+        CONFIG.carSpriteSrc = src;
+        if (syncSelect !== false && elCarSprite) elCarSprite.value = String(resolvedId);
+        if (window.GeowalkCarDrive) GeowalkCarDrive.setSpriteSrc(src);
+        if (resolvedId !== prevId && isCarMode() && carCameraView !== "topdown" &&
+            window.GeowalkCarDrive && GeowalkCarDrive.playDropAnim) {
+            GeowalkCarDrive.playDropAnim();
+        }
+        return resolvedId;
+    }
+
+    const DEFAULT_SKY_STYLE_KEY = "__default__";
+    const MAP1_STYLE_URL = CONFIG.styleUrl || "maps/map1.json";
+
+    function cloneSkyParams(sky) {
+        return sky ? Object.assign({}, sky) : null;
+    }
+
+    function getDefaultSky() {
+        if (CONFIG.skyByStyle && CONFIG.skyByStyle[MAP1_STYLE_URL]) {
+            return cloneSkyParams(CONFIG.skyByStyle[MAP1_STYLE_URL]);
+        }
+        return cloneSkyParams(CONFIG.sky);
+    }
+
+    function getSkyForStyleKey(styleKey) {
+        if (styleKey && styleKey !== DEFAULT_SKY_STYLE_KEY &&
+            CONFIG.skyByStyle && CONFIG.skyByStyle[styleKey]) {
+            return cloneSkyParams(CONFIG.skyByStyle[styleKey]);
+        }
+        return getDefaultSky();
+    }
+
+    let activeStyleSkyKey = MAP1_STYLE_URL;
+
+    function getActiveSky() {
+        return getSkyForStyleKey(activeStyleSkyKey);
+    }
+
+    function syncConfigSkyFromActiveStyle() {
+        CONFIG.sky = getActiveSky();
+    }
+
+    function persistActiveSkyParams() {
+        if (!CONFIG.skyByStyle) CONFIG.skyByStyle = {};
+        const storeKey = activeStyleSkyKey === DEFAULT_SKY_STYLE_KEY
+            ? MAP1_STYLE_URL
+            : activeStyleSkyKey;
+        CONFIG.skyByStyle[storeKey] = cloneSkyParams(CONFIG.sky);
+    }
+
+    function setActiveStyleSkyKey(styleKey) {
+        activeStyleSkyKey = styleKey || DEFAULT_SKY_STYLE_KEY;
+        syncConfigSkyFromActiveStyle();
+    }
+
+    syncConfigSkyFromActiveStyle();
+
+    function isCarMode() { return CONFIG.movementMode === "car"; }
+    function isFollowMode() { return CONFIG.movementMode === "follow"; }
+    function isIgnoreMode() { return CONFIG.movementMode === "ignore"; }
+
+    function styleNameFromUrl(url) {
+        if (!url || typeof url !== "string") return "embedded";
+        const m = url.match(/([^/\\]+)\.(json|js)$/i);
+        return m ? m[1] : url;
+    }
+
+    function totalEyeHeightForMode(mode) {
+        if (mode === "ignore") {
+            return CONFIG.ignoreTerrainEyeHeight != null
+                ? CONFIG.ignoreTerrainEyeHeight
+                : CONFIG.eyeHeight * CONFIG.startHeightMultiplier;
+        }
+        if (mode === "car") return CONFIG.carEyeHeight;
+        return CONFIG.followTerrainEyeHeight != null ? CONFIG.followTerrainEyeHeight : 2.8;
+    }
+
+    function totalEyeHeightForIgnore(ignore) {
+        return totalEyeHeightForMode(ignore ? "ignore" : "follow");
+    }
+
+    function altOffsetForTotalEye(totalEye) {
+        return totalEye - CONFIG.groundAlt - CONFIG.eyeHeight;
+    }
+
+    // Сразу применяем settings.json к полям панели и подсказкам (до init карты)
+    const elWalk = document.getElementById("walk");
+    const elRun = document.getElementById("run");
+    const elFov = document.getElementById("fov");
+    const elFly = document.getElementById("fly");
+    const elFpsLimit = document.getElementById("fps-limit");
+    const elDraw = document.getElementById("draw");
+    const elClip3d = document.getElementById("clip3d");
+    const elClip3dFactor = document.getElementById("clip3d-factor");
+    const elCarRoll = document.getElementById("car-roll");
+    const elCarSprite = document.getElementById("car-sprite");
+    const elCarRollMax = document.getElementById("car-roll-max");
+    const elCarRollSec = document.getElementById("car-roll-sec");
+    const elCarWakeMax = document.getElementById("car-wake-max");
+    const elRelief = document.getElementById("relief");
+    const elTrees3d = document.getElementById("trees3d");
+    const elTrees3dDensity = document.getElementById("trees3d-density");
+    const elNoTerrCol = document.getElementById("noterrcol");
+    const elMinimap = document.getElementById("minimap");
+    const elSurfaceProbe = document.getElementById("surface-probe");
+    const elChooseFollow = document.getElementById("choose-terrain-follow");
+    const elChooseIgnore = document.getElementById("choose-terrain-ignore");
+    const elChooseCar = document.getElementById("choose-terrain-car");
+    const MOVEMENT_MODES = [
+        { id: "ignore", button: elChooseIgnore },
+        { id: "follow", button: elChooseFollow },
+        { id: "car", button: elChooseCar }
+    ];
+    const MOVEMENT_MODE_LABELS = {
+        ignore: "Режим голубя",
+        follow: "Прогулка",
+        car: "Машинка"
+    };
+    // Показывать ли debug dots в каждом режиме передвижения (по умолчанию — везде).
+    const pinModeEnabled = { ignore: true, follow: true, car: true };
+    function pinsActiveForCurrentMode() {
+        return !!pinModeEnabled[CONFIG.movementMode]
+            && !document.body.classList.contains("overlay-open");
+    }
+    const elShadows = document.getElementById("shadows");
+    const elStyleStatus = document.getElementById("style-status");
+    const elHelpShift = document.getElementById("help-shift");
+    const elHelpCar = document.getElementById("help-car");
+    const elTerrainChooseHintCar = document.getElementById("terrain-choose-hint-car");
+    const elTerrainChooseHintQ = document.getElementById("terrain-choose-hint-q");
+    const elCarSkinPicker = document.getElementById("car-skin-picker");
+    const elMovementModeToast = document.getElementById("movement-mode-toast");
+    const elOverlayHint = document.getElementById("overlay-hint");
+
+    function applyConfigToUI() {
+        elWalk.value = CONFIG.walkSpeed;
+        elRun.value = CONFIG.runMultiplier;
+        if (elFov) elFov.value = CONFIG.fov;
+        elFly.value = CONFIG.flySpeed;
+        if (elFpsLimit) elFpsLimit.value = CONFIG.fpsLimit;
+        elDraw.value = CONFIG.sky.fogGroundBlend;
+        if (elClip3d) elClip3d.checked = !!CONFIG.clip3dEnabled;
+        if (elClip3dFactor) elClip3dFactor.value = CONFIG.clip3dFactor;
+        if (elCarSprite) elCarSprite.value = String(carSpriteIdFromConfig());
+        if (elCarRoll) elCarRoll.checked = CONFIG.carCameraRollEnabled !== false;
+        if (elCarRollMax) elCarRollMax.value = CONFIG.carCameraRollMax;
+        if (elCarRollSec) elCarRollSec.value = CONFIG.carCameraRollSec;
+        if (elCarWakeMax) elCarWakeMax.value = CONFIG.carWakeMaxCount;
+        syncClipPanelUI();
+        syncCarRollPanelUI();
+        elRelief.value = CONFIG.terrainExaggeration;
+        if (elTrees3d) elTrees3d.checked = CONFIG.trees3dEnabled !== false;
+        if (elTrees3dDensity) elTrees3dDensity.value = CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 2;
+        elNoTerrCol.checked = CONFIG.ignoreTerrainCollision;
+        elShadows.checked = CONFIG.shadows;
+        if (elMinimap) elMinimap.checked = CONFIG.minimapEnabled !== false;
+        if (elSurfaceProbe) elSurfaceProbe.checked = CONFIG.surfaceProbeEnabled !== false;
+        elStyleStatus.textContent = "стиль: " + styleNameFromUrl(CONFIG.styleUrl);
+        elHelpShift.innerHTML = "<kbd>Shift</kbd> — ускорение ×" + CONFIG.runMultiplier;
+        elOverlayHint.textContent = "Некоммерческая гео-песочница для путешествий. By Boxypix design & dev. 2026";
+        syncMovementChooseUI();
+    }
+    applyConfigToUI();
+    if (window.GeowalkFollowTerrainHands) GeowalkFollowTerrainHands.init();
+
+    function carDriveOptionsFromConfig() {
+        return {
+            src: CONFIG.carSpriteSrc,
+            widthPx: CONFIG.carSpriteWidthPx,
+            turnThresholdDeg: CONFIG.carSpriteTurnThresholdDeg.slice(),
+            pivotOffsetX: CONFIG.carSpritePivotOffsetX,
+            pivotOffsetY: CONFIG.carSpritePivotOffsetY,
+            topFrameIndex: CONFIG.carSpriteTopFrameIndex,
+            topTurnLeanMaxDeg: 10,
+            topTurnLeanSec: CONFIG.carCameraRollSec != null ? CONFIG.carCameraRollSec : 0.8,
+            wakeMaxCount: CONFIG.carWakeMaxCount
+        };
+    }
+
+    function woodTerrainOptionsFromConfig() {
+        return {
+            enabled: CONFIG.trees3dEnabled !== false,
+            terrainOn: CONFIG.terrainExaggeration > 0,
+            density: CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 2,
+            vectorSource: CONFIG.buildingsSourceId || "openmaptiles",
+            fillLayerId: "landcover_wood"
+        };
+    }
+
+    function syncWoodTerrainFromConfig(force) {
+        if (!window.GeowalkWoodTerrainExtrude) return;
+        GeowalkWoodTerrainExtrude.sync({
+            enabled: CONFIG.trees3dEnabled !== false,
+            terrainOn: CONFIG.terrainExaggeration > 0,
+            density: CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 2,
+            force: !!force
+        });
+    }
+
+    function initCarDriveModule() {
+        if (!window.GeowalkCarDrive) return;
+        GeowalkCarDrive.init(carDriveOptionsFromConfig());
+    }
+    initCarDriveModule();
+
+    function initEffectsModule() {
+        if (!window.GeowalkEffects) return;
+        GeowalkEffects.init({
+            borderColor: CONFIG.fxCollectBorderColor || "#22e05a",
+            borderWidthPx: CONFIG.fxCollectBorderWidthPx != null ? CONFIG.fxCollectBorderWidthPx : 30,
+            borderDurationSec: CONFIG.fxCollectBorderSec != null ? CONFIG.fxCollectBorderSec : 1
+        });
+    }
+    initEffectsModule();
+
+    function initCarPinsModule() {
+        if (!window.GeowalkCarPins) return;
+        const defaultPinTypes = [
+            { id: "it_green", color: "#C8FF00", count: 5, spawnMaxM: 800, hitRadiusM: 20, sizeM: 3, baseM: 2, spinEnabled: false },
+            { id: "it_orange", color: "#FF6F00", count: 1, spawnMaxM: 500, hitRadiusM: 10, sizeM: 3, baseM: 1, spinEnabled: false },
+            { id: "it_blue", color: "#006FFF", count: 2, spawnMaxM: 1000, hitRadiusM: 4, sizeM: 2, baseM: 2, spinEnabled: false, moveSpeedM: 35, trailCount: 2, trailSpacingM: 3 }
+        ];
+        GeowalkCarPins.init({
+            types: Array.isArray(CONFIG.carPinTypes) && CONFIG.carPinTypes.length
+                ? CONFIG.carPinTypes : defaultPinTypes,
+            spinDegPerSec: CONFIG.carPinSpinDegPerSec != null ? CONFIG.carPinSpinDegPerSec : 90,
+            onCollect(typeId) {
+                addPinStat(typeId);
+                if (!window.GeowalkEffects) return;
+                if (typeId === "it_orange") GeowalkEffects.flashBorder({ color: "#FF6F00" });
+                else if (typeId === "it_blue") GeowalkEffects.flashBorder({ color: "#0099FF" });
+                else GeowalkEffects.flashBorder();
+            }
+        });
+    }
+    initCarPinsModule();
+
+    function initGiantMobModule() {
+        if (!window.GeowalkGiantMob) return;
+        GeowalkGiantMob.init({
+            src: CONFIG.sprite1Src || "images/mo_1a.png",
+            enabled: CONFIG.sprite1Enabled !== false,
+            spawnRadiusM: CONFIG.sprite1SpawnRadiusM != null ? CONFIG.sprite1SpawnRadiusM : 1000,
+            count: CONFIG.sprite1Count != null ? CONFIG.sprite1Count : 1,
+            sizeM: CONFIG.sprite1SizeM != null ? CONFIG.sprite1SizeM : 120
+        });
+    }
+    initGiantMobModule();
+
+    applyCarSprite(carSpriteIdFromConfig(), true);
+
+    function syncCarSkinPickerSelection() {
+        if (!elCarSkinPicker) return;
+        const cur = carSpriteIdFromConfig();
+        elCarSkinPicker.querySelectorAll("[data-car-sprite-id]").forEach(btn => {
+            btn.classList.toggle("selected", (btn.getAttribute("data-car-sprite-id") | 0) === cur);
+        });
+    }
+
+    function updateCarSkinPickerPosition() {
+        if (!elCarSkinPicker || !carSkinPickerOpen || !ready) return;
+        let x = null;
+        let y = null;
+        if (window.GeowalkCarDrive && GeowalkCarDrive.getPivot) {
+            const p = GeowalkCarDrive.getPivot();
+            if (p) { x = p.x; y = p.y; }
+        }
+        if (x == null) {
+            const rect = map.getCanvas().getBoundingClientRect();
+            const pt = map.project([player.lng, player.lat]);
+            x = rect.left + pt.x;
+            y = rect.top + pt.y;
+        }
+        const carW = CONFIG.carSpriteWidthPx || 280;
+        const offsetY = carW * (400 / 600) * 0.52 + 96;
+        elCarSkinPicker.style.left = x + "px";
+        elCarSkinPicker.style.top = y + "px";
+        elCarSkinPicker.style.transform = "translate(-50%, calc(-100% - " + offsetY + "px))";
+    }
+
+    function carSkinPickerLiftTarget() {
+        return CONFIG.carSkinPickerLiftM != null ? CONFIG.carSkinPickerLiftM : 4;
+    }
+
+    function startCarSkinPickerLiftAnim(to, onDone) {
+        carSkinPickerLiftAnim = {
+            from: carSkinPickerLift,
+            to,
+            elapsed: 0,
+            duration: Math.max(0.15, CONFIG.carSkinPickerLiftSec != null ? CONFIG.carSkinPickerLiftSec : 0.45),
+            onDone: onDone || null
+        };
+    }
+
+    function updateCarSkinPickerLiftAnim(dt) {
+        if (!carSkinPickerLiftAnim) return;
+        carSkinPickerLiftAnim.elapsed += dt;
+        const u = Math.min(1, carSkinPickerLiftAnim.elapsed / carSkinPickerLiftAnim.duration);
+        const ease = u * u * (3 - 2 * u);
+        carSkinPickerLift = carSkinPickerLiftAnim.from +
+            (carSkinPickerLiftAnim.to - carSkinPickerLiftAnim.from) * ease;
+        if (u >= 1) {
+            carSkinPickerLift = carSkinPickerLiftAnim.to;
+            const done = carSkinPickerLiftAnim.onDone;
+            carSkinPickerLiftAnim = null;
+            if (done) done();
+        }
+    }
+
+    function openCarSkinPicker() {
+        if (!isCarMode() || carSkinPickerOpen) return;
+        carSkinPickerOpen = true;
+        velFwd = 0;
+        velStrafe = 0;
+        carYawVel = 0;
+        player.speed = 0;
+        document.body.classList.add("car-skin-picker-open");
+        if (elCarSkinPicker) {
+            elCarSkinPicker.hidden = false;
+            elCarSkinPicker.classList.add("open");
+            elCarSkinPicker.setAttribute("aria-hidden", "false");
+        }
+        syncCarSkinPickerSelection();
+        document.exitPointerLock?.();
+        if (resumeHint) resumeHint.style.display = "none";
+        updateCarSkinPickerPosition();
+        startCarSkinPickerLiftAnim(carSkinPickerLiftTarget());
+    }
+
+    function closeCarSkinPicker(relock) {
+        if (!carSkinPickerOpen) return;
+        carSkinPickerOpen = false;
+        document.body.classList.remove("car-skin-picker-open");
+        if (elCarSkinPicker) {
+            elCarSkinPicker.classList.remove("open");
+            elCarSkinPicker.hidden = true;
+            elCarSkinPicker.setAttribute("aria-hidden", "true");
+        }
+        const doRelock = relock !== false && !window.matchMedia("(max-width: 1000px)").matches;
+        startCarSkinPickerLiftAnim(0, () => {
+            if (doRelock) requestLock();
+        });
+    }
+
+    function toggleCarSkinPicker() {
+        if (!isCarMode()) return;
+        if (carSkinPickerOpen) closeCarSkinPicker(true);
+        else openCarSkinPicker();
+    }
+
+    function initCarSkinPickerUI() {
+        if (!elCarSkinPicker) return;
+        elCarSkinPicker.querySelectorAll("[data-car-sprite-id]").forEach(btn => {
+            btn.addEventListener("click", async (e) => {
+                e.stopPropagation();
+                const id = btn.getAttribute("data-car-sprite-id") | 0;
+                await applyCarSprite(id, true);
+                syncCarSkinPickerSelection();
+                closeCarSkinPicker(true);
+            });
+        });
+    }
+    initCarSkinPickerUI();
+
+    function syncMovementChooseUI() {
+        MOVEMENT_MODES.forEach(mode => {
+            mode.button.classList.toggle("selected", CONFIG.movementMode === mode.id);
+        });
+        document.body.classList.toggle("car-mode", isCarMode());
+        if (elHelpCar) elHelpCar.hidden = !isCarMode();
+        if (elTerrainChooseHintCar) elTerrainChooseHintCar.hidden = !isCarMode();
+        if (elTerrainChooseHintQ) {
+            elTerrainChooseHintQ.textContent = isCarMode()
+                ? "Q – выбор скина машины"
+                : "Q – менять стиль движения";
+        }
+        syncFollowTerrainHandsModule();
+        syncCarDriveModule();
+        syncTouchCrossUI();
+    }
+
+    function syncCarDriveModule() {
+        if (!window.GeowalkCarDrive) return;
+        GeowalkCarDrive.sync({
+            carMode: isCarMode(),
+            overlayOpen: document.body.classList.contains("overlay-open")
+        });
+        syncCarPinsModule();
+    }
+
+    function syncCarPinsModule() {
+        if (!window.GeowalkCarPins) return;
+        GeowalkCarPins.sync({
+            carMode: pinsActiveForCurrentMode(),
+            overlayOpen: document.body.classList.contains("overlay-open")
+        });
+    }
+
+    function syncFollowTerrainHandsModule() {
+        if (!window.GeowalkFollowTerrainHands) return;
+        GeowalkFollowTerrainHands.sync({
+            followTerrain: isFollowMode(),
+            overlayOpen: document.body.classList.contains("overlay-open")
+        });
+    }
+
+    function showMovementModeToast(modeId) {
+        if (!elMovementModeToast) return;
+        const label = MOVEMENT_MODE_LABELS[modeId];
+        if (!label) return;
+        elMovementModeToast.textContent = label;
+        elMovementModeToast.classList.remove("show");
+        void elMovementModeToast.offsetWidth;
+        elMovementModeToast.classList.add("show");
+    }
+
+    function setMovementMode(modeId) {
+        if (!MOVEMENT_MODES.some(m => m.id === modeId)) return;
+        const changed = CONFIG.movementMode !== modeId;
+        CONFIG.movementMode = modeId;
+        CONFIG.ignoreTerrainCollision = modeId === "ignore";
+        elNoTerrCol.checked = modeId === "ignore";
+        fixedElevation = null;
+        velFwd = 0;
+        velStrafe = 0;
+        carYawVel = 0;
+        carCameraRoll = 0;
+        carCameraView = "chase";
+        carSkinPickerOpen = false;
+        carSkinPickerLift = 0;
+        carSkinPickerLiftAnim = null;
+        try { map.setCenterClampedToGround(false); } catch (e) {}
+        startHeightAnimForMode(modeId);
+        syncMovementChooseUI();
+        applyCarModeVisuals();
+        if (changed) showMovementModeToast(modeId);
+    }
+
+    function setIgnoreTerrain(ignore) {
+        setMovementMode(ignore ? "ignore" : "follow");
+    }
+
+    function applyMovementChooseIndex(index) {
+        const n = MOVEMENT_MODES.length;
+        const i = ((index % n) + n) % n;
+        setMovementMode(MOVEMENT_MODES[i].id);
+    }
+
+    function cycleTerrainChoose() {
+        let cur = MOVEMENT_MODES.findIndex(m => m.id === CONFIG.movementMode);
+        if (cur < 0) cur = 0;
+        applyMovementChooseIndex(cur + 1);
+    }
+
+    function syncTerrainChooseUI() {
+        syncMovementChooseUI();
+    }
+
+    // Небо из settings.json → поля MapLibre Style Spec (sky)
+    function skyToStyleSpec(sky) {
+        if (!sky) return undefined;
+        return {
+            "sky-color": sky.color,
+            "sky-horizon-blend": sky.horizonBlend,
+            "horizon-color": sky.horizonColor,
+            "horizon-fog-blend": sky.horizonFogBlend,
+            "fog-color": sky.fogColor,
+            "fog-ground-blend": sky.fogGroundBlend
+        };
+    }
+
+    function styleWithSkyFromConfig(style) {
+        if (!style || typeof style !== "object") return style;
+        const sky = getActiveSky();
+        if (!sky) return style;
+        const next = Object.assign({}, style);
+        next.sky = skyToStyleSpec(sky);
+        return next;
+    }
+
+    function loadInitialStyle() {
+        if (location.protocol === "file:") {
+            const embeddedByUrl = {
+                "maps/map1.json": window.GEOWALK_STYLE,
+                "maps/map2.json": window.GEOWALK_STYLE_MAP2,
+                "maps/map3.json": window.GEOWALK_STYLE_MAP3,
+                "maps/map4.json": window.GEOWALK_STYLE_MAP4,
+                "maps/trees.json": window.GEOWALK_STYLE_TREES,
+                "maps/trees3.json": window.GEOWALK_STYLE_TREES3
+            };
+            const embedded = embeddedByUrl[CONFIG.styleUrl];
+            if (embedded) return styleWithSkyFromConfig(embedded);
+            if (window.GEOWALK_STYLE) return styleWithSkyFromConfig(window.GEOWALK_STYLE);
+        }
+        if (location.protocol !== "file:") {
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open("GET", CONFIG.styleUrl, false);
+                xhr.send(null);
+                if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+                    return styleWithSkyFromConfig(JSON.parse(xhr.responseText));
+                }
+            } catch (e) { /* MapLibre загрузит styleUrl сам */ }
+        }
+        return CONFIG.styleUrl;
+    }
+
+    const MINI_MAP_STYLE_URL = "maps/mini1.json";
+
+    function loadMiniMapStyle() {
+        // Мини-карта всегда использует только maps/mini1.json (не основной стиль карты).
+        if (location.protocol === "file:" && window.GEOWALK_MINI_STYLE) {
+            return window.GEOWALK_MINI_STYLE;
+        }
+        if (location.protocol !== "file:") {
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open("GET", MINI_MAP_STYLE_URL, false);
+                xhr.send(null);
+                if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+                    return JSON.parse(xhr.responseText);
+                }
+            } catch (e) { /* см. запасной вариант ниже */ }
+        }
+        return MINI_MAP_STYLE_URL;
+    }
+
+    const EARTH_CIRC = 40075016.686; // м
+    const TILE = 512;
+    const DEG = Math.PI / 180;
+    const M_PER_DEG_LAT = 111320;
+
+    // ----------------------------------------------------------------------
+    // Карта
+    // ----------------------------------------------------------------------
+    // Стиль + небо из settings.json: sky вшивается в объект стиля до создания карты.
+    const initialStyle = loadInitialStyle();
+
+    const map = new maplibregl.Map({
+        container: "map",
+        style: initialStyle,
+        center: [CONFIG.start.lng, CONFIG.start.lat],
+        zoom: 18,
+        bearing: CONFIG.startBearing,
+        pitch: 60,
+        interactive: false,
+        attributionControl: { compact: true },
+        maxPitch: 90,
+        maxZoom: 24,
+        fadeDuration: 0,
+        crossSourceCollisions: false
+    });
+
+    let miniMap = null;
+    let miniMapReady = false;
+    let miniMapExpanded = false;
+    const MINI_MAP_ZOOM = 12;
+    const elMiniMapWrap = document.getElementById("mini-map-wrap");
+    const elMiniMapCompass = document.getElementById("mini-map-compass");
+
+    function setMiniMapExpanded(expanded) {
+        miniMapExpanded = !!expanded;
+        if (elMiniMapWrap) elMiniMapWrap.classList.toggle("expanded", miniMapExpanded);
+        if (miniMap) requestAnimationFrame(() => { try { miniMap.resize(); } catch (e) {} });
+    }
+
+    function toggleMiniMapExpanded() {
+        if (CONFIG.minimapEnabled === false || !elMiniMapWrap || elMiniMapWrap.hidden) return;
+        setMiniMapExpanded(!miniMapExpanded);
+    }
+
+    function createMiniMap() {
+        if (miniMap) return;
+        miniMap = new maplibregl.Map({
+            container: "mini-map",
+            style: loadMiniMapStyle(),
+            center: [CONFIG.start.lng, CONFIG.start.lat],
+            zoom: MINI_MAP_ZOOM,
+            bearing: CONFIG.startBearing,
+            pitch: 0,
+            interactive: false,
+            attributionControl: false,
+            fadeDuration: 0,
+            maxPitch: 0,
+            pitchWithRotate: false,
+            dragRotate: false
+        });
+        miniMap.on("load", () => {
+            miniMapReady = true;
+            updateMiniMap();
+        });
+    }
+
+    function destroyMiniMap() {
+        if (!miniMap) return;
+        miniMapReady = false;
+        try { miniMap.remove(); } catch (e) {}
+        miniMap = null;
+    }
+
+    function syncMiniMapEnabled() {
+        const on = CONFIG.minimapEnabled !== false;
+        if (elMiniMapWrap) elMiniMapWrap.hidden = !on;
+        if (!on) setMiniMapExpanded(false);
+        if (on) createMiniMap();
+        else destroyMiniMap();
+    }
+
+    function updateMiniMap() {
+        if (!miniMap || !miniMapReady) return;
+        try {
+            miniMap.jumpTo({
+                center: [player.lng, player.lat],
+                bearing: player.yaw,
+                pitch: 0,
+                zoom: MINI_MAP_ZOOM
+            });
+        } catch (e) { /* пропускаем редкий сбой кадра */ }
+        if (elMiniMapCompass) {
+            elMiniMapCompass.style.transform = "translate(-50%, -50%) rotate(" + (-player.yaw) + "deg)";
+        }
+    }
+
+    function stripIconLayers() {
+        for (const layer of map.getStyle().layers || []) {
+            if (layer.type === "symbol" && layer.layout && layer.layout["icon-image"]) {
+                try { map.removeLayer(layer.id); } catch (e) {}
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // Состояние игрока
+    // ----------------------------------------------------------------------
+    const player = {
+        lng: CONFIG.start.lng,
+        lat: CONFIG.start.lat,
+        yaw: CONFIG.startBearing,    // курс, град
+        pitch: CONFIG.pitchStart,    // наклон камеры, град (0=вниз,90=горизонт)
+        altOffset: altOffsetForTotalEye(totalEyeHeightForMode(CONFIG.movementMode)),
+        speed: 0,
+        eye: CONFIG.eyeHeight,
+        collision: true
+    };
+
+    syncMiniMapEnabled();
+
+    // фиксированная высота рельефа-базы (м над уровнем моря) при включённом
+    // «игнорировать рельеф»: камера держит постоянную абсолютную высоту = база + рост.
+    let fixedElevation = null;
+    // скорость в системе игрока (м/с): вперёд/назад и влево/вправо — для инерции
+    let velFwd = 0, velStrafe = 0;
+    let carYawVel = 0;
+    let carCameraRoll = 0;
+    let carCameraView = "chase"; // chase | topdown (клавиша C)
+    let carSkinPickerOpen = false;
+    let carSkinPickerLift = 0;
+    let carSkinPickerLiftAnim = null;
+    let modeVisualsBase = null;
+
+    const CAR_MODE_FOG = 0.9;
+    const CAR_TOP_CLIP3D_FACTOR = 1;
+    const CAR_TOP_WAKE_MAX = 14;
+
+    function syncModeVisualsPanel() {
+        if (elDraw) elDraw.value = CONFIG.sky.fogGroundBlend;
+        if (elClip3dFactor) elClip3dFactor.value = CONFIG.clip3dFactor;
+        if (elCarWakeMax) elCarWakeMax.value = CONFIG.carWakeMaxCount;
+    }
+
+    function syncCarWakeMax() {
+        if (window.GeowalkCarDrive) GeowalkCarDrive.setWakeMaxCount(CONFIG.carWakeMaxCount);
+    }
+
+    function applyCarModeVisuals() {
+        if (!isCarMode()) {
+            if (!modeVisualsBase) return;
+            CONFIG.sky.fogGroundBlend = modeVisualsBase.fogGroundBlend;
+            CONFIG.clip3dFactor = modeVisualsBase.clip3dFactor;
+            CONFIG.carWakeMaxCount = modeVisualsBase.carWakeMaxCount;
+            modeVisualsBase = null;
+            syncModeVisualsPanel();
+            persistActiveSkyParams();
+            if (map) applySky();
+            syncCarWakeMax();
+            return;
+        }
+        if (!modeVisualsBase) {
+            modeVisualsBase = {
+                fogGroundBlend: CONFIG.sky.fogGroundBlend,
+                clip3dFactor: CONFIG.clip3dFactor,
+                carWakeMaxCount: CONFIG.carWakeMaxCount
+            };
+        }
+        CONFIG.sky.fogGroundBlend = CAR_MODE_FOG;
+        if (carCameraView === "topdown") {
+            CONFIG.clip3dFactor = CAR_TOP_CLIP3D_FACTOR;
+            CONFIG.carWakeMaxCount = CAR_TOP_WAKE_MAX;
+        } else {
+            CONFIG.clip3dFactor = modeVisualsBase.clip3dFactor;
+            CONFIG.carWakeMaxCount = modeVisualsBase.carWakeMaxCount;
+        }
+        syncModeVisualsPanel();
+        persistActiveSkyParams();
+        if (map) applySky();
+        syncCarWakeMax();
+    }
+
+    function toggleCarCameraView() {
+        if (!isCarMode()) return;
+        if (carSkinPickerOpen) {
+            closeCarSkinPicker(true);
+            return;
+        }
+        carCameraView = carCameraView === "chase" ? "topdown" : "chase";
+        applyCarModeVisuals();
+    }
+    let heightAnim = null;
+    let jumpAnim = null;
+
+    function startHeightAnimForMode(mode) {
+        jumpAnim = null;
+        heightAnim = {
+            from: player.altOffset,
+            to: altOffsetForTotalEye(totalEyeHeightForMode(mode)),
+            elapsed: 0,
+            duration: Math.max(0.2, CONFIG.heightAnimSec || 2)
+        };
+    }
+
+    function startHeightAnim(ignore) {
+        startHeightAnimForMode(ignore ? "ignore" : "follow");
+    }
+
+    function updateHeightAnim(dt) {
+        if (!heightAnim) return;
+        heightAnim.elapsed += dt;
+        const u = Math.min(1, heightAnim.elapsed / heightAnim.duration);
+        const ease = u * u * (3 - 2 * u);
+        player.altOffset = heightAnim.from + (heightAnim.to - heightAnim.from) * ease;
+        if (u >= 1) heightAnim = null;
+    }
+
+    function getJumpLift() {
+        if (!jumpAnim) return 0;
+        const u = Math.min(1, jumpAnim.elapsed / jumpAnim.duration);
+        return Math.sin(Math.PI * u) * jumpAnim.amplitude;
+    }
+
+    function tryStartFollowJump() {
+        // Прыжок в режиме «следовать рельефу» (desktop: pointer lock, touch: сенсорный UI)
+        if (CONFIG.ignoreTerrainCollision || !controlsActive() || !isFollowMode()) return;
+        if (heightAnim || jumpAnim) return;
+        jumpAnim = {
+            base: player.altOffset,
+            amplitude: CONFIG.followTerrainJumpHeight != null ? CONFIG.followTerrainJumpHeight : 14,
+            elapsed: 0,
+            duration: Math.max(0.4, CONFIG.followTerrainJumpSec != null ? CONFIG.followTerrainJumpSec : 1.4)
+        };
+    }
+
+    function updateFollowJumpAnim(dt) {
+        if (!jumpAnim) return;
+        jumpAnim.elapsed += dt;
+        player.altOffset = jumpAnim.base + getJumpLift();
+        if (jumpAnim.elapsed >= jumpAnim.duration) {
+            player.altOffset = jumpAnim.base;
+            jumpAnim = null;
+        }
+    }
+
+    // Автопрокрутка на заставке: вперёд 10 м/с, не дольше 2 мин, пока виден оверлей
+    const OVERLAY_AUTO_WALK_SPEED = 10;
+    const OVERLAY_AUTO_WALK_SEC = 120;
+    let overlayAutoWalkTime = 0;
+
+    const keys = Object.create(null);
+    const touchJoy = { fwd: 0, turn: 0 };
+    let joyPointerId = null;
+    let locked = false;
+    let ready = false;
+    let started = false;
+
+    // ----------------------------------------------------------------------
+    // Ввод
+    // ----------------------------------------------------------------------
+    const overlay = document.getElementById("overlay");
+    const resumeHint = document.getElementById("resume-hint");
+    const flightHint = document.getElementById("flight-hint");
+    const canvasEl = map.getCanvas();
+
+    function overlayVisible() {
+        return !overlay.classList.contains("hidden");
+    }
+
+    function isTouchUiActive() {
+        return window.matchMedia("(max-width: 1000px)").matches && !overlayVisible();
+    }
+
+    function isTouchUiTextInput(el) {
+        return el && el.closest && el.closest("#search-bar input, #panel input, #panel textarea");
+    }
+
+    function preventTouchUiSelection(e) {
+        if (!isTouchUiActive() || isTouchUiTextInput(e.target)) return;
+        e.preventDefault();
+    }
+
+    document.addEventListener("selectstart", preventTouchUiSelection);
+    document.addEventListener("contextmenu", preventTouchUiSelection);
+
+    function controlsActive() {
+        return locked || isTouchUiActive();
+    }
+
+    function syncTouchControlsAria() {
+        const el = document.getElementById("touch-controls");
+        if (el) el.setAttribute("aria-hidden", isTouchUiActive() ? "false" : "true");
+    }
+
+    let resetTouchJoystick = null;
+
+    function syncTouchCrossUI() {
+        const elDown = document.getElementById("touch-down");
+        if (elDown) {
+            elDown.disabled = false;
+            elDown.classList.remove("touch-btn-disabled");
+            if (isCarMode()) {
+                elDown.textContent = "_";
+                elDown.setAttribute("aria-label", "Тормоз");
+            } else if (isFollowMode()) {
+                elDown.textContent = "J";
+                elDown.setAttribute("aria-label", "Прыжок");
+            } else {
+                elDown.textContent = "↓";
+                elDown.setAttribute("aria-label", "Вниз");
+            }
+        }
+        if (isCarMode()) {
+            touchJoy.fwd = 0;
+            touchJoy.turn = 0;
+            keys["KeyW"] = false;
+            if (resetTouchJoystick) resetTouchJoystick();
+        }
+    }
+
+    function initTouchControls() {
+        const JOY_RADIUS = 52;
+        const JOY_DEAD = 0.12;
+        const elJoy = document.getElementById("touch-joystick");
+        const elStick = document.getElementById("touch-joystick-stick");
+        const elUp = document.getElementById("touch-up");
+        const elLeft = document.getElementById("touch-left");
+        const elRight = document.getElementById("touch-right");
+        const elDown = document.getElementById("touch-down");
+        if (!elJoy || !elStick) return;
+
+        function resetStick() {
+            touchJoy.fwd = 0;
+            touchJoy.turn = 0;
+            elStick.style.transform = "translate(-50%, -50%)";
+        }
+        resetTouchJoystick = resetStick;
+
+        function updateStick(e) {
+            const rect = elJoy.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            let dx = e.clientX - cx;
+            let dy = e.clientY - cy;
+            const dist = Math.hypot(dx, dy);
+            if (dist > JOY_RADIUS) {
+                dx = (dx / dist) * JOY_RADIUS;
+                dy = (dy / dist) * JOY_RADIUS;
+            }
+            elStick.style.transform = "translate(calc(-50% + " + dx + "px), calc(-50% + " + dy + "px))";
+            touchJoy.fwd = -dy / JOY_RADIUS;
+            touchJoy.turn = dx / JOY_RADIUS;
+            if (Math.abs(touchJoy.fwd) < JOY_DEAD) touchJoy.fwd = 0;
+            if (Math.abs(touchJoy.turn) < JOY_DEAD) touchJoy.turn = 0;
+        }
+
+        elJoy.addEventListener("pointerdown", (e) => {
+            e.preventDefault();
+            joyPointerId = e.pointerId;
+            elJoy.setPointerCapture(e.pointerId);
+            updateStick(e);
+        });
+        elJoy.addEventListener("pointermove", (e) => {
+            if (e.pointerId !== joyPointerId) return;
+            e.preventDefault();
+            updateStick(e);
+        });
+        function endJoy(e) {
+            if (e.pointerId !== joyPointerId) return;
+            joyPointerId = null;
+            resetStick();
+        }
+        elJoy.addEventListener("pointerup", endJoy);
+        elJoy.addEventListener("pointercancel", endJoy);
+
+        function bindTouchBtn(el, down, up) {
+            if (!el) return;
+            el.addEventListener("pointerdown", (e) => {
+                e.preventDefault();
+                el.classList.add("pressed");
+                el.setPointerCapture(e.pointerId);
+                down();
+            });
+            function release() {
+                el.classList.remove("pressed");
+                up();
+            }
+            el.addEventListener("pointerup", release);
+            el.addEventListener("pointercancel", release);
+        }
+
+        bindTouchBtn(elUp, () => {
+            if (isIgnoreMode()) keys["Space"] = true;
+            else if (isFollowMode()) tryStartFollowJump();
+            else if (isCarMode()) keys["ShiftLeft"] = true;
+        }, () => {
+            keys["Space"] = false;
+            keys["ShiftLeft"] = false;
+        });
+
+        bindTouchBtn(elDown, () => {
+            if (isFollowMode()) tryStartFollowJump();
+            else if (isIgnoreMode()) keys["KeyX"] = true;
+            else if (isCarMode()) keys["Space"] = true;
+        }, () => {
+            keys["KeyX"] = false;
+            keys["Space"] = false;
+        });
+
+        bindTouchBtn(elLeft, () => { keys["KeyA"] = true; }, () => { keys["KeyA"] = false; });
+        bindTouchBtn(elRight, () => { keys["KeyD"] = true; }, () => { keys["KeyD"] = false; });
+
+        const elGo = document.getElementById("touch-go");
+        const elCam = document.getElementById("touch-cam");
+        bindTouchBtn(elGo, () => { keys["KeyW"] = true; }, () => { keys["KeyW"] = false; });
+        if (elCam) {
+            elCam.addEventListener("pointerdown", (e) => {
+                e.preventDefault();
+                toggleCarCameraView();
+            });
+        }
+
+        syncTouchCrossUI();
+        syncTouchControlsAria();
+        window.addEventListener("resize", syncTouchControlsAria);
+    }
+    initTouchControls();
+
+    function syncOverlayChrome() {
+        document.body.classList.toggle("overlay-open", overlayVisible());
+        syncFollowTerrainHandsModule();
+        syncCarDriveModule();
+        syncTouchControlsAria();
+    }
+
+    function requestLock() {
+        if (carSkinPickerOpen) return;
+        canvasEl.requestPointerLock?.();
+    }
+
+    function dismissOverlay() {
+        started = true;
+        overlay.classList.add("hidden");
+        resumeHint.style.display = "none";
+        flightHint.style.display = "none";
+        syncOverlayChrome();
+    }
+
+    overlay.addEventListener("click", () => {
+        if (window.matchMedia("(max-width: 1000px)").matches) dismissOverlay();
+        else requestLock();
+    });
+    canvasEl.addEventListener("click", () => {
+        if (carSkinPickerOpen) return;
+        if (window.matchMedia("(max-width: 1000px)").matches) {
+            if (overlayVisible()) dismissOverlay();
+            return;
+        }
+        if (!locked) requestLock();
+    });
+
+    document.addEventListener("pointerlockchange", () => {
+        locked = document.pointerLockElement === canvasEl;
+        if (locked) {
+            started = true;
+            overlay.classList.add("hidden");
+            resumeHint.style.display = "none";
+            flightHint.style.display = "block";
+        } else {
+            flightHint.style.display = "none";
+            // после старта не показываем большую заставку, чтобы был доступ к полям
+            if (started && !carSkinPickerOpen) resumeHint.style.display = "block";
+            else if (started && carSkinPickerOpen && resumeHint) resumeHint.style.display = "none";
+            else overlay.classList.remove("hidden");
+        }
+        syncOverlayChrome();
+    });
+
+    document.addEventListener("mousemove", (e) => {
+        if (!locked || isCarMode()) return;
+        player.yaw = ((player.yaw + e.movementX * CONFIG.mouseYaw) % 360 + 360) % 360;
+        // вертикальный обзор отключён — наклон камеры фиксирован (CONFIG.pitchStart)
+    });
+
+    function isTyping(e) {
+        const t = e.target;
+        return t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+    }
+
+    const HANDLED = ["Space","KeyX","KeyW","KeyA","KeyS","KeyD","KeyC","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","ShiftLeft","ShiftRight","KeyQ","Digit1","Digit2","Digit3"];
+    let sprite1InRange = false;
+    window.addEventListener("keydown", (e) => {
+        if (isTyping(e)) return;            // не мешаем вводу в поля
+        if (e.code === "KeyE" && !e.repeat && sprite1InRange &&
+            !(elStyleMenu && elStyleMenu.classList.contains("visible"))) {
+            e.preventDefault();
+            document.exitPointerLock?.();
+            openStyleMenu();
+            hideRealityHint();
+            return;
+        }
+        if (e.code === "Digit1" && !e.repeat) {
+            e.preventDefault();
+            applyMovementChooseIndex(0);
+            return;
+        }
+        if (e.code === "Digit2" && !e.repeat) {
+            e.preventDefault();
+            applyMovementChooseIndex(1);
+            return;
+        }
+        if (e.code === "Digit3" && !e.repeat) {
+            e.preventDefault();
+            applyMovementChooseIndex(2);
+            return;
+        }
+        if (e.code === "KeyQ") {
+            e.preventDefault();
+            if (isCarMode() && !e.repeat) {
+                toggleCarSkinPicker();
+                return;
+            }
+            cycleTerrainChoose();
+            return;
+        }
+        if (e.code === "KeyM" && !e.repeat) {
+            e.preventDefault();
+            toggleMiniMapExpanded();
+            return;
+        }
+        if (e.code === "KeyF" && !e.repeat) {
+            e.preventDefault();
+            toggleDebugMenu();
+            return;
+        }
+        if (e.code === "KeyC" && locked && isCarMode() && !e.repeat && !carSkinPickerOpen) {
+            e.preventDefault();
+            toggleCarCameraView();
+            return;
+        }
+        if (e.code === "Space" && controlsActive() && isFollowMode() && !e.repeat) {
+            e.preventDefault();
+            tryStartFollowJump();
+            return;
+        }
+        keys[e.code] = true;
+        if (HANDLED.includes(e.code)) e.preventDefault();
+    });
+    window.addEventListener("keyup", (e) => {
+        if (isTyping(e)) return;
+        keys[e.code] = false;
+    });
+
+    // ----------------------------------------------------------------------
+    // Панель настроек + переход по городу
+    // ----------------------------------------------------------------------
+    const elCity = document.getElementById("city");
+    const elCityGo = document.getElementById("city-go");
+    const elCityStatus = document.getElementById("city-status");
+    const teleportOverlay = document.getElementById("teleport-overlay");
+    let teleportHideTimer = null;
+    let teleportFadeTimer = null;
+
+    const TELEPORT_FADE_START_MS = 4000;
+    const TELEPORT_TOTAL_MS = 5000;
+    const TELEPORT_MAP_DELAY_MS = 1500;
+    let teleportMoveTimer = null;
+
+    function applyTeleportToMap(lng, lat) {
+        player.lng = lng;
+        player.lat = lat;
+        player.altOffset = altOffsetForTotalEye(totalEyeHeightForMode(CONFIG.movementMode));
+        heightAnim = null;
+        jumpAnim = null;
+        velFwd = 0;
+        velStrafe = 0;
+        fixedElevation = null;
+        if (window.GeowalkWoodTerrainExtrude) GeowalkWoodTerrainExtrude.reset(lng, lat);
+        if (ready) applyCamera();
+    }
+
+    function scheduleTeleportMove(lng, lat) {
+        if (teleportMoveTimer) clearTimeout(teleportMoveTimer);
+        teleportMoveTimer = setTimeout(() => {
+            teleportMoveTimer = null;
+            applyTeleportToMap(lng, lat);
+        }, TELEPORT_MAP_DELAY_MS);
+    }
+
+    function resetTeleportAnimations() {
+        if (!teleportOverlay) return;
+        const animated = teleportOverlay.querySelectorAll(
+            ".teleport-backdrop, .teleport-strip, .teleport-buddy-wrap, .teleport-buddy"
+        );
+        for (const el of animated) el.style.animation = "none";
+        void teleportOverlay.offsetWidth;
+        for (const el of animated) el.style.animation = "";
+    }
+
+    function showTeleportTransition() {
+        if (teleportHideTimer) clearTimeout(teleportHideTimer);
+        if (teleportFadeTimer) clearTimeout(teleportFadeTimer);
+        if (!teleportOverlay) return;
+        teleportOverlay.classList.remove("visible", "active", "fading-out");
+        resetTeleportAnimations();
+        void teleportOverlay.offsetWidth;
+        teleportOverlay.classList.add("visible");
+        requestAnimationFrame(() => teleportOverlay.classList.add("active"));
+        teleportOverlay.setAttribute("aria-hidden", "false");
+        teleportFadeTimer = setTimeout(() => {
+            teleportOverlay.classList.add("fading-out");
+            teleportFadeTimer = null;
+        }, TELEPORT_FADE_START_MS);
+        teleportHideTimer = setTimeout(hideTeleportTransition, TELEPORT_TOTAL_MS);
+    }
+
+    function hideTeleportTransition() {
+        if (teleportHideTimer) clearTimeout(teleportHideTimer);
+        if (teleportFadeTimer) clearTimeout(teleportFadeTimer);
+        if (!teleportOverlay) return;
+        teleportOverlay.classList.remove("active", "visible", "fading-out");
+        resetTeleportAnimations();
+        teleportOverlay.setAttribute("aria-hidden", "true");
+        teleportHideTimer = null;
+        teleportFadeTimer = null;
+    }
+
+    function bindNumber(el, apply) {
+        el.addEventListener("input", () => {
+            const v = parseFloat(el.value);
+            if (!isNaN(v)) apply(v);
+        });
+    }
+    bindNumber(elWalk, v => CONFIG.walkSpeed = v);
+    bindNumber(elRun, v => CONFIG.runMultiplier = v);
+    function clampFov(v) { return Math.max(30, Math.min(120, v)); }
+    function applyFov() {
+        if (!map) return;
+        try { map.setVerticalFieldOfView(clampFov(CONFIG.fov)); } catch (err) { console.warn("FOV:", err); }
+    }
+    bindNumber(elFov, v => { CONFIG.fov = clampFov(v); applyFov(); });
+    bindNumber(elFly, v => CONFIG.flySpeed = v);
+    bindNumber(elFpsLimit, v => { CONFIG.fpsLimit = Math.max(0, Math.round(v)); });
+    bindNumber(elDraw, v => {
+        CONFIG.sky.fogGroundBlend = Math.max(0, Math.min(1, v));
+        persistActiveSkyParams();
+        applySky();
+    });
+
+    function syncClipPanelUI() {
+        if (elClip3dFactor) elClip3dFactor.disabled = !elClip3d || !elClip3d.checked;
+    }
+    function syncCarRollPanelUI() {
+        const on = elCarRoll && elCarRoll.checked;
+        if (elCarRollMax) elCarRollMax.disabled = !on;
+        if (elCarRollSec) elCarRollSec.disabled = !on;
+    }
+    if (elClip3d) {
+        elClip3d.addEventListener("change", () => {
+            CONFIG.clip3dEnabled = elClip3d.checked;
+            syncClipPanelUI();
+        });
+    }
+    bindNumber(elClip3dFactor, v => {
+        CONFIG.clip3dFactor = Math.max(0.05, Math.min(1, v));
+    });
+    if (elCarRoll) {
+        elCarRoll.addEventListener("change", () => {
+            CONFIG.carCameraRollEnabled = elCarRoll.checked;
+            syncCarRollPanelUI();
+        });
+    }
+    if (elCarSprite) {
+        elCarSprite.addEventListener("change", () => {
+            applyCarSprite(Number(elCarSprite.value), true);
+        });
+    }
+    bindNumber(elCarRollMax, v => {
+        CONFIG.carCameraRollMax = Math.max(0, Math.min(45, v));
+    });
+    bindNumber(elCarRollSec, v => {
+        CONFIG.carCameraRollSec = Math.max(0.05, v);
+    });
+    bindNumber(elCarWakeMax, v => {
+        CONFIG.carWakeMaxCount = Math.max(1, Math.min(30, v | 0));
+        if (window.GeowalkCarDrive) GeowalkCarDrive.setWakeMaxCount(CONFIG.carWakeMaxCount);
+    });
+
+    // ---- Debug-меню точек (клавиша F) ----
+    const elDebugMenu = document.getElementById("debug-menu");
+    const elDebugMenuClose = document.getElementById("debug-menu-close");
+    const elDbgPinTable = document.getElementById("dbg-pin-table");
+    let debugMenuOpen = false;
+
+    // Строки таблицы параметров (ключ setParam, подпись, min, step).
+    const PIN_PARAM_ROWS = [
+        { key: "spawnRadius", field: "spawnMaxM", label: "Радиус генерации (м)", min: 2, step: 1 },
+        { key: "count", field: "count", label: "Кол-во точек", min: 1, max: 50, step: 1 },
+        { key: "hitRadius", field: "hitRadiusM", label: "Радиус сбора (м)", min: 0.5, step: 0.5 },
+        { key: "size", field: "sizeM", label: "Размер кубика (м)", min: 0.1, step: 0.5 },
+        { key: "base", field: "baseM", label: "Высота над землёй (м)", min: 0, step: 0.5 },
+        { key: "spin", field: "spinEnabled", label: "Вращение", type: "bool" }
+    ];
+
+    // Строки блока движения/шлейфа (только для подвижных типов, moveSpeedM > 0).
+    const PIN_MOVE_ROWS = [
+        { key: "moveSpeed", field: "moveSpeedM", label: "Скорость (м/с)", min: 0, step: 1 },
+        { key: "turnMin", field: "turnMinSec", label: "Смена угла: мин (с)", min: 0.05, step: 0.1 },
+        { key: "turnMax", field: "turnMaxSec", label: "Смена угла: макс (с)", min: 0.05, step: 0.1 },
+        { key: "trailEnabled", field: "trailEnabled", label: "Шлейф вкл", type: "bool" },
+        { key: "trailCount", field: "trailCount", label: "Шлейф: кубиков", min: 0, max: 10, step: 1 },
+        { key: "trailSpacing", field: "trailSpacingM", label: "Шлейф: шаг (м)", min: 0.2, step: 0.5 }
+    ];
+
+    function buildTypeHead(t) {
+        const th = document.createElement("th");
+        const wrap = document.createElement("span");
+        wrap.className = "dbg-type-head";
+        const sw = document.createElement("span");
+        sw.className = "dbg-type-swatch";
+        sw.style.background = t.color;
+        wrap.appendChild(sw);
+        wrap.appendChild(document.createTextNode(t.id));
+        th.appendChild(wrap);
+        return th;
+    }
+
+    function makePinTable(rows, list) {
+        const table = document.createElement("table");
+        table.className = "dbg-pin-table";
+        const thead = document.createElement("thead");
+        const htr = document.createElement("tr");
+        const corner = document.createElement("th");
+        corner.className = "dbg-corner";
+        corner.textContent = "Параметр";
+        htr.appendChild(corner);
+        for (const t of list) htr.appendChild(buildTypeHead(t));
+        thead.appendChild(htr);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        for (const row of rows) {
+            const tr = document.createElement("tr");
+            const label = document.createElement("td");
+            label.className = "dbg-row-label";
+            label.textContent = row.label;
+            tr.appendChild(label);
+            for (const t of list) {
+                const td = document.createElement("td");
+                const input = document.createElement("input");
+                if (row.type === "bool") {
+                    input.type = "checkbox";
+                    input.checked = !!t[row.field];
+                    input.addEventListener("change", () => {
+                        if (window.GeowalkCarPins) GeowalkCarPins.setParam(t.id, row.key, input.checked);
+                    });
+                } else {
+                    input.type = "number";
+                    input.min = row.min;
+                    if (row.max != null) input.max = row.max;
+                    input.step = row.step;
+                    input.value = t[row.field];
+                    input.addEventListener("input", () => {
+                        const v = parseFloat(input.value);
+                        if (isNaN(v)) return;
+                        if (window.GeowalkCarPins) GeowalkCarPins.setParam(t.id, row.key, v);
+                    });
+                }
+                td.appendChild(input);
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        }
+        table.appendChild(tbody);
+        return table;
+    }
+
+    function buildPinParamTable() {
+        if (!elDbgPinTable) return;
+        const list = (window.GeowalkCarPins && GeowalkCarPins.getTypes)
+            ? GeowalkCarPins.getTypes() : [];
+        elDbgPinTable.innerHTML = "";
+        if (!list.length) return;
+
+        elDbgPinTable.appendChild(makePinTable(PIN_PARAM_ROWS, list));
+
+        // Отдельный блок движения/шлейфа только для подвижных типов.
+        const moving = list.filter(t => t.moveSpeedM > 0);
+        if (moving.length) {
+            const sep = document.createElement("div");
+            sep.className = "debug-menu-sep";
+            elDbgPinTable.appendChild(sep);
+            const sub = document.createElement("div");
+            sub.className = "debug-menu-subtitle";
+            sub.textContent = "Движение и шлейф";
+            elDbgPinTable.appendChild(sub);
+            elDbgPinTable.appendChild(makePinTable(PIN_MOVE_ROWS, moving));
+        }
+
+        buildSprite1Block();
+    }
+
+    // Строки блока спрайт-моба it_sprite1 (отдельный модуль GeowalkGiantMob).
+    const SPRITE1_ROWS = [
+        { key: "enabled", field: "enabled", label: "Вкл", type: "bool" },
+        { key: "spawnRadius", field: "spawnRadiusM", label: "Радиус появления (м)", min: 10, step: 10 },
+        { key: "count", field: "count", label: "Количество", min: 0, max: 50, step: 1 },
+        { key: "size", field: "sizeM", label: "Размер ширины (м)", min: 1, step: 1 }
+    ];
+
+    function buildSprite1Block() {
+        if (!window.GeowalkGiantMob || !GeowalkGiantMob.getParams) return;
+        const p = GeowalkGiantMob.getParams();
+
+        const sep = document.createElement("div");
+        sep.className = "debug-menu-sep";
+        elDbgPinTable.appendChild(sep);
+        const sub = document.createElement("div");
+        sub.className = "debug-menu-subtitle";
+        sub.textContent = "Спрайт it_sprite1";
+        elDbgPinTable.appendChild(sub);
+
+        const table = document.createElement("table");
+        table.className = "dbg-pin-table";
+        const thead = document.createElement("thead");
+        const htr = document.createElement("tr");
+        const corner = document.createElement("th");
+        corner.className = "dbg-corner";
+        corner.textContent = "Параметр";
+        htr.appendChild(corner);
+        const th = document.createElement("th");
+        const wrap = document.createElement("span");
+        wrap.className = "dbg-type-head";
+        wrap.appendChild(document.createTextNode(p.id || "it_sprite1"));
+        th.appendChild(wrap);
+        htr.appendChild(th);
+        thead.appendChild(htr);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        for (const row of SPRITE1_ROWS) {
+            const tr = document.createElement("tr");
+            const label = document.createElement("td");
+            label.className = "dbg-row-label";
+            label.textContent = row.label;
+            tr.appendChild(label);
+            const td = document.createElement("td");
+            const input = document.createElement("input");
+            if (row.type === "bool") {
+                input.type = "checkbox";
+                input.checked = !!p[row.field];
+                input.addEventListener("change", () => GeowalkGiantMob.setParam(row.key, input.checked));
+            } else {
+                input.type = "number";
+                input.min = row.min;
+                if (row.max != null) input.max = row.max;
+                input.step = row.step;
+                input.value = p[row.field];
+                input.addEventListener("input", () => {
+                    const v = parseFloat(input.value);
+                    if (isNaN(v)) return;
+                    GeowalkGiantMob.setParam(row.key, v);
+                });
+            }
+            td.appendChild(input);
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+        }
+        table.appendChild(tbody);
+        elDbgPinTable.appendChild(table);
+    }
+
+    function setDebugMenuOpen(open) {
+        if (!elDebugMenu) return;
+        debugMenuOpen = !!open;
+        elDebugMenu.hidden = !debugMenuOpen;
+        elDebugMenu.setAttribute("aria-hidden", debugMenuOpen ? "false" : "true");
+        if (debugMenuOpen) {
+            buildPinParamTable();
+            document.exitPointerLock?.();
+        }
+    }
+
+    function toggleDebugMenu() { setDebugMenuOpen(!debugMenuOpen); }
+
+    if (elDebugMenuClose) {
+        elDebugMenuClose.addEventListener("click", () => setDebugMenuOpen(false));
+    }
+
+    const pinModeCheckboxes = {
+        ignore: document.getElementById("dbg-pin-mode-ignore"),
+        follow: document.getElementById("dbg-pin-mode-follow"),
+        car: document.getElementById("dbg-pin-mode-car")
+    };
+    Object.keys(pinModeCheckboxes).forEach(modeId => {
+        const cb = pinModeCheckboxes[modeId];
+        if (!cb) return;
+        cb.checked = pinModeEnabled[modeId] !== false;
+        cb.addEventListener("change", () => {
+            pinModeEnabled[modeId] = cb.checked;
+            syncCarPinsModule();
+        });
+    });
+
+    // ---- Stats: круговые диаграммы (собранные кубики) ----
+    const STAT_RING_R = 26;
+    const STAT_RING_C = 2 * Math.PI * STAT_RING_R;
+    const PIN_STATS = {
+        it_green: { max: 240, value: 0, prog: document.getElementById("stat-prog-green"), num: document.getElementById("stat-num-green"), maxEl: document.getElementById("stat-max-green") },
+        it_orange: { max: 50, value: 0, prog: document.getElementById("stat-prog-orange"), num: document.getElementById("stat-num-orange"), maxEl: document.getElementById("stat-max-orange") },
+        it_blue: { max: 10, value: 0, prog: document.getElementById("stat-prog-blue"), num: document.getElementById("stat-num-blue"), maxEl: document.getElementById("stat-max-blue") }
+    };
+    function updatePinStatRing(typeId) {
+        const s = PIN_STATS[typeId];
+        if (!s) return;
+        const frac = Math.max(0, Math.min(1, s.max ? s.value / s.max : 0));
+        if (s.prog) {
+            s.prog.style.strokeDasharray = STAT_RING_C;
+            s.prog.style.strokeDashoffset = STAT_RING_C * (1 - frac);
+        }
+        if (s.num) s.num.textContent = String(s.value);
+        if (s.maxEl) s.maxEl.textContent = String(s.max);
+    }
+    function addPinStat(typeId) {
+        const s = PIN_STATS[typeId];
+        if (!s) return;
+        s.value = Math.min(s.max, s.value + 1);
+        updatePinStatRing(typeId);
+    }
+    Object.keys(PIN_STATS).forEach(updatePinStatRing);
+
+    function applySky() {
+        try {
+            const sky = getActiveSky();
+            if (!sky) return;
+            map.setSky(skyToStyleSpec(sky));
+        } catch (err) { console.warn("Sky:", err); }
+    }
+
+    function applyTerrain(ex) {
+        try {
+            if (ex && ex > 0) map.setTerrain({ source: "terrain-dem", exaggeration: ex });
+            else map.setTerrain(null);
+        } catch (e) { console.warn("terrain:", e); }
+        if (window.GeowalkWoodTerrainExtrude) syncWoodTerrainFromConfig(true);
+    }
+
+    function applyTerrainCollision(ignore) {
+        setMovementMode(ignore ? "ignore" : "follow");
+    }
+
+    let ShadowClass = null;
+    let shadowLayer = null;
+    async function enableShadows() {
+        try {
+            if (shadowLayer) return;
+            if (!map.getLayer(CONFIG.buildingsLayerId)) { console.warn("shadows: нет слоя зданий"); return; }
+            if (!ShadowClass) {
+                const mod = await import(CONFIG.shadowModuleUrl);
+                ShadowClass = mod.AOShadowLayer;
+            }
+            shadowLayer = new ShadowClass({
+                buildingsLayerId: CONFIG.buildingsLayerId,
+                sourceId: CONFIG.buildingsSourceId
+            });
+            map.addLayer(shadowLayer, CONFIG.buildingsLayerId);
+            map.setLight({ anchor: "map", position: [1.2, 210, 30], intensity: 0.5 });
+        } catch (e) { console.warn("shadows:", e); }
+    }
+    function disableShadows() {
+        try { if (shadowLayer) { map.removeLayer(shadowLayer.id); shadowLayer = null; } } catch (e) {}
+    }
+
+    elRelief.addEventListener("input", () => {
+        const v = parseFloat(elRelief.value);
+        if (!isNaN(v)) { CONFIG.terrainExaggeration = v; applyTerrain(v); }
+    });
+    if (elTrees3d) {
+        elTrees3d.addEventListener("change", () => {
+            CONFIG.trees3dEnabled = elTrees3d.checked;
+            syncWoodTerrainFromConfig(true);
+        });
+    }
+    if (elTrees3dDensity) {
+        bindNumber(elTrees3dDensity, v => {
+            CONFIG.trees3dDensity = Math.max(0.2, Math.min(2, v));
+            elTrees3dDensity.value = CONFIG.trees3dDensity;
+            syncWoodTerrainFromConfig(true);
+        });
+    }
+    elNoTerrCol.addEventListener("change", () => setIgnoreTerrain(elNoTerrCol.checked));
+    elMinimap.addEventListener("change", () => {
+        CONFIG.minimapEnabled = elMinimap.checked;
+        syncMiniMapEnabled();
+    });
+    if (elSurfaceProbe) {
+        elSurfaceProbe.addEventListener("change", () => {
+            CONFIG.surfaceProbeEnabled = elSurfaceProbe.checked;
+            if (!CONFIG.surfaceProbeEnabled) {
+                surfaceCache = emptySurfaceCache();
+                surfaceCacheTime = 0;
+            }
+            updateSurfaceStatus();
+        });
+    }
+    MOVEMENT_MODES.forEach((mode, i) => {
+        mode.button.addEventListener("click", () => applyMovementChooseIndex(i));
+    });
+    elShadows.addEventListener("change", () => {
+        if (elShadows.checked) enableShadows(); else disableShadows();
+    });
+
+    // Swap style: полноэкранное меню выбора стиля карты
+    const elStyleFile = document.getElementById("style-file");
+    const elStyleMenu = document.getElementById("style-menu-overlay");
+    const elStyleMenuClose = document.getElementById("style-menu-close");
+    const elRealityHint = document.getElementById("reality-hint");
+    const SPRITE1_INTERACT_M = CONFIG.sprite1InteractM != null ? CONFIG.sprite1InteractM : 10;
+
+    function hideRealityHint() {
+        if (elRealityHint) elRealityHint.classList.remove("visible");
+    }
+
+    function updateRealityHint() {
+        if (!elRealityHint) return;
+        const styleMenuOpen = elStyleMenu && elStyleMenu.classList.contains("visible");
+        const near = window.GeowalkGiantMob && ready &&
+            GeowalkGiantMob.nearestDistM(player.lng, player.lat) <= SPRITE1_INTERACT_M;
+        sprite1InRange = !!near;
+        elRealityHint.classList.toggle("visible", sprite1InRange && !styleMenuOpen);
+    }
+    const elStyleMenuUpload = document.getElementById("style-menu-upload");
+    const STYLE_PRESETS = {
+        "maps/map1.json": "map1",
+        "maps/map2.json": "map2",
+        "maps/map3.json": "map3",
+        "maps/map4.json": "map4",
+        "maps/trees.json": "trees",
+        "maps/trees3.json": "map2"
+    };
+    const EMBEDDED_STYLE_BY_URL = {
+        "maps/map1.json": "GEOWALK_STYLE",
+        "maps/map2.json": "GEOWALK_STYLE_MAP2",
+        "maps/map3.json": "GEOWALK_STYLE_MAP3",
+        "maps/map4.json": "GEOWALK_STYLE_MAP4",
+        "maps/trees.json": "GEOWALK_STYLE_TREES",
+        "maps/trees3.json": "GEOWALK_STYLE_TREES3"
+    };
+
+    function getEmbeddedStyle(url) {
+        const key = EMBEDDED_STYLE_BY_URL[url];
+        return key && window[key] ? window[key] : null;
+    }
+
+    async function fetchStyleJson(url) {
+        // Через http-сервер всегда берём актуальный JSON из /maps.
+        if (location.protocol !== "file:") {
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error("HTTP " + resp.status);
+            return resp.json();
+        }
+        // file:// — браузер блокирует fetch/XHR к локальным json, используем снимок .js
+        const embedded = getEmbeddedStyle(url);
+        if (embedded) return embedded;
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", url, false);
+        xhr.send(null);
+        if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+            return JSON.parse(xhr.responseText);
+        }
+        throw new Error("load failed");
+    }
+
+    function openStyleMenu() {
+        if (!elStyleMenu) return;
+        elStyleMenu.hidden = false;
+        elStyleMenu.classList.add("visible");
+        elStyleMenu.setAttribute("aria-hidden", "false");
+    }
+
+    function closeStyleMenu() {
+        if (!elStyleMenu) return;
+        elStyleMenu.classList.remove("visible");
+        elStyleMenu.setAttribute("aria-hidden", "true");
+        elStyleMenu.hidden = true;
+    }
+
+    document.querySelectorAll(".style-swap").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openStyleMenu();
+        });
+    });
+
+    if (elStyleMenuClose) elStyleMenuClose.addEventListener("click", closeStyleMenu);
+    const elStyleMenuCancel = document.getElementById("style-menu-cancel");
+    if (elStyleMenuCancel) elStyleMenuCancel.addEventListener("click", closeStyleMenu);
+    if (elStyleMenu) {
+        elStyleMenu.addEventListener("click", (e) => {
+            if (e.target === elStyleMenu) closeStyleMenu();
+        });
+    }
+    if (elStyleMenuUpload) {
+        elStyleMenuUpload.addEventListener("click", () => elStyleFile.click());
+    }
+    elStyleMenu && elStyleMenu.querySelectorAll("[data-style-url]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            loadStyleFromUrl(btn.getAttribute("data-style-url"));
+        });
+    });
+
+    async function loadStyleFromUrl(url) {
+        if (!url) return;
+        if (elStyleStatus) elStyleStatus.textContent = "загрузка…";
+        closeStyleMenu();
+        const label = STYLE_PRESETS[url] || styleNameFromUrl(url);
+        try {
+            const obj = await fetchStyleJson(url);
+            swapStyle(obj, label, url);
+        } catch (err) {
+            console.warn("loadStyleFromUrl:", err);
+            if (elStyleStatus) elStyleStatus.textContent = "ошибка загрузки";
+        }
+    }
+
+    elStyleFile.addEventListener("change", () => {
+        const file = elStyleFile.files && elStyleFile.files[0];
+        elStyleFile.value = "";
+        if (!file) return;
+        elStyleStatus.textContent = "загрузка…";
+        const reader = new FileReader();
+        reader.onload = () => {
+            let obj;
+            try { obj = JSON.parse(reader.result); }
+            catch (e) { elStyleStatus.textContent = "не JSON"; return; }
+            closeStyleMenu();
+            swapStyle(obj, file.name, DEFAULT_SKY_STYLE_KEY);
+        };
+        reader.onerror = () => { elStyleStatus.textContent = "ошибка чтения"; };
+        reader.readAsText(file);
+    });
+
+    window.addEventListener("keydown", (e) => {
+        if (e.code === "Escape" && elStyleMenu && elStyleMenu.classList.contains("visible")) {
+            e.preventDefault();
+            closeStyleMenu();
+        }
+    });
+
+    async function goToCity(name) {
+        name = (name || "").trim();
+        if (!name) return;
+        elCityStatus.textContent = "ищу…";
+        try {
+            const url = "https://photon.komoot.io/api/?limit=1&q=" + encodeURIComponent(name);
+            const resp = await fetch(url);
+            const data = await resp.json();
+            const f = data.features && data.features[0];
+            if (!f) { elCityStatus.textContent = "не найдено"; return; }
+            const [lng, lat] = f.geometry.coordinates;
+            const p = f.properties || {};
+            elCityStatus.textContent = "→ " + (p.name || name) + (p.country ? ", " + p.country : "");
+            dismissOverlay();
+            showTeleportTransition();
+            scheduleTeleportMove(lng, lat);
+        } catch (err) {
+            elCityStatus.textContent = "ошибка сети";
+        }
+    }
+    elCityGo.addEventListener("click", () => goToCity(elCity.value));
+    elCity.addEventListener("keydown", (e) => { if (e.key === "Enter") goToCity(elCity.value); });
+
+    // Советы в чеклисте: delayMs — через сколько показать (мс). Картинку каждого совета меняй в src у .explore-checklist-tip-photo.
+    const EXPLORE_CHECKLIST_TIPS = [
+        { id: "explore-checklist-tip", delayMs: 20000 },
+        { id: "explore-checklist-tip-2", delayMs: 60000 },
+    ];
+
+    function showExploreChecklistTip(el) {
+        if (!el || el.classList.contains("is-dismissed") || el.classList.contains("is-visible")) return;
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => el.classList.add("is-visible"));
+        });
+    }
+
+    function dismissExploreChecklistTip(el) {
+        if (!el || el.classList.contains("is-dismissed")) return;
+        el.classList.remove("is-visible");
+        const finish = () => {
+            el.classList.add("is-dismissed");
+            el.removeEventListener("transitionend", finish);
+        };
+        el.addEventListener("transitionend", finish);
+        setTimeout(finish, 650);
+    }
+
+    EXPLORE_CHECKLIST_TIPS.forEach(({ id, delayMs }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        setTimeout(() => showExploreChecklistTip(el), delayMs);
+    });
+
+    document.querySelectorAll("#explore-checklist .explore-checklist-tip-close").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const tip = btn.closest(".explore-checklist-tip");
+            if (tip) dismissExploreChecklistTip(tip);
+        });
+    });
+
+    const elPanel = document.getElementById("panel");
+
+    function setDebugPanelOpen(open) {
+        if (elPanel) elPanel.classList.toggle("expanded", open);
+        document.body.classList.toggle("debug-panel-open", open);
+    }
+
+    document.querySelectorAll("[data-panel-toggle]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            setDebugPanelOpen(btn.getAttribute("data-panel-toggle") === "open");
+        });
+    });
+
+    // ----------------------------------------------------------------------
+    // Столкновения со зданиями (footprint из вектора + точка-в-полигоне)
+    // ----------------------------------------------------------------------
+    let buildingCache = [];
+    let cacheTime = 0;
+
+    function refreshBuildingCache() {
+        let feats;
+        try {
+            feats = map.querySourceFeatures(CONFIG.buildingsSourceId, { sourceLayer: CONFIG.buildingsSourceLayer });
+        } catch (e) { return; }
+        const lng0 = player.lng, lat0 = player.lat;
+        const pad = 0.0025; // ~250 м
+        const out = [];
+        for (const f of feats) {
+            const g = f.geometry; if (!g) continue;
+            const polys = g.type === "Polygon" ? [g.coordinates]
+                : g.type === "MultiPolygon" ? g.coordinates : null;
+            if (!polys) continue;
+            const props = f.properties || {};
+            const rawH = props.render_height != null ? props.render_height : props.height;
+            const height = (rawH != null && isFinite(+rawH)) ? +rawH : 12;
+            for (const poly of polys) {
+                const ring = poly[0];
+                if (!ring || ring.length < 3) continue;
+                let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+                for (const p of ring) {
+                    if (p[0] < minx) minx = p[0]; if (p[0] > maxx) maxx = p[0];
+                    if (p[1] < miny) miny = p[1]; if (p[1] > maxy) maxy = p[1];
+                }
+                if (maxx < lng0 - pad || minx > lng0 + pad || maxy < lat0 - pad || miny > lat0 + pad) continue;
+                out.push({ ring, minx, miny, maxx, maxy, height });
+            }
+        }
+        buildingCache = out;
+    }
+
+    function pointInRing(x, y, ring) {
+        let inside = false;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+            const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+            if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+        }
+        return inside;
+    }
+
+    function isInsideBuilding(lng, lat) {
+        for (const b of buildingCache) {
+            if (lng < b.minx || lng > b.maxx || lat < b.miny || lat > b.maxy) continue;
+            if (pointInRing(lng, lat, b.ring)) return true;
+        }
+        return false;
+    }
+
+    function ringsFromFeature(f) {
+        const g = f.geometry;
+        if (!g) return [];
+        if (g.type === "Polygon") return g.coordinates[0] ? [g.coordinates[0]] : [];
+        if (g.type === "MultiPolygon") return g.coordinates.map(p => p[0]).filter(Boolean);
+        return [];
+    }
+
+    function pushRingToCache(out, ring, lng0, lat0, pad) {
+        if (!ring || ring.length < 3) return;
+        let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+        for (const p of ring) {
+            if (p[0] < minx) minx = p[0]; if (p[0] > maxx) maxx = p[0];
+            if (p[1] < miny) miny = p[1]; if (p[1] > maxy) maxy = p[1];
+        }
+        if (maxx < lng0 - pad || minx > lng0 + pad || maxy < lat0 - pad || miny > lat0 + pad) return;
+        out.push({ ring, minx, miny, maxx, maxy });
+    }
+
+    const SURFACE_PROBE_LAYERS = [
+        { id: "water", sourceLayer: "water" },
+        { id: "landcover_wood", sourceLayer: "landcover", class: "wood" },
+        { id: "landcover_sand", sourceLayer: "landcover", class: "sand" },
+        { id: "landcover_grass", sourceLayer: "landcover", class: "grass" },
+        { id: "landcover_wetland", sourceLayer: "landcover", class: "wetland" },
+        { id: "park", sourceLayer: "park" },
+        { id: "landuse_cemetery", sourceLayer: "landuse", class: "cemetery" },
+        { id: "landuse_hospital", sourceLayer: "landuse", class: "hospital" },
+        { id: "landuse_school", sourceLayer: "landuse", class: "school" },
+        { id: "road_area_pattern", sourceLayer: "transportation", polygonOnly: true }
+    ];
+
+    function emptySurfaceCache() {
+        const cache = Object.create(null);
+        for (const layer of SURFACE_PROBE_LAYERS) cache[layer.id] = [];
+        return cache;
+    }
+
+    let surfaceCache = emptySurfaceCache();
+    let surfaceCacheTime = 0;
+    let playerSurfaceLayers = [];
+
+    function refreshSurfaceCache() {
+        surfaceCache = emptySurfaceCache();
+        if (!map.getSource("openmaptiles")) return;
+        const lng0 = player.lng, lat0 = player.lat;
+        const pad = 0.0025;
+        const sourceFeats = Object.create(null);
+        for (const layer of SURFACE_PROBE_LAYERS) {
+            if (sourceFeats[layer.sourceLayer]) continue;
+            try {
+                sourceFeats[layer.sourceLayer] = map.querySourceFeatures("openmaptiles", { sourceLayer: layer.sourceLayer });
+            } catch (e) {
+                sourceFeats[layer.sourceLayer] = [];
+            }
+        }
+        for (const layer of SURFACE_PROBE_LAYERS) {
+            for (const f of sourceFeats[layer.sourceLayer]) {
+                if (layer.class && f.properties?.class !== layer.class) continue;
+                if (layer.polygonOnly) {
+                    const gt = f.geometry?.type;
+                    if (gt !== "Polygon" && gt !== "MultiPolygon") continue;
+                }
+                for (const ring of ringsFromFeature(f)) pushRingToCache(surfaceCache[layer.id], ring, lng0, lat0, pad);
+            }
+        }
+    }
+
+    function isCarSandSurface(layers) {
+        return layers.includes("landcover_sand");
+    }
+
+    function isCarWoodSurface(layers) {
+        return layers.includes("landcover_wood");
+    }
+
+    function isCarWaterSurface(layers) {
+        return layers.includes("water") && !layers.includes("road_area_pattern");
+    }
+
+    function isOnSurface(cache, lng, lat) {
+        for (const item of cache) {
+            if (lng < item.minx || lng > item.maxx || lat < item.miny || lat > item.maxy) continue;
+            if (pointInRing(lng, lat, item.ring)) return true;
+        }
+        return false;
+    }
+
+    function probeSurfaceAt(lng, lat) {
+        const hit = [];
+        for (const layer of SURFACE_PROBE_LAYERS) {
+            if (isOnSurface(surfaceCache[layer.id], lng, lat)) hit.push(layer.id);
+        }
+        return hit;
+    }
+
+    function updateSurfaceStatus() {
+        const el = document.getElementById("surface-status");
+        if (!el) return;
+        if (CONFIG.surfaceProbeEnabled === false || !ready || (!isFollowMode() && !isCarMode())) {
+            el.textContent = "";
+            playerSurfaceLayers = [];
+            return;
+        }
+        if (isCarMode() || performance.now() - surfaceCacheTime > 350) {
+            refreshSurfaceCache();
+            surfaceCacheTime = performance.now();
+        }
+        playerSurfaceLayers = probeSurfaceAt(player.lng, player.lat);
+        el.textContent = playerSurfaceLayers.length ? playerSurfaceLayers.join(" · ") : "—";
+    }
+
+    // ----------------------------------------------------------------------
+    // Игровой цикл
+    // ----------------------------------------------------------------------
+    // Применяет все наши настройки поверх (свеже)загруженного стиля карты.
+    function setupStyle() {
+        applyFov();
+        stripIconLayers();
+        applySky();
+
+        // 3D рельеф: источник высот (DEM)
+        try {
+            if (!map.getSource("terrain-dem")) {
+                map.addSource("terrain-dem", {
+                    type: "raster-dem",
+                    tiles: [CONFIG.demUrl],
+                    tileSize: 256,
+                    encoding: CONFIG.demEncoding,
+                    maxzoom: 15
+                });
+            }
+            applyTerrain(CONFIG.terrainExaggeration);
+            fixedElevation = null;
+        } catch (err) { console.warn("DEM:", err); }
+
+        // Тени зданий (старый слой исчез вместе с прежним стилем)
+        shadowLayer = null;
+        if (CONFIG.shadows) enableShadows();
+
+        // пересчитать базу высоты и кэш зданий под новый стиль
+        fixedElevation = null;
+        buildingCache = [];
+        cacheTime = 0;
+        surfaceCache = emptySurfaceCache();
+        surfaceCacheTime = 0;
+
+        if (window.GeowalkWoodTerrainExtrude) {
+            try {
+                GeowalkWoodTerrainExtrude.setup(map, woodTerrainOptionsFromConfig());
+            } catch (err) { console.warn("Wood terrain extrude:", err); }
+        }
+        if (window.GeowalkCarPins) {
+            try {
+                GeowalkCarPins.setup(map);
+            } catch (err) { console.warn("Car pins:", err); }
+        }
+        if (window.GeowalkGiantMob) {
+            try {
+                GeowalkGiantMob.setup(map);
+            } catch (err) { console.warn("Sprite1 cubes:", err); }
+        }
+    }
+
+    function applyNearFarClip(tr) {
+        if (!tr || typeof tr.overrideNearFarZ !== "function") return;
+        try {
+            tr.clearNearFarZOverride();
+            const h = tr.height || map.getCanvas().height || 800;
+            const nearZ = Math.max(0.02, h / CONFIG.nearClipDivisor);
+            let farZ = tr.farZ;
+            if (CONFIG.clip3dEnabled && isFinite(farZ)) {
+                const factor = Math.max(0.05, Math.min(1, CONFIG.clip3dFactor || 0.5));
+                farZ = nearZ + (farZ - nearZ) * factor;
+            }
+            if (isFinite(farZ) && farZ > nearZ) tr.overrideNearFarZ(nearZ, farZ);
+        } catch (err) { /* near/far override недоступен */ }
+    }
+
+    map.on("load", () => {
+        setupStyle();
+        applyCarModeVisuals();
+        if (window.GeowalkWoodTerrainExtrude) GeowalkWoodTerrainExtrude.bindMapEvents(map);
+        ready = true;
+        applyCamera();
+    });
+
+    // Замена стиля карты в рамках сессии (из выбранного JSON-файла)
+    const elRealitySwap = document.getElementById("reality-swap");
+    let realitySwapAnim = null;
+    function playRealitySwap() {
+        if (!elRealitySwap) return;
+        if (realitySwapAnim) { try { realitySwapAnim.cancel(); } catch (e) {} }
+        elRealitySwap.style.display = "block";
+        // 1 c проявление, 3 c держим, 1 c уход в прозрачность (всего 5 c).
+        realitySwapAnim = elRealitySwap.animate([
+            { opacity: 0, offset: 0 },
+            { opacity: 1, offset: 0.2 },
+            { opacity: 1, offset: 0.8 },
+            { opacity: 0, offset: 1 }
+        ], { duration: 5000, easing: "linear" });
+        realitySwapAnim.onfinish = () => {
+            elRealitySwap.style.display = "none";
+            realitySwapAnim = null;
+        };
+    }
+
+    const REALITY_SWAP_DELAY_MS = 2000;
+    function swapStyle(styleObj, label, styleSkyKey) {
+        // Проигрываем оверлей-переход, а саму замену стиля делаем через 2 c —
+        // пока экран уже перекрыт гифкой.
+        playRealitySwap();
+        setTimeout(() => {
+            try {
+                setActiveStyleSkyKey(styleSkyKey);
+                if (elDraw) elDraw.value = CONFIG.sky.fogGroundBlend;
+                ready = false;
+                map.setStyle(styleWithSkyFromConfig(styleObj), { diff: false });
+                map.once("style.load", () => {
+                    setupStyle();
+                    ready = true;
+                    if (elStyleStatus) elStyleStatus.textContent = label ? ("стиль: " + label) : "стиль заменён";
+                });
+                map.once("error", (e) => {
+                    if (!ready) {
+                        ready = true;
+                        console.warn("swapStyle load error:", e && e.error);
+                        if (elStyleStatus) elStyleStatus.textContent = "ошибка стиля";
+                    }
+                });
+            } catch (err) {
+                console.warn("swapStyle:", err);
+                ready = true;
+                if (elStyleStatus) elStyleStatus.textContent = "ошибка стиля";
+            }
+        }, REALITY_SWAP_DELAY_MS);
+    }
+
+    function update(dt) {
+        const overlayWalk = overlayVisible() &&
+            overlayAutoWalkTime < OVERLAY_AUTO_WALK_SEC &&
+            !locked;
+
+        if (overlayWalk) {
+            overlayAutoWalkTime += dt;
+            const dist = OVERLAY_AUTO_WALK_SPEED * dt;
+            const b = player.yaw * DEG;
+            player.lat += (Math.cos(b) * dist) / M_PER_DEG_LAT;
+            player.lng += (Math.sin(b) * dist) / (M_PER_DEG_LAT * Math.cos(player.lat * DEG));
+            player.speed = OVERLAY_AUTO_WALK_SPEED;
+        }
+
+        let fwd = (keys["KeyW"] || keys["ArrowUp"] ? 1 : 0) - (keys["KeyS"] || keys["ArrowDown"] ? 1 : 0);
+        let strafe = (keys["KeyD"] || keys["ArrowRight"] ? 1 : 0) - (keys["KeyA"] || keys["ArrowLeft"] ? 1 : 0);
+        if (isTouchUiActive() && !isCarMode() && Math.abs(touchJoy.fwd) > 0.001) {
+            fwd = touchJoy.fwd;
+        }
+        if (isTouchUiActive() && !isCarMode() && controlsActive() && Math.abs(touchJoy.turn) > 0.001) {
+            player.yaw = ((player.yaw + touchJoy.turn * 120 * dt) % 360 + 360) % 360;
+        }
+
+        // коллизия активна, пока высота над землёй ≤ collisionHeight
+        const heightAboveGround = CONFIG.eyeHeight + player.altOffset;
+        const collisionActive = heightAboveGround <= CONFIG.collisionHeight;
+        player.collision = collisionActive;
+        if (collisionActive && performance.now() - cacheTime > 350) {
+            refreshBuildingCache();
+            cacheTime = performance.now();
+        }
+
+        let maxSpeed = (keys["ShiftLeft"] || keys["ShiftRight"]) ? CONFIG.walkSpeed * CONFIG.runMultiplier : CONFIG.walkSpeed;
+        let targetFwd = 0, targetStrafe = 0;
+
+        if (isCarMode() && controlsActive() && !overlayWalk && !carSkinPickerOpen) {
+            let turnInput = Math.max(-1, Math.min(1, strafe));
+            if (velFwd < -0.05) turnInput = -turnInput;
+            const maxTurnRate = CONFIG.carTurnSpeedDeg;
+            const targetYawVel = turnInput * maxTurnRate;
+            const turnTau = Math.max(0.02, CONFIG.carTurnInertiaSec);
+            const turnBlend = 1 - Math.exp(-dt / turnTau);
+            carYawVel += (targetYawVel - carYawVel) * turnBlend;
+            player.yaw = ((player.yaw + carYawVel * dt) % 360 + 360) % 360;
+
+            maxSpeed = (keys["ShiftLeft"] || keys["ShiftRight"])
+                ? CONFIG.carSpeed * CONFIG.runMultiplier
+                : CONFIG.carSpeed;
+            if (controlsActive() && Math.abs(fwd) > 0.15 && !keys["Space"]) targetFwd = fwd > 0 ? 1 : -1;
+            targetStrafe = 0;
+
+            const targetVel = targetFwd * maxSpeed;
+            const accelTau = Math.max(0.02, CONFIG.carAccelSec);
+            const brakeTau = Math.max(0.02, CONFIG.carBrakeSec);
+            const handbrakeTau = Math.max(0.02, CONFIG.carHandbrakeSec);
+            let tau = brakeTau;
+            if (keys["Space"]) {
+                tau = handbrakeTau;
+            } else if (Math.abs(targetVel) > 0.01) {
+                if (Math.abs(velFwd) < 0.05 || velFwd * targetVel > 0) {
+                    if (Math.abs(targetVel) > Math.abs(velFwd)) tau = accelTau;
+                }
+            }
+            const blend = 1 - Math.exp(-dt / tau);
+            const stopVel = keys["Space"] ? 0 : targetVel;
+            velFwd += (stopVel - velFwd) * blend;
+            velStrafe += (0 - velStrafe) * blend;
+        } else if (controlsActive() && (fwd !== 0 || strafe !== 0)) {
+            const len = Math.hypot(fwd, strafe);
+            const speedMul = Math.min(1, len);
+            targetFwd = fwd / len;
+            targetStrafe = strafe / len;
+            maxSpeed *= speedMul;
+            if (CONFIG.inertiaEnabled) {
+                const tau = Math.max(0.02, CONFIG.inertia);
+                const blend = 1 - Math.exp(-dt / tau);
+                velFwd += (targetFwd * maxSpeed - velFwd) * blend;
+                velStrafe += (targetStrafe * maxSpeed - velStrafe) * blend;
+            } else {
+                velFwd = targetFwd * maxSpeed;
+                velStrafe = targetStrafe * maxSpeed;
+            }
+        } else if (CONFIG.inertiaEnabled) {
+            const tau = Math.max(0.02, CONFIG.inertia);
+            const blend = 1 - Math.exp(-dt / tau);
+            velFwd += (0 - velFwd) * blend;
+            velStrafe += (0 - velStrafe) * blend;
+        } else {
+            velFwd = 0;
+            velStrafe = 0;
+        }
+
+        const dist = Math.hypot(velFwd, velStrafe) * dt;
+        if (controlsActive() && dist > 1e-7) {
+            const b = player.yaw * DEG;
+            const sinB = Math.sin(b), cosB = Math.cos(b);
+            const north = (velFwd * cosB - velStrafe * sinB) * dt;
+            const east  = (velFwd * sinB + velStrafe * cosB) * dt;
+            let dLat = north / M_PER_DEG_LAT;
+            let dLng = east / (M_PER_DEG_LAT * Math.cos(player.lat * DEG));
+            const reqDist = Math.hypot(north, east);
+
+            // упираемся в дома (скольжение вдоль стен по осям), но не застреваем,
+            // если уже оказались внутри здания — тогда даём выйти
+            if (collisionActive && !isInsideBuilding(player.lng, player.lat)) {
+                if (isInsideBuilding(player.lng + dLng, player.lat)) dLng = 0;
+                if (isInsideBuilding(player.lng, player.lat + dLat)) dLat = 0;
+                if (dLng !== 0 && dLat !== 0 && isInsideBuilding(player.lng + dLng, player.lat + dLat)) { dLng = 0; dLat = 0; }
+            }
+            player.lat += dLat;
+            player.lng += dLng;
+
+            // при ударе о стену гасим инерцию пропорционально фактическому сдвигу
+            if (CONFIG.inertiaEnabled && reqDist > 1e-6) {
+                const actDist = Math.hypot(dLat * M_PER_DEG_LAT, dLng * M_PER_DEG_LAT * Math.cos(player.lat * DEG));
+                if (actDist < reqDist * 0.99) {
+                    const scale = actDist / reqDist;
+                    velFwd *= scale;
+                    velStrafe *= scale;
+                }
+            }
+        }
+        if (!overlayWalk) player.speed = dt > 0 ? Math.hypot(velFwd, velStrafe) : 0;
+
+        updateHeightAnim(dt);
+        updateFollowJumpAnim(dt);
+        updateCarSkinPickerLiftAnim(dt);
+        updateCarCameraRoll(dt, strafe, velFwd);
+
+        // Space/X — подъём/спуск только при включённой галочке «игнорировать рельеф»
+        if (controlsActive() && !heightAnim && !jumpAnim && isIgnoreMode()) {
+            const up = (keys["Space"] ? 1 : 0) - (keys["KeyX"] ? 1 : 0);
+            player.altOffset += up * CONFIG.flySpeed * dt;
+            if (player.altOffset < 0) player.altOffset = 0;
+        }
+    }
+
+    function updateCarCameraRoll(dt, strafe, velFwd) {
+        const rollTau = Math.max(0.02, CONFIG.carCameraRollSec || 0.8);
+        const rollBlend = 1 - Math.exp(-dt / rollTau);
+        if (!isCarMode() || carCameraView === "topdown" || !controlsActive() || CONFIG.carCameraRollEnabled === false) {
+            carCameraRoll += (0 - carCameraRoll) * rollBlend;
+            return;
+        }
+        let turnInput = Math.max(-1, Math.min(1, strafe));
+        if (velFwd < -0.05) turnInput = -turnInput;
+        const speedMin = CONFIG.carCameraRollSpeedMin != null ? CONFIG.carCameraRollSpeedMin : 30;
+        const rollMax = CONFIG.carCameraRollMax != null ? CONFIG.carCameraRollMax : 5;
+        const targetRoll = Math.abs(velFwd) > speedMin && turnInput !== 0
+            ? turnInput * rollMax
+            : 0;
+        carCameraRoll += (targetRoll - carCameraRoll) * rollBlend;
+    }
+
+    // Камера от первого лица: глаз держим точно в точке игрока.
+    // MapLibre ставит камеру позади center на расстоянии cameraToCenterDistance,
+    // поэтому center выносим вперёд ровно на это расстояние по земле.
+    function applyCamera() {
+        if (!ready) return;
+        const cosLat = Math.cos(player.lat * DEG);
+
+        if (isCarMode()) {
+            const topdown = carCameraView === "topdown";
+            const liftM = carSkinPickerLift;
+            const b = player.yaw * DEG;
+            let zoom, camPitch, aheadM, targetEye;
+
+            if (topdown) {
+                // MapLibre pitch: 0 = строго сверху, 90 = горизонт
+                camPitch = CONFIG.carTopCameraPitch;
+                aheadM = CONFIG.carTopLookAheadM;
+                zoom = CONFIG.carTopZoom;
+                targetEye = CONFIG.carTopCameraHeight;
+                player.eye = targetEye;
+            } else {
+                camPitch = CONFIG.carCameraPitch;
+                aheadM = CONFIG.carLookAheadM;
+                targetEye = CONFIG.carCameraHeight;
+                const pr = camPitch * DEG;
+                const tr = map.transform;
+                const ctc = tr.cameraToCenterDistance;
+                zoom = Math.log2(Math.cos(pr) * ctc * EARTH_CIRC * cosLat / (TILE * targetEye));
+                zoom = Math.min(CONFIG.maxSafeZoom, Math.max(1, zoom));
+                const mpp = EARTH_CIRC * cosLat / (TILE * Math.pow(2, zoom));
+                player.eye = Math.cos(pr) * ctc * mpp;
+            }
+
+            const opts = {
+                center: [
+                    player.lng + (Math.sin(b) * aheadM) / (M_PER_DEG_LAT * cosLat),
+                    player.lat + (Math.cos(b) * aheadM) / M_PER_DEG_LAT
+                ],
+                zoom,
+                bearing: player.yaw,
+                pitch: camPitch,
+                roll: topdown || CONFIG.carCameraRollEnabled === false ? 0 : carCameraRoll
+            };
+
+            if (map.getCenterClampedToGround()) map.setCenterClampedToGround(false);
+            if (map.getTerrain() && map.isSourceLoaded("terrain-dem")) {
+                const te = map.queryTerrainElevation([player.lng, player.lat]);
+                if (typeof te === "number" && isFinite(te)) opts.elevation = te + liftM;
+            } else if (!map.getTerrain()) {
+                opts.elevation = liftM;
+            }
+
+            try { map.jumpTo(opts); } catch (err) { /* пропускаем редкий сбой кадра */ }
+            applyNearFarClip(map.transform);
+            return;
+        }
+
+        const tr = map.transform;
+        const ctc = tr.cameraToCenterDistance;
+        const pr = player.pitch * DEG;
+        const targetEye = CONFIG.groundAlt + CONFIG.eyeHeight + player.altOffset;
+
+        // подбираем zoom так, чтобы высота глаз = targetEye:
+        // eye = cos(pitch) * ctc * metersPerPixel,  metersPerPixel = circ*cosLat/(TILE*2^zoom)
+        let zoom = Math.log2(Math.cos(pr) * ctc * EARTH_CIRC * cosLat / (TILE * targetEye));
+        zoom = Math.min(CONFIG.maxSafeZoom, Math.max(1, zoom));
+
+        // фактическая высота при выбранном zoom (может отличаться, если уперлись в maxSafeZoom)
+        const mpp = EARTH_CIRC * cosLat / (TILE * Math.pow(2, zoom));
+        const actualEye = Math.cos(pr) * ctc * mpp;
+        player.eye = actualEye;
+
+        // расстояние по земле от камеры (=игрок) до center
+        const groundDist = Math.tan(pr) * actualEye;
+        const b = player.yaw * DEG;
+        const dLat = (Math.cos(b) * groundDist) / M_PER_DEG_LAT;
+        const dLng = (Math.sin(b) * groundDist) / (M_PER_DEG_LAT * cosLat);
+
+        const opts = {
+            center: [player.lng + dLng, player.lat + dLat],
+            zoom,
+            bearing: player.yaw,
+            pitch: player.pitch,
+            roll: 0
+        };
+
+        if (isIgnoreMode()) {
+            // постоянная высота: один раз фиксируем базу рельефа и держим её,
+            // тогда камера = база + рост, не повторяя неровности под ногами.
+            if (fixedElevation === null) {
+                if (!map.getTerrain()) {
+                    // рельеф выключен — база на уровне моря
+                    fixedElevation = 0;
+                } else if (map.isSourceLoaded("terrain-dem")) {
+                    // ждём реальные данные высот; ровный 0 до загрузки игнорируем,
+                    // чтобы не зафиксировать базу под землёй
+                    const te = map.queryTerrainElevation([player.lng, player.lat]);
+                    if (typeof te === "number" && isFinite(te) && te !== 0) fixedElevation = te;
+                }
+            }
+            if (fixedElevation !== null) {
+                if (map.getCenterClampedToGround()) map.setCenterClampedToGround(false);
+                opts.elevation = fixedElevation;
+            } else {
+                // база ещё не готова (DEM грузится) — временно идём по рельефу,
+                // чтобы не провалиться под землю
+                if (!map.getCenterClampedToGround()) map.setCenterClampedToGround(true);
+            }
+        } else {
+            // галочка выкл.: высота камеры — только по рельефу под игроком, не под прицелом (center)
+            if (map.getCenterClampedToGround()) map.setCenterClampedToGround(false);
+            if (map.getTerrain() && map.isSourceLoaded("terrain-dem")) {
+                const te = map.queryTerrainElevation([player.lng, player.lat]);
+                if (typeof te === "number" && isFinite(te)) {
+                    opts.elevation = te;
+                } else if (!map.getCenterClampedToGround()) {
+                    map.setCenterClampedToGround(true);
+                }
+            } else if (!map.getTerrain()) {
+                opts.elevation = 0;
+            } else if (!map.getCenterClampedToGround()) {
+                map.setCenterClampedToGround(true);
+            }
+        }
+
+        try {
+            map.jumpTo(opts);
+        } catch (err) { /* пропускаем редкий сбой кадра */ }
+
+        applyNearFarClip(map.transform);
+    }
+
+    function updateHUD() {
+        document.getElementById("hud-coord").textContent = player.lat.toFixed(5) + ", " + player.lng.toFixed(5);
+        document.getElementById("hud-bearing").textContent = Math.round(player.yaw) + "°";
+        document.getElementById("hud-look").textContent = (90 - player.pitch).toFixed(0) + "° вниз";
+        document.getElementById("hud-alt").textContent = (player.eye).toFixed(1) + " м";
+        document.getElementById("hud-speed").textContent = player.speed.toFixed(1) + " м/с";
+        document.getElementById("hud-collision").textContent = player.collision ? "упираемся" : "сквозь";
+        updateSurfaceStatus();
+    }
+
+    let lastSimT = performance.now();
+    function frame(now) {
+        const fps = CONFIG.fpsLimit;
+        if (fps > 0) {
+            const minMs = 1000 / fps;
+            if (now - lastSimT < minMs) {
+                requestAnimationFrame(frame);
+                return;
+            }
+        }
+        const dt = Math.min(0.05, (now - lastSimT) / 1000);
+        lastSimT = now;
+        update(dt);
+        applyCamera();
+        if (window.GeowalkWoodTerrainExtrude && ready) {
+            GeowalkWoodTerrainExtrude.tick({ lng: player.lng, lat: player.lat, ready: true });
+        }
+        if (window.GeowalkCarDrive && isCarMode() && ready) {
+            const rect = map.getCanvas().getBoundingClientRect();
+            // Ось машины — позиция игрока; carLookAheadM смещает только центр камеры вперёд.
+            const pt = map.project([player.lng, player.lat]);
+            GeowalkCarDrive.setPivot(rect.left + pt.x, rect.top + pt.y);
+            if (carSkinPickerOpen) updateCarSkinPickerPosition();
+        }
+        updateHUD();
+        updateMiniMap();
+        if (window.GeowalkFollowTerrainHands) {
+            GeowalkFollowTerrainHands.tick({
+                speed: player.speed,
+                dt,
+                surfaceLayers: playerSurfaceLayers
+            });
+        }
+        if (window.GeowalkCarDrive) {
+            const mapRect = map.getCanvas().getBoundingClientRect();
+            GeowalkCarDrive.tick({
+                speed: player.speed,
+                dt,
+                turnSpeedDeg: carYawVel,
+                viewMode: carCameraView,
+                cameraRollDeg: (carCameraView === "topdown" || CONFIG.carCameraRollEnabled === false) ? 0 : carCameraRoll,
+                yaw: player.yaw,
+                lng: player.lng,
+                lat: player.lat,
+                onWater: isCarWaterSurface(playerSurfaceLayers),
+                onWood: isCarWoodSurface(playerSurfaceLayers),
+                onSand: isCarSandSurface(playerSurfaceLayers),
+                projectPoint(lng, lat) {
+                    const pt = map.project([lng, lat]);
+                    return { x: mapRect.left + pt.x, y: mapRect.top + pt.y };
+                }
+            });
+        }
+        if (window.GeowalkCarPins && pinsActiveForCurrentMode() && ready) {
+            GeowalkCarPins.tick({
+                lng: player.lng,
+                lat: player.lat,
+                yaw: player.yaw,
+                dt
+            });
+        }
+        if (window.GeowalkGiantMob && ready) {
+            const mobRect = map.getCanvas().getBoundingClientRect();
+            GeowalkGiantMob.tick({
+                lng: player.lng,
+                lat: player.lat,
+                bearing: map.getBearing(),
+                projectPoint(lng, lat) {
+                    const pt = map.project([lng, lat]);
+                    return { x: mobRect.left + pt.x, y: mobRect.top + pt.y };
+                }
+            });
+        }
+        updateRealityHint();
+        requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    window.addEventListener("resize", () => {
+        map.resize();
+        if (miniMap) miniMap.resize();
+    });
+    </script>
+</body>
+</html>

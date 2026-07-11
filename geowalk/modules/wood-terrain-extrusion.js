@@ -8,7 +8,8 @@
     const LAYER_ID = "geowalk-wood-blobs";
 
     const DEFAULTS = {
-        enabled: true,
+        enabled: false,
+        treeSpritesEnabled: true,
         terrainOn: true,
         density: 2,
         extrusionBaseM: 1,
@@ -28,6 +29,12 @@
         positionJitter: 0.9,
         rotationStepDeg: 15,
         maxCount: 850,
+        treeSpriteSrc: "images/t_teee.png",
+        treeSpriteAspect: 1,
+        treeSpriteScale: 5,
+        treeSpriteRadiusM: 800,
+        treeSpriteSpawnAnim: true,
+        treeSpriteSpawnAnimSec: 0.5,
         cellsPerPass: 40,
         woodQueryMoveM: 180,
         flushMinIntervalMs: 120,
@@ -53,6 +60,171 @@
     let cellCache = new Map();
     /** @type {{ bbox: number[], wood: object[], lng: number, lat: number }|null} */
     let woodSnapshot = null;
+    let treeSpriteByKey = new Map();
+    let treeSpriteMat = null;
+    let treePlaneGeom = null;
+    let treeTex = null;
+
+    function resetTreeSpriteCache() {
+        clearAllTreeSprites();
+        treeSpriteMat = null;
+        if (treePlaneGeom) {
+            treePlaneGeom.dispose();
+            treePlaneGeom = null;
+        }
+        if (treeTex) {
+            treeTex.dispose();
+            treeTex = null;
+        }
+    }
+
+    function randomYawForLngLat(lng, lat) {
+        const ix = Math.floor(lng * 1e5);
+        const iy = Math.floor(lat * 1e5);
+        return hash01(ix, iy, 9) * Math.PI * 2;
+    }
+
+    function getTreeSpriteMaterial(t3) {
+        if (treeSpriteMat) return treeSpriteMat;
+        const src = (cfg && cfg.treeSpriteSrc) || "images/t_teee.png";
+        treeTex = new t3.TextureLoader().load(src);
+        if (t3.SRGBColorSpace) treeTex.colorSpace = t3.SRGBColorSpace;
+        treeSpriteMat = new t3.MeshBasicMaterial({
+            map: treeTex,
+            transparent: true,
+            alphaTest: 0.35,
+            side: t3.DoubleSide,
+            depthTest: true,
+            depthWrite: false
+        });
+        return treeSpriteMat;
+    }
+
+    function extrusionRadiusM() {
+        return cfg && cfg.radiusM != null ? cfg.radiusM : DEFAULTS.radiusM;
+    }
+
+    function spriteRadiusM() {
+        if (!cfg) return DEFAULTS.treeSpriteRadiusM;
+        return cfg.treeSpriteRadiusM != null ? cfg.treeSpriteRadiusM : extrusionRadiusM();
+    }
+
+    function genRadiusM() {
+        let r = 0;
+        if (cfg && cfg.enabled !== false) r = Math.max(r, extrusionRadiusM());
+        if (cfg && cfg.treeSpritesEnabled !== false) r = Math.max(r, spriteRadiusM());
+        return r || extrusionRadiusM();
+    }
+
+    function clearAllTreeSprites() {
+        const T = window.GeowalkThree;
+        if (T) {
+            for (const rec of treeSpriteByKey.values()) T.remove(rec.group);
+        }
+        treeSpriteByKey.clear();
+    }
+
+    function applyTreeSpriteScale(mesh, factor) {
+        const side = mesh.userData.side;
+        if (side == null) return;
+        const f = factor != null ? factor : 1;
+        mesh.scale.set(side * f, side * f, 1);
+    }
+
+    function createTreeBillboard(t3, T, mat, lng, lat, sizeM, base) {
+        const p = T.geoToLocal(lng, lat, base);
+        if (!treePlaneGeom) {
+            treePlaneGeom = new t3.PlaneGeometry(1, 1);
+            // Ось вращения: низ по центру (локально y = 0).
+            treePlaneGeom.translate(0, 0.5, 0);
+        }
+        const mesh = new t3.Mesh(treePlaneGeom, mat);
+        mesh.userData.side = sizeM;
+        mesh.rotation.x = Math.PI / 2;
+        applyTreeSpriteScale(mesh, cfg && cfg.treeSpriteSpawnAnim !== false ? 0 : 1);
+        const group = new t3.Group();
+        group.add(mesh);
+        group.position.set(p.x, p.y, p.z);
+        group.rotation.z = randomYawForLngLat(lng, lat);
+        group.userData.cellKey = null;
+        return group;
+    }
+
+    function capSpriteEntries(lng, lat, entries) {
+        const cap = effectiveMaxCount();
+        if (entries.length <= cap) return entries;
+        entries.sort((a, b) =>
+            distMetersSq(lng, lat, a.lng, a.lat) - distMetersSq(lng, lat, b.lng, b.lat));
+        return entries.slice(0, cap);
+    }
+
+    function syncThreeTrees(lng, lat, entries) {
+        const T = window.GeowalkThree;
+        const t3 = window.THREE;
+        if (!T || !t3 || !T.isReady() || !cfg) return;
+        if (!cfg.treeSpritesEnabled || !active) {
+            clearAllTreeSprites();
+            return;
+        }
+        const radiusSq = spriteRadiusM() * spriteRadiusM();
+        const keepKeys = new Set();
+        const inRange = [];
+        for (const entry of entries || []) {
+            if (!entry || !entry.feature || !entry.key) continue;
+            if (distMetersSq(lng, lat, entry.lng, entry.lat) > radiusSq) continue;
+            keepKeys.add(entry.key);
+            inRange.push(entry);
+        }
+        const capped = capSpriteEntries(lng, lat, inRange);
+
+        for (const [key, rec] of treeSpriteByKey) {
+            if (!keepKeys.has(key)) {
+                T.remove(rec.group);
+                treeSpriteByKey.delete(key);
+            }
+        }
+
+        const mat = getTreeSpriteMaterial(t3);
+        const scaleMul = cfg.treeSpriteScale != null ? cfg.treeSpriteScale : 5;
+        const animOn = cfg.treeSpriteSpawnAnim !== false;
+
+        for (const entry of capped) {
+            if (treeSpriteByKey.has(entry.key)) continue;
+            const f = entry.feature;
+            const ring = f.geometry && f.geometry.coordinates && f.geometry.coordinates[0];
+            if (!ring || !ring.length) continue;
+            let flng = 0, flat = 0;
+            for (const c of ring) { flng += c[0]; flat += c[1]; }
+            flng /= ring.length; flat /= ring.length;
+            const h = (f.properties && f.properties.h) || 4;
+            const base = cfg.extrusionBaseM || 1;
+            const sizeM = Math.max(2.5, h) * scaleMul;
+            const group = createTreeBillboard(t3, T, mat, flng, flat, sizeM, base);
+            group.userData.cellKey = entry.key;
+            const mesh = group.children[0];
+            if (animOn) {
+                mesh.userData.spawnAnim = true;
+                mesh.userData.animT = 0;
+                applyTreeSpriteScale(mesh, 0);
+            }
+            T.add(group);
+            treeSpriteByKey.set(entry.key, { group, mesh });
+        }
+    }
+
+    function tickTreeSpriteAnim(dt) {
+        if (!cfg || !cfg.treeSpritesEnabled || cfg.treeSpriteSpawnAnim === false) return;
+        const dur = Math.max(0.05, cfg.treeSpriteSpawnAnimSec != null ? cfg.treeSpriteSpawnAnimSec : 0.5);
+        for (const rec of treeSpriteByKey.values()) {
+            const mesh = rec.mesh;
+            if (!mesh || !mesh.userData.spawnAnim) continue;
+            mesh.userData.animT = Math.min(dur, (mesh.userData.animT || 0) + dt);
+            const u = mesh.userData.animT / dur;
+            const f = 1 - Math.pow(1 - u, 3);
+            applyTreeSpriteScale(mesh, f);
+            if (u >= 1) mesh.userData.spawnAnim = false;
+        }
+    }
 
     function metersToDegLat(m) { return m / M_PER_DEG_LAT; }
     function metersToDegLng(m, lat) { return m / (M_PER_DEG_LAT * Math.cos(lat * DEG)); }
@@ -225,7 +397,7 @@
             "fill-extrusion-color": cfg.extrusionColor,
             "fill-extrusion-base": cfg.extrusionBaseM,
             "fill-extrusion-height": ["+", cfg.extrusionBaseM, ["get", "h"]],
-            "fill-extrusion-opacity": 1,
+            "fill-extrusion-opacity": 0,
             "fill-extrusion-vertical-gradient": true
         };
     }
@@ -364,24 +536,45 @@
         };
     }
 
-    function flushToMap(lng, lat, force) {
-        if (!dirty && !force) return;
-        const radiusSq = cfg.radiusM * cfg.radiusM;
+    function pickSpriteEntries(lng, lat) {
+        const radiusSq = spriteRadiusM() * spriteRadiusM();
         const picked = [];
         for (const entry of cellCache.values()) {
+            if (!entry.feature || !entry.key) continue;
             if (distMetersSq(lng, lat, entry.lng, entry.lat) > radiusSq) continue;
-            if (entry.feature) picked.push(entry);
+            picked.push(entry);
+        }
+        return capSpriteEntries(lng, lat, picked);
+    }
+
+    function refreshThreeTrees(lng, lat) {
+        if (!cfg || !cfg.treeSpritesEnabled || !active) return;
+        syncThreeTrees(lng, lat, pickSpriteEntries(lng, lat));
+    }
+
+    function flushToMap(lng, lat, force) {
+        if (!dirty && !force) return;
+        const extrusionRadiusSq = extrusionRadiusM() * extrusionRadiusM();
+        const pickedExtrusion = [];
+        for (const entry of cellCache.values()) {
+            if (!entry.feature) continue;
+            if (distMetersSq(lng, lat, entry.lng, entry.lat) > extrusionRadiusSq) continue;
+            pickedExtrusion.push(entry);
         }
         const cap = effectiveMaxCount();
-        if (picked.length > cap) {
-            picked.sort((a, b) =>
+        if (pickedExtrusion.length > cap) {
+            pickedExtrusion.sort((a, b) =>
                 distMetersSq(lng, lat, a.lng, a.lat) - distMetersSq(lng, lat, b.lng, b.lat));
-            picked.length = cap;
+            pickedExtrusion.length = cap;
         }
-        const features = picked.map(e => e.feature);
-        if (!force && features.length === lastFlushCount && !dirty) return;
+        const features = pickedExtrusion.map(e => e.feature);
+        const spriteEntries = pickSpriteEntries(lng, lat);
+        if (!force && features.length === lastFlushCount && !dirty) {
+            syncThreeTrees(lng, lat, cfg.treeSpritesEnabled !== false ? spriteEntries : []);
+            return;
+        }
         try {
-            if (mapRef.getSource(SOURCE_ID)) {
+            if (cfg.enabled !== false && mapRef.getSource(SOURCE_ID)) {
                 mapRef.getSource(SOURCE_ID).setData({ type: "FeatureCollection", features });
             }
         } catch (e) {
@@ -390,10 +583,11 @@
         lastFlushCount = features.length;
         lastFlushAt = performance.now();
         dirty = false;
+        syncThreeTrees(lng, lat, cfg.treeSpritesEnabled !== false ? spriteEntries : []);
     }
 
     function evictFarCells(lng, lat) {
-        const radiusSq = cfg.radiusM * cfg.radiusM;
+        const radiusSq = genRadiusM() * genRadiusM();
         for (const [key, entry] of cellCache) {
             if (distMetersSq(lng, lat, entry.lng, entry.lat) > radiusSq) {
                 cellCache.delete(key);
@@ -403,7 +597,7 @@
     }
 
     function collectMissingCells(lng, lat, bbox, stepLng, stepLat) {
-        const radiusSq = cfg.radiusM * cfg.radiusM;
+        const radiusSq = genRadiusM() * genRadiusM();
         const missing = [];
         const ixMin = Math.floor(bbox[0] / stepLng);
         const ixMax = Math.floor(bbox[2] / stepLng);
@@ -434,12 +628,14 @@
             cellCache.clear();
             woodSnapshot = null;
             lastFlushCount = -1;
+            clearAllTreeSprites();
             dirty = true;
         }
         if (zoom < cfg.minZoom) {
             cellCache.clear();
             woodSnapshot = null;
             lastFlushCount = -1;
+            clearAllTreeSprites();
             try { mapRef.getSource(SOURCE_ID).setData({ type: "FeatureCollection", features: [] }); } catch (e) {}
             return;
         }
@@ -450,7 +646,7 @@
         const cellM = cfg.gridCellM;
         const stepLat = metersToDegLat(cellM);
         const stepLng = metersToDegLng(cellM, lat);
-        const bbox = bboxAround(lng, lat, cfg.radiusM);
+        const bbox = bboxAround(lng, lat, genRadiusM());
         const wood = getWood(bbox, lng, lat);
 
         evictFarCells(lng, lat);
@@ -460,8 +656,10 @@
         let added = 0;
         for (let i = 0; i < missing.length && added < budget; i++) {
             const c = missing[i];
+            const key = cellKey(c.ix, c.iy);
             const entry = createTreeForCell(c.ix, c.iy, stepLng, stepLat, zoom, wood);
-            cellCache.set(cellKey(c.ix, c.iy), entry);
+            entry.key = key;
+            cellCache.set(key, entry);
             if (entry.feature) dirty = true;
             added++;
         }
@@ -511,6 +709,7 @@
     function deactivate() {
         if (rebuildTimer) clearTimeout(rebuildTimer);
         rebuildTimer = null;
+        clearAllTreeSprites();
         clearCache();
         removeRuntime();
         active = false;
@@ -531,14 +730,23 @@
     }
 
     function teardown() {
+        resetTreeSpriteCache();
         deactivate();
         cfg = null;
         lastOptions = null;
         mapRef = null;
     }
 
-    function shouldRun(options) {
+    function shouldRunExtrusion(options) {
         return options.enabled !== false && options.terrainOn !== false;
+    }
+
+    function shouldRunSprites(options) {
+        return options.treeSpritesEnabled !== false && options.terrainOn !== false;
+    }
+
+    function shouldRunAny(options) {
+        return shouldRunExtrusion(options) || shouldRunSprites(options);
     }
 
     function applyRuntimeOptions(options) {
@@ -548,7 +756,41 @@
             cfg.density = clampDensity(options.density);
             changed = true;
         }
+        if (options.enabled != null) cfg.enabled = options.enabled !== false;
+        if (options.treeSpritesEnabled != null) {
+            const next = options.treeSpritesEnabled !== false;
+            if (next !== cfg.treeSpritesEnabled) {
+                cfg.treeSpritesEnabled = next;
+                changed = true;
+            }
+        }
+        if (options.treeSpriteRadiusM != null) {
+            const r = Math.max(50, Math.min(3000, +options.treeSpriteRadiusM || 0));
+            if (r !== cfg.treeSpriteRadiusM) {
+                cfg.treeSpriteRadiusM = r;
+                changed = true;
+            }
+        }
+        if (options.treeSpriteSpawnAnim != null) {
+            const next = options.treeSpriteSpawnAnim !== false;
+            if (next !== cfg.treeSpriteSpawnAnim) {
+                cfg.treeSpriteSpawnAnim = next;
+                changed = true;
+            }
+        }
         return changed;
+    }
+
+    function applyExtrusionRuntime(wantExtrusion) {
+        if (wantExtrusion) ensureRuntime();
+        else {
+            try {
+                if (mapRef && mapRef.getSource(SOURCE_ID)) {
+                    mapRef.getSource(SOURCE_ID).setData({ type: "FeatureCollection", features: [] });
+                }
+            } catch (e) {}
+            removeRuntime();
+        }
     }
 
     function setup(map, options) {
@@ -559,47 +801,49 @@
         cfg = lastOptions;
         cellCache = new Map();
         bindMapEvents(map);
-        if (!shouldRun(cfg)) return;
+        if (!shouldRunAny(cfg)) return;
         active = true;
         terrainOn = true;
-        ensureRuntime();
+        applyExtrusionRuntime(shouldRunExtrusion(cfg));
         scheduleRebuild(0);
     }
 
     function sync(state) {
         if (!mapRef) return;
-        const enabled = state.enabled !== false;
-        const terrainOnReq = !!(state && state.terrainOn);
-        const want = enabled && terrainOnReq;
+        const s = state || {};
+        const terrainOnReq = !!s.terrainOn;
+        if (!cfg) cfg = Object.assign({}, DEFAULTS, lastOptions || {});
+
+        const optsChanged = applyRuntimeOptions(s);
+
+        const extrusionOn = cfg.enabled !== false && terrainOnReq;
+        const spritesOn = cfg.treeSpritesEnabled !== false && terrainOnReq;
+        const want = extrusionOn || spritesOn;
 
         if (!want) {
             if (active) deactivate();
             return;
         }
 
-        if (!cfg) cfg = Object.assign({}, DEFAULTS, lastOptions || {});
-
-        if (applyRuntimeOptions(state || {})) {
-            clearCache();
-            dirty = true;
-            if (!active) {
-                active = true;
-                terrainOn = true;
-                ensureRuntime();
-            }
-            scheduleRebuild(0);
-            return;
-        }
-
         if (!active) {
             active = true;
             terrainOn = true;
-            ensureRuntime();
+            applyExtrusionRuntime(extrusionOn);
             scheduleRebuild(0);
             return;
         }
 
-        if (state && state.force) scheduleRebuild(0);
+        applyExtrusionRuntime(extrusionOn);
+        if (!spritesOn) clearAllTreeSprites();
+
+        if (optsChanged) {
+            clearCache();
+            dirty = true;
+            scheduleRebuild(0);
+            return;
+        }
+
+        if (s.force) scheduleRebuild(0);
     }
 
     function tick(state) {
@@ -607,6 +851,9 @@
         if (state.lng == null || state.lat == null) return;
         playerLng = state.lng;
         playerLat = state.lat;
+
+        const dt = state.dt != null ? state.dt : 0;
+        tickTreeSpriteAnim(dt);
 
         const stepLat = metersToDegLat(cfg.gridCellM);
         const stepLng = metersToDegLng(cfg.gridCellM, playerLat);
@@ -616,6 +863,7 @@
 
         lastCellIx = ix;
         lastCellIy = iy;
+        if (cfg.treeSpritesEnabled !== false) refreshThreeTrees(playerLng, playerLat);
         scheduleRebuild(cfg.rebuildDebounceMs);
     }
 

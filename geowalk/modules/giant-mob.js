@@ -21,7 +21,7 @@
         spawnRadiusM: 1000,
         count: 1,
         sizeM: 120,            // ширина = высота (квадратный спрайт), в метрах
-        enabled: true,
+        enabled: false,
         minScreenPx: 4,
         maxScreenPx: 6000,
         minApproachFactor: 0.35,   // нижний предел уменьшения при приближении
@@ -38,16 +38,12 @@
         cubeColor: [255, 255, 255] // rgb белого куба
     };
 
-    const CUBE_SOURCE = "geowalk-sprite1-cubes";
-    const CUBE_LAYER = "geowalk-sprite1-cubes";
-
     let opts = { ...DEFAULTS };
     let styleEl = null;
     let root = null;
     let els = [];
     let instances = [];      // { lng, lat }
     let seededAround = null;
-    let mapRef = null;
 
     function injectStyles() {
         if (styleEl) return;
@@ -125,69 +121,47 @@
         for (const img of els) img.style.display = "none";
     }
 
-    // Квадратный footprint куба-основания под спрайтом.
-    function cubePolygon(lng, lat, halfM) {
-        const mLng = M_PER_DEG_LAT * Math.cos(lat * DEG) || 1e-6;
-        const dLng = halfM / mLng;
-        const dLat = halfM / M_PER_DEG_LAT;
-        const ring = [
-            [lng - dLng, lat - dLat],
-            [lng + dLng, lat - dLat],
-            [lng + dLng, lat + dLat],
-            [lng - dLng, lat + dLat]
-        ];
-        ring.push(ring[0]);
-        return [ring];
-    }
+    let cubeMeshes = [];
+    let cubeMat = null;
+    let cubeGeom = null;
 
-    function cubeFeature(lng, lat, op) {
-        return {
-            type: "Feature",
-            properties: { h: opts.cubeSizeM, op: op },
-            geometry: { type: "Polygon", coordinates: cubePolygon(lng, lat, opts.cubeSizeM / 2) }
-        };
-    }
-
-    function findInsertBefore(map) {
-        const layers = map.getStyle() && map.getStyle().layers;
-        if (!layers) return undefined;
-        for (let i = 0; i < layers.length; i++) {
-            if (layers[i].type === "symbol") return layers[i].id;
+    function ensureCubeMeshes(n) {
+        const T = window.GeowalkThree;
+        const t3 = window.THREE;
+        if (!T || !t3 || !T.isReady()) return;
+        while (cubeMeshes.length < n) {
+            if (!cubeGeom) cubeGeom = new t3.BoxGeometry(1, 1, 1);
+            if (!cubeMat) {
+                const c = opts.cubeColor;
+                cubeMat = new t3.MeshStandardMaterial({
+                    color: new t3.Color(c[0] / 255, c[1] / 255, c[2] / 255),
+                    roughness: 0.6, transparent: true, opacity: 1
+                });
+            }
+            const m = new t3.Mesh(cubeGeom, cubeMat);
+            m.visible = false;
+            T.add(m);
+            cubeMeshes.push(m);
         }
-        return undefined;
-    }
-
-    function ensureCubeLayer() {
-        if (!mapRef) return;
-        if (!mapRef.getSource(CUBE_SOURCE)) {
-            mapRef.addSource(CUBE_SOURCE, {
-                type: "geojson",
-                data: { type: "FeatureCollection", features: [] }
-            });
-        }
-        if (!mapRef.getLayer(CUBE_LAYER)) {
-            const c = opts.cubeColor;
-            mapRef.addLayer({
-                id: CUBE_LAYER,
-                type: "fill-extrusion",
-                source: CUBE_SOURCE,
-                paint: {
-                    // Прозрачность per-cube — через alpha цвета (data-driven "op").
-                    "fill-extrusion-color": ["rgba", c[0], c[1], c[2], ["get", "op"]],
-                    "fill-extrusion-base": 0,
-                    "fill-extrusion-height": ["get", "h"],
-                    "fill-extrusion-opacity": 1
-                }
-            }, findInsertBefore(mapRef));
+        while (cubeMeshes.length > n) {
+            const m = cubeMeshes.pop();
+            T.remove(m);
         }
     }
 
-    function setCubeData(features) {
-        if (!mapRef) return;
-        try {
-            const src = mapRef.getSource(CUBE_SOURCE);
-            if (src) src.setData({ type: "FeatureCollection", features: features || [] });
-        } catch (e) { /* стиль перезагружается */ }
+    function hideCubeMeshes() {
+        for (const m of cubeMeshes) m.visible = false;
+    }
+
+    function placeCubeMesh(mesh, lng, lat, op) {
+        const T = window.GeowalkThree;
+        if (!T) return;
+        const s = opts.cubeSizeM;
+        const p = T.geoToLocal(lng, lat, s / 2);
+        mesh.position.set(p.x, p.y, p.z);
+        mesh.scale.set(s, s, s);
+        mesh.material.opacity = op;
+        mesh.visible = true;
     }
 
     // Пиксели на метр в точке основания — среднее по двум ортам.
@@ -205,12 +179,14 @@
 
     function tick(motion) {
         ensurePool(opts.enabled ? Math.max(0, opts.count | 0) : 0);
-        if (!opts.enabled) { hideAll(); setCubeData([]); return; }
+        if (!opts.enabled) { hideAll(); hideCubeMeshes(); return; }
 
         const lng = motion && motion.lng;
         const lat = motion && motion.lat;
         const project = motion && motion.projectPoint;
-        if (lng == null || lat == null || typeof project !== "function") { hideAll(); setCubeData([]); return; }
+        if (lng == null || lat == null || typeof project !== "function") { hideAll(); hideCubeMeshes(); return; }
+
+        ensureCubeMeshes(opts.cubeEnabled ? instances.length : 0);
 
         // Пере-генерация при выходе за радиус появления.
         if (!seededAround || instances.length !== (opts.count | 0) ||
@@ -221,20 +197,17 @@
         const camBearing = motion.bearing != null ? motion.bearing : 0;
         const cosLat = Math.cos(lat * DEG) || 1e-6;
         const span = Math.max(1e-3, opts.fadeStartM - opts.fadeEndM);
-        const cubeFeats = [];
+        hideCubeMeshes();
 
         for (let i = 0; i < instances.length; i++) {
             const inst = instances[i];
             const img = els[i];
 
             const d = distM(lng, lat, inst.lng, inst.lat);
-            // Проявление из прозрачности: дальше fadeStartM — невидим,
-            // между fadeStartM и fadeEndM плавно проявляется, ближе — полностью виден.
             const distOpacity = Math.max(0, Math.min(1, (opts.fadeStartM - d) / span));
 
-            // Куб-основание проявляется на той же дистанции, что и спрайт.
-            if (opts.cubeEnabled && distOpacity > 0) {
-                cubeFeats.push(cubeFeature(inst.lng, inst.lat, distOpacity));
+            if (opts.cubeEnabled && distOpacity > 0 && cubeMeshes[i]) {
+                placeCubeMesh(cubeMeshes[i], inst.lng, inst.lat, distOpacity);
             }
 
             if (!img) continue;
@@ -281,8 +254,6 @@
             img.style.opacity = String(finalOpacity);
             img.style.display = "block";
         }
-
-        setCubeData(cubeFeats);
     }
 
     window.GeowalkGiantMob = {
@@ -292,9 +263,8 @@
             ensurePool(opts.enabled ? Math.max(0, opts.count | 0) : 0);
             for (const img of els) if (img.getAttribute("src") !== opts.src) img.src = opts.src;
         },
-        setup(map) {
-            mapRef = map;
-            ensureCubeLayer();
+        setup() {
+            if (window.GeowalkThree) GeowalkThree.onReady(() => ensureCubeMeshes(opts.count));
         },
         tick(motion) { tick(motion || {}); },
         reseed(lng, lat) {
@@ -338,13 +308,12 @@
         destroy() {
             for (const img of els) img.remove();
             els = [];
+            for (const m of cubeMeshes) {
+                if (window.GeowalkThree) GeowalkThree.remove(m);
+            }
+            cubeMeshes = [];
             if (root) { root.remove(); root = null; }
             if (styleEl) { styleEl.remove(); styleEl = null; }
-            if (mapRef) {
-                try { if (mapRef.getLayer(CUBE_LAYER)) mapRef.removeLayer(CUBE_LAYER); } catch (e) {}
-                try { if (mapRef.getSource(CUBE_SOURCE)) mapRef.removeSource(CUBE_SOURCE); } catch (e) {}
-            }
-            mapRef = null;
             instances = [];
             seededAround = null;
         }

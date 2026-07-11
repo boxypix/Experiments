@@ -1,9 +1,11 @@
-// Модуль: езда на машине (спрайт-лист: 4×600px × 2 ряда по 400px).
-// Ряд 0 — обычное покрытие; ряд 1 — слой water. Кадры 0–2 — поворот сзади; кадр 3 — вид сверху.
+// Модуль: езда на машине (спрайт-лист: 6×600px × 2 ряда по 400px, 3600×800).
+// Кадры 0–4 — поворот сзади (0°, 5°, 10°, 15°, 20°); кадр 5 — вид сверху.
+// Ряд 0 — обычное покрытие; ряд 1 — слой water.
 (function () {
     "use strict";
 
-    const SHEET = { frameWidth: 600, frameHeight: 400, frameCount: 4, rowCount: 2 };
+    const SHEET = { frameWidth: 600, frameHeight: 400, frameCount: 6, rowCount: 2 };
+    const DEFAULT_TURN_FRAME_THRESHOLDS_DEG = [15, 35, 55, 75];
     const WAKE_STEP_M = 3;
     const WAKE_LIFE_SEC = 1;
     const WAKE_MAX_LIMIT = 30;
@@ -348,11 +350,12 @@
 
     function frameFromTurnSpeed(degPerSec) {
         const abs = Math.abs(degPerSec);
-        const t1 = opts.turnThresholdDeg[0];
-        const t2 = opts.turnThresholdDeg[1];
-        if (abs < t1) return 0;
-        if (abs < t2) return 1;
-        return 2;
+        const t = (opts && opts.turnFrameThresholdsDeg) || DEFAULT_TURN_FRAME_THRESHOLDS_DEG;
+        if (abs < t[0]) return 0;
+        if (abs < t[1]) return 1;
+        if (abs < t[2]) return 2;
+        if (abs < t[3]) return 3;
+        return 4;
     }
 
     function easeOutBounce(t) {
@@ -516,7 +519,10 @@
                 turnThresholdDeg: options.turnThresholdDeg.slice(),
                 pivotOffsetX: options.pivotOffsetX,
                 pivotOffsetY: options.pivotOffsetY,
-                topFrameIndex: options.topFrameIndex != null ? options.topFrameIndex : 3,
+                topFrameIndex: options.topFrameIndex != null ? options.topFrameIndex : 5,
+                turnFrameThresholdsDeg: options.turnFrameThresholdsDeg
+                    ? options.turnFrameThresholdsDeg.slice()
+                    : DEFAULT_TURN_FRAME_THRESHOLDS_DEG.slice(),
                 topTurnLeanMaxDeg: options.topTurnLeanMaxDeg != null ? options.topTurnLeanMaxDeg : 10,
                 topTurnLeanSec: options.topTurnLeanSec != null ? options.topTurnLeanSec : 0.8,
                 wakeSrc: options.wakeSrc || "images/fx_1.png",

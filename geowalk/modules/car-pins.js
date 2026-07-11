@@ -1,11 +1,10 @@
-// Модуль: коллекционные точки — настоящие 3D-кубики (fill-extrusion),
-// рендерятся так же, как 3D-деревья проекта. Поддерживает несколько ТИПОВ
-// кубиков (напр. it_green, it_orange), у каждого свой цвет/размер/радиус и т.д.
-// Кубики крутятся вокруг вертикальной оси и корректно перекрываются
-// 3D-домами/рельефом за счёт depth-теста WebGL.
+// Модуль: коллекционные точки — 3D-кубики, рендерятся в Three.js слое
+// (GeowalkThree) и корректно перекрываются домами/рельефом за счёт depth-теста.
+// Поддерживает несколько ТИПОВ кубиков (it_green, it_orange, it_blue), у каждого
+// свой цвет/размер/радиус/движение/шлейф. Кубики крутятся вокруг вертикали.
 //
 // GeowalkCarPins.init({ types: [...], spinDegPerSec, onCollect })
-// GeowalkCarPins.setup(map)                  — создать источники+слои
+// GeowalkCarPins.setup(map)                  — (совместимость; сцена в GeowalkThree)
 // GeowalkCarPins.sync({ carMode, overlayOpen })
 // GeowalkCarPins.tick({ lng, lat, dt })
 // GeowalkCarPins.getTypes() / setParam(typeId, key, value)
@@ -18,6 +17,7 @@
     const TYPE_DEFAULTS = {
         id: "it_green",
         color: "#C8FF00",
+        enabled: false,
         count: 5,
         spawnMinM: 22,
         spawnMaxM: 95,
@@ -35,26 +35,30 @@
 
     const DEFAULTS = {
         spinDegPerSec: 90,
-        minZoom: 10,
         onCollect: null,
         types: [{ ...TYPE_DEFAULTS }]
     };
 
     let opts = { ...DEFAULTS };
-    let mapRef = null;
     let types = [];
     let active = false;
+    let boxGeom = null;
 
-    function sourceIdFor(id) { return "geowalk-car-pins-" + id; }
-    function layerIdFor(id) { return "geowalk-car-pins-" + id; }
+    function THREE() { return window.THREE; }
+    function three() { return window.GeowalkThree; }
+
+    function getBoxGeom() {
+        if (!boxGeom && THREE()) boxGeom = new (THREE().BoxGeometry)(1, 1, 1);
+        return boxGeom;
+    }
 
     function normalizeType(raw) {
         const t = Object.assign({}, TYPE_DEFAULTS, raw || {});
         t.count = Math.max(1, Math.min(50, t.count | 0));
         t.pins = [];
         t.seededAround = null;
-        t.sourceId = sourceIdFor(t.id);
-        t.layerId = layerIdFor(t.id);
+        t.material = null;
+        t.meshDirty = true;
         return t;
     }
 
@@ -62,7 +66,8 @@
         type.pins = [];
         for (let i = 0; i < type.count; i++) {
             type.pins.push({
-                active: false, lng: 0, lat: 0, spinDeg: Math.random() * 360
+                active: false, lng: 0, lat: 0, spinDeg: Math.random() * 360,
+                heading: 0, turnTimer: 0, hist: null, core: null, trail: null
             });
         }
     }
@@ -125,13 +130,11 @@
         const cosLat = Math.cos(slot.lat * DEG) || 1e-6;
         slot.lat += (Math.cos(slot.heading) * step) / M_PER_DEG_LAT;
         slot.lng += (Math.sin(slot.heading) * step) / (M_PER_DEG_LAT * cosLat);
-        // Не отпускаем точку дальше радиуса генерации — разворачиваем к игроку.
         if (distM(lng, lat, slot.lng, slot.lat) > type.spawnMaxM) {
             const east = (lng - slot.lng) * M_PER_DEG_LAT * cosLat;
             const north = (lat - slot.lat) * M_PER_DEG_LAT;
             slot.heading = Math.atan2(east, north);
         }
-        // История пройденного пути — для шлейфа кубиков позади точки.
         if (type.trailCount > 0) {
             if (!slot.hist) slot.hist = [];
             slot.hist.push({ lng: slot.lng, lat: slot.lat });
@@ -159,124 +162,71 @@
         type.seededAround = { lng, lat };
     }
 
-    // Квадратный footprint кубика, повёрнутый на deg вокруг центра.
-    function cubePolygon(lng, lat, halfM, deg) {
-        const rad = deg * DEG;
-        const cos = Math.cos(rad);
-        const sin = Math.sin(rad);
-        const mLng = M_PER_DEG_LAT * Math.cos(lat * DEG);
-        const corners = [
-            [-halfM, -halfM], [halfM, -halfM], [halfM, halfM], [-halfM, halfM]
-        ];
-        const ring = [];
-        for (const c of corners) {
-            const rx = c[0] * cos - c[1] * sin;
-            const ry = c[0] * sin + c[1] * cos;
-            ring.push([lng + rx / mLng, lat + ry / M_PER_DEG_LAT]);
-        }
-        ring.push(ring[0]);
-        return [ring];
-    }
+    // ---- Three.js меши -----------------------------------------------------
 
-    function cubeFeature(lng, lat, sizeM, deg) {
-        return {
-            type: "Feature",
-            properties: { h: sizeM },
-            geometry: {
-                type: "Polygon",
-                coordinates: cubePolygon(lng, lat, sizeM / 2, deg)
-            }
-        };
-    }
-
-    function buildFeatures(type) {
-        const feats = [];
+    function disposeTypeMeshes(type) {
+        const T = three();
         for (const slot of type.pins) {
-            if (!slot.active) continue;
-            feats.push(cubeFeature(slot.lng, slot.lat, type.sizeM, slot.spinDeg));
-            // Шлейф: кубики позади вдоль пройденного пути, постепенно меньше.
-            if (type.trailEnabled && type.trailCount > 0 && slot.hist && slot.hist.length > 1) {
-                for (let k = 1; k <= type.trailCount; k++) {
-                    const p = pointBack(slot.hist, type.trailSpacingM * k);
-                    const scale = Math.max(0.2, 1 - 0.28 * k);
-                    feats.push(cubeFeature(p.lng, p.lat, type.sizeM * scale, slot.spinDeg));
+            if (slot.core) { if (T) T.remove(slot.core); slot.core = null; }
+            if (slot.trail) {
+                for (const m of slot.trail) { if (T) T.remove(m); }
+                slot.trail = null;
+            }
+        }
+    }
+
+    function rebuildTypeMeshes(type) {
+        const t3 = THREE();
+        const T = three();
+        if (!t3 || !T || !T.isReady()) return;
+        disposeTypeMeshes(type);
+        if (!type.material) {
+            type.material = new t3.MeshStandardMaterial({
+                color: new t3.Color(type.color), roughness: 0.55, metalness: 0.0
+            });
+        } else {
+            type.material.color = new t3.Color(type.color);
+        }
+        const geom = getBoxGeom();
+        for (const slot of type.pins) {
+            slot.core = new t3.Mesh(geom, type.material);
+            slot.core.visible = false;
+            T.add(slot.core);
+            slot.trail = [];
+            if (type.trailCount > 0) {
+                for (let k = 0; k < type.trailCount; k++) {
+                    const m = new t3.Mesh(geom, type.material);
+                    m.visible = false;
+                    T.add(m);
+                    slot.trail.push(m);
                 }
             }
         }
-        return feats;
+        type.meshDirty = false;
     }
 
-    function setData(type, features) {
-        if (!mapRef) return;
-        try {
-            const src = mapRef.getSource(type.sourceId);
-            if (src) src.setData({ type: "FeatureCollection", features: features || [] });
-        } catch (e) { /* стиль перезагружается */ }
+    function placeCube(mesh, lng, lat, sizeM, baseM, spinDeg) {
+        const T = three();
+        const p = T.geoToLocal(lng, lat, baseM + sizeM / 2);
+        mesh.position.set(p.x, p.y, p.z);
+        mesh.scale.set(sizeM, sizeM, sizeM);
+        mesh.rotation.z = spinDeg * DEG;
+        mesh.visible = true;
     }
 
-    function layerPaint(type) {
-        return {
-            "fill-extrusion-color": type.color,
-            "fill-extrusion-base": type.baseM,
-            "fill-extrusion-height": ["+", type.baseM, ["get", "h"]],
-            "fill-extrusion-opacity": 1,
-            "fill-extrusion-vertical-gradient": true
-        };
-    }
-
-    function findInsertBefore(map) {
-        const layers = map.getStyle() && map.getStyle().layers;
-        if (!layers) return undefined;
-        for (let i = 0; i < layers.length; i++) {
-            if (layers[i].type === "symbol") return layers[i].id;
-        }
-        return undefined;
-    }
-
-    function ensureLayer(type) {
-        if (!mapRef) return;
-        if (!mapRef.getSource(type.sourceId)) {
-            mapRef.addSource(type.sourceId, {
-                type: "geojson",
-                data: { type: "FeatureCollection", features: [] }
-            });
-        }
-        if (!mapRef.getLayer(type.layerId)) {
-            mapRef.addLayer({
-                id: type.layerId,
-                type: "fill-extrusion",
-                source: type.sourceId,
-                minzoom: opts.minZoom,
-                paint: layerPaint(type)
-            }, findInsertBefore(mapRef));
-        }
-    }
-
-    function ensureAllLayers() {
-        for (const t of types) ensureLayer(t);
-    }
-
-    function setup(map, options) {
-        mapRef = map;
-        if (options && options.types) buildTypes(options.types);
-        ensureAllLayers();
-        if (!active) for (const t of types) setData(t, []);
-    }
-
-    function sync(state) {
-        const want = !!(state && state.carMode) && !(state && state.overlayOpen);
-        active = want;
-        if (!active) {
-            for (const t of types) {
-                for (const slot of t.pins) slot.active = false;
-                t.seededAround = null;
-                setData(t, []);
-            }
+    function hideTypeMeshes(type) {
+        for (const slot of type.pins) {
+            if (slot.core) slot.core.visible = false;
+            if (slot.trail) for (const m of slot.trail) m.visible = false;
         }
     }
 
     function tickType(type, lng, lat, dt) {
-        if (mapRef && !mapRef.getLayer(type.layerId)) ensureLayer(type);
+        if (!type.enabled) {
+            hideTypeMeshes(type);
+            return;
+        }
+        if (type.meshDirty) rebuildTypeMeshes(type);
         if (!type.seededAround ||
             distM(type.seededAround.lng, type.seededAround.lat, lng, lat) > type.spawnMaxM * 2.5) {
             seedAll(type, lng, lat);
@@ -293,12 +243,26 @@
                 }
                 spawnPin(type, slot, lng, lat);
             }
+
+            if (slot.core) placeCube(slot.core, slot.lng, slot.lat, type.sizeM, type.baseM, slot.spinDeg);
+
+            // Шлейф: кубики позади вдоль пройденного пути, постепенно меньше.
+            if (slot.trail && slot.trail.length) {
+                const canTrail = type.trailEnabled && type.trailCount > 0 &&
+                    slot.hist && slot.hist.length > 1;
+                for (let k = 0; k < slot.trail.length; k++) {
+                    const m = slot.trail[k];
+                    if (!canTrail) { m.visible = false; continue; }
+                    const p = pointBack(slot.hist, type.trailSpacingM * (k + 1));
+                    const scale = Math.max(0.2, 1 - 0.28 * (k + 1));
+                    placeCube(m, p.lng, p.lat, type.sizeM * scale, type.baseM, slot.spinDeg);
+                }
+            }
         }
-        setData(type, buildFeatures(type));
     }
 
     function tick(motion) {
-        if (!mapRef || !active) return;
+        if (!active || !THREE() || !three() || !three().isReady()) return;
         const dt = motion && motion.dt != null ? motion.dt : 0;
         const lng = motion && motion.lng;
         const lat = motion && motion.lat;
@@ -306,13 +270,33 @@
         for (const t of types) tickType(t, lng, lat, dt);
     }
 
+    function onScene() {
+        for (const t of types) t.meshDirty = true;
+    }
+
     window.GeowalkCarPins = {
         init(options) {
             opts = Object.assign({}, DEFAULTS, options || {});
             buildTypes(options && options.types);
+            if (window.GeowalkThree) GeowalkThree.onReady(onScene);
         },
-        setup(map, options) { setup(map, options || null); },
-        sync(state) { sync(state || {}); },
+        setup() {
+            // Сцена управляется GeowalkThree; при пере-создании сцены onScene
+            // помечает меши на перестройку. Здесь только подстраховка.
+            if (window.GeowalkThree) GeowalkThree.onReady(onScene);
+            for (const t of types) t.meshDirty = true;
+        },
+        sync(state) {
+            const want = !!(state && state.carMode) && !(state && state.overlayOpen);
+            active = want;
+            if (!active) {
+                for (const t of types) {
+                    for (const slot of t.pins) slot.active = false;
+                    t.seededAround = null;
+                    hideTypeMeshes(t);
+                }
+            }
+        },
         tick(motion) { tick(motion || {}); },
         reseed(lng, lat) {
             for (const t of types) {
@@ -324,6 +308,7 @@
             return types.map(t => ({
                 id: t.id,
                 color: t.color,
+                enabled: !!t.enabled,
                 count: t.count,
                 spawnMaxM: t.spawnMaxM,
                 hitRadiusM: t.hitRadiusM,
@@ -338,11 +323,22 @@
                 trailSpacingM: t.trailSpacingM
             }));
         },
-        // key: count | spawnRadius | hitRadius | size | base | spin
+        // key: enabled | count | spawnRadius | hitRadius | size | base | spin
         //    | moveSpeed | turnMin | turnMax | trailEnabled | trailCount | trailSpacing
         setParam(typeId, key, value) {
             const t = findType(typeId);
             if (!t) return;
+            if (key === "enabled") {
+                t.enabled = !!value;
+                if (!t.enabled) {
+                    hideTypeMeshes(t);
+                    t.seededAround = null;
+                    for (const slot of t.pins) slot.active = false;
+                } else {
+                    t.meshDirty = true;
+                }
+                return;
+            }
             const v = +value;
             if (key === "count") {
                 const c = Math.max(1, Math.min(50, v | 0));
@@ -350,6 +346,7 @@
                 t.count = c;
                 makePins(t);
                 t.seededAround = null;
+                t.meshDirty = true;
             } else if (key === "spawnRadius") {
                 const r = Math.max(2, v || 0);
                 t.spawnMaxM = r;
@@ -361,12 +358,6 @@
                 t.sizeM = Math.max(0.1, v || 0);
             } else if (key === "base") {
                 t.baseM = Math.max(0, v || 0);
-                if (mapRef && mapRef.getLayer(t.layerId)) {
-                    try {
-                        mapRef.setPaintProperty(t.layerId, "fill-extrusion-base", t.baseM);
-                        mapRef.setPaintProperty(t.layerId, "fill-extrusion-height", ["+", t.baseM, ["get", "h"]]);
-                    } catch (e) {}
-                }
             } else if (key === "spin") {
                 t.spinEnabled = !!value;
             } else if (key === "moveSpeed") {
@@ -380,20 +371,15 @@
                 t.trailEnabled = !!value;
             } else if (key === "trailCount") {
                 t.trailCount = Math.max(0, Math.min(10, v | 0));
+                t.meshDirty = true;
             } else if (key === "trailSpacing") {
                 t.trailSpacingM = Math.max(0.2, v || 0);
             }
         },
         destroy() {
-            if (mapRef) {
-                for (const t of types) {
-                    try { if (mapRef.getLayer(t.layerId)) mapRef.removeLayer(t.layerId); } catch (e) {}
-                    try { if (mapRef.getSource(t.sourceId)) mapRef.removeSource(t.sourceId); } catch (e) {}
-                }
-            }
+            for (const t of types) disposeTypeMeshes(t);
             types = [];
             active = false;
-            mapRef = null;
         }
     };
 })();
