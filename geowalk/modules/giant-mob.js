@@ -133,9 +133,9 @@
             if (!cubeGeom) cubeGeom = new t3.BoxGeometry(1, 1, 1);
             if (!cubeMat) {
                 const c = opts.cubeColor;
-                cubeMat = new t3.MeshStandardMaterial({
+                cubeMat = new t3.MeshBasicMaterial({
                     color: new t3.Color(c[0] / 255, c[1] / 255, c[2] / 255),
-                    roughness: 0.6, transparent: true, opacity: 1
+                    transparent: true, opacity: 1
                 });
             }
             const m = new t3.Mesh(cubeGeom, cubeMat);

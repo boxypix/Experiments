@@ -89,7 +89,7 @@
     function isAnchoredSceneObject(obj) {
         let p = obj;
         while (p) {
-            if (p.name === "geowalk-3dsky" || p.name === "geowalk-car-3d") return true;
+            if (p.name === "geowalk-3dsky" || p.name === "geowalk-car-3d" || p.name === "geowalk-save-pin") return true;
             p = p.parent;
         }
         return false;
@@ -161,6 +161,33 @@
         return layers[idx + 1].id;
     }
 
+    function flattenMeshMaterials(root) {
+        const THREE = window.THREE;
+        if (!THREE || !root) return;
+        root.traverse((node) => {
+            if (!node.isMesh || !node.material) return;
+            const flattenOne = (mat) => {
+                if (!mat || mat.isMeshBasicMaterial) return mat;
+                const basic = new THREE.MeshBasicMaterial({
+                    color: mat.color ? mat.color.clone() : new THREE.Color(0xffffff),
+                    map: mat.map || null,
+                    transparent: !!mat.transparent,
+                    opacity: mat.opacity != null ? mat.opacity : 1,
+                    alphaMap: mat.alphaMap || null,
+                    alphaTest: mat.alphaTest || 0,
+                    side: mat.side != null ? mat.side : THREE.FrontSide,
+                    depthWrite: mat.depthWrite !== false,
+                    depthTest: mat.depthTest !== false,
+                    vertexColors: !!mat.vertexColors
+                });
+                mat.dispose();
+                return basic;
+            };
+            if (Array.isArray(node.material)) node.material = node.material.map(flattenOne);
+            else node.material = flattenOne(node.material);
+        });
+    }
+
     function makeLayer() {
         return {
             id: "geowalk-three",
@@ -171,16 +198,14 @@
                 const THREE = window.THREE;
                 camera = new THREE.Camera();
                 scene = new THREE.Scene();
-                scene.add(new THREE.AmbientLight(0xffffff, 1.15));
-                const dir = new THREE.DirectionalLight(0xffffff, 1.5);
-                dir.position.set(0.4, 0.7, 1).normalize();
-                scene.add(dir);
+                scene.add(new THREE.AmbientLight(0xffffff, 1));
                 renderer = new THREE.WebGLRenderer({
                     canvas: m.getCanvas(),
                     context: gl,
                     antialias: true
                 });
                 renderer.autoClear = false;
+                renderer.toneMapping = THREE.NoToneMapping;
                 if (origin.lng != null) {
                     origin.merc = maplibregl.MercatorCoordinate.fromLngLat([origin.lng, origin.lat], 0);
                     origin.scale = origin.merc.meterInMercatorCoordinateUnits();
@@ -273,6 +298,7 @@
             };
         },
         meterScale() { return origin.scale; },
+        flattenMeshMaterials,
         THREE() { return window.THREE; }
     };
 })();

@@ -14,7 +14,7 @@
 
     let wakeFx = {
         assetWidthPx: 120,
-        assetHeightPx: 70,
+        assetHeightPx: 120,
         sizeScatterPct: 20
     };
 

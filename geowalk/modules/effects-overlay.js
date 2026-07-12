@@ -3,6 +3,7 @@
 // Подключение: <script src="modules/effects-overlay.js"></script>
 // GeowalkEffects.init();
 // GeowalkEffects.flashBorder({ color, widthPx, durationSec });
+// GeowalkEffects.flashSavePinBorder({ color, widthPx, durationSec });
 (function () {
     "use strict";
 
@@ -10,14 +11,19 @@
         zIndex: 30,
         borderColor: "#22e05a",
         borderWidthPx: 30,
-        borderDurationSec: 1
+        borderDurationSec: 1,
+        savePinBorderColor: "#9DFF00",
+        savePinBorderWidthPx: 30,
+        savePinBorderDurationSec: 1
     };
 
     let opts = { ...DEFAULTS };
     let root = null;
     let borderEl = null;
+    let savePinBorderEl = null;
     let styleEl = null;
     let borderAnim = null;
+    let savePinBorderAnim = null;
 
     function injectStyles() {
         if (styleEl) return;
@@ -46,21 +52,42 @@
         borderEl = document.createElement("div");
         borderEl.className = "fx-border";
         root.appendChild(borderEl);
+        savePinBorderEl = document.createElement("div");
+        savePinBorderEl.className = "fx-border";
+        root.appendChild(savePinBorderEl);
         document.body.appendChild(root);
     }
 
-    function flashBorder(o) {
+    function flashBorderEl(el, o, defaults) {
         ensureDom();
-        const color = (o && o.color) || opts.borderColor;
-        const widthPx = (o && o.widthPx != null) ? o.widthPx : opts.borderWidthPx;
-        const durationSec = (o && o.durationSec != null) ? o.durationSec : opts.borderDurationSec;
-        borderEl.style.setProperty("--fx-border-c", color);
-        borderEl.style.setProperty("--fx-border-w", widthPx + "px");
-        if (borderAnim) { try { borderAnim.cancel(); } catch (e) {} }
-        borderAnim = borderEl.animate(
+        if (!el) return null;
+        const color = (o && o.color) || defaults.color;
+        const widthPx = (o && o.widthPx != null) ? o.widthPx : defaults.widthPx;
+        const durationSec = (o && o.durationSec != null) ? o.durationSec : defaults.durationSec;
+        el.style.setProperty("--fx-border-c", color);
+        el.style.setProperty("--fx-border-w", widthPx + "px");
+        return el.animate(
             [{ opacity: 1 }, { opacity: 0 }],
             { duration: Math.max(1, durationSec * 1000), easing: "ease-out", fill: "forwards" }
         );
+    }
+
+    function flashBorder(o) {
+        if (borderAnim) { try { borderAnim.cancel(); } catch (e) {} }
+        borderAnim = flashBorderEl(borderEl, o, {
+            color: opts.borderColor,
+            widthPx: opts.borderWidthPx,
+            durationSec: opts.borderDurationSec
+        });
+    }
+
+    function flashSavePinBorder(o) {
+        if (savePinBorderAnim) { try { savePinBorderAnim.cancel(); } catch (e) {} }
+        savePinBorderAnim = flashBorderEl(savePinBorderEl, o, {
+            color: opts.savePinBorderColor,
+            widthPx: opts.savePinBorderWidthPx,
+            durationSec: opts.savePinBorderDurationSec
+        });
     }
 
     window.GeowalkEffects = {
@@ -72,10 +99,15 @@
         flashBorder(o) {
             flashBorder(o || {});
         },
+        flashSavePinBorder(o) {
+            flashSavePinBorder(o || {});
+        },
         destroy() {
             if (borderAnim) { try { borderAnim.cancel(); } catch (e) {} borderAnim = null; }
+            if (savePinBorderAnim) { try { savePinBorderAnim.cancel(); } catch (e) {} savePinBorderAnim = null; }
             if (root) { root.remove(); root = null; }
             borderEl = null;
+            savePinBorderEl = null;
             if (styleEl) { styleEl.remove(); styleEl = null; }
         }
     };

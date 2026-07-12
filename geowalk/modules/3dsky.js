@@ -9,7 +9,8 @@
         sizeM: 12000,
         repeat: 3.5,
         opacity: 0.92,
-        driftSpeed: 0.012
+        driftSpeed: 0.012,
+        topDownHidePitchDeg: 50
     };
 
     let cfg = null;
@@ -24,6 +25,8 @@
     let playerLng = null;
     let playerLat = null;
     let playerLiftM = 0;
+    let cameraPitch = 90;
+    let cameraElevM = null;
     let skyAbsZM = null;
     let skyAbsAltM = null;
     let readyHook = null;
@@ -84,6 +87,19 @@
         if (s.playerLng != null && isFinite(s.playerLng)) playerLng = s.playerLng;
         if (s.playerLat != null && isFinite(s.playerLat)) playerLat = s.playerLat;
         if (s.playerLiftM != null && isFinite(s.playerLiftM)) playerLiftM = Math.max(0, s.playerLiftM);
+        if (s.cameraPitch != null && isFinite(s.cameraPitch)) cameraPitch = s.cameraPitch;
+        if (s.cameraElevM != null && isFinite(s.cameraElevM)) cameraElevM = s.cameraElevM;
+    }
+
+    function updateSkyPlaneVisibility(GT) {
+        if (!skyPlane) return;
+        const hidePitch = cfg && cfg.topDownHidePitchDeg != null ? cfg.topDownHidePitchDeg : 50;
+        let hide = cameraPitch < hidePitch;
+        if (!hide && cameraElevM != null && playerLng != null && playerLat != null) {
+            const skyZ = resolveSkyAbsZM(GT) + playerLiftM;
+            hide = cameraElevM > skyZ + 20 && cameraPitch < hidePitch + 20;
+        }
+        skyPlane.visible = !hide;
     }
 
     function resetSkyHeight() {
@@ -134,6 +150,7 @@
 
         lastPlayerLocalX = local.x;
         lastPlayerLocalY = local.y;
+        updateSkyPlaneVisibility(GT);
     }
 
     function detachSkyRoot() {

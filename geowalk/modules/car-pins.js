@@ -181,8 +181,8 @@
         if (!t3 || !T || !T.isReady()) return;
         disposeTypeMeshes(type);
         if (!type.material) {
-            type.material = new t3.MeshStandardMaterial({
-                color: new t3.Color(type.color), roughness: 0.55, metalness: 0.0
+            type.material = new t3.MeshBasicMaterial({
+                color: new t3.Color(type.color)
             });
         } else {
             type.material.color = new t3.Color(type.color);
