@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Clipboard</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #000000;
+      --card: #212121;
+      --text: #ffffff;
+      --muted: #888888;
+      --toast: #0dff00;
+      --pad: 16px;
+      --gap: 16px;
+      --radius: 14px;
+      --header-h: 96px;
+      --tabs-h: 56px;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    .app {
+      --app-max: 480px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: var(--app-max);
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg);
+      padding: var(--pad);
+      padding-right: 72px;
+      flex-shrink: 0;
+    }
+
+    .header h1 {
+      font-size: 44px;
+      font-weight: 900;
+      line-height: 1.05;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .counter {
+      margin-top: 4px;
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .view-toggle {
+      position: fixed;
+      top: var(--pad);
+      right: max(var(--pad), calc(50% - (var(--app-max) / 2) + var(--pad)));
+      z-index: 20;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 400;
+      font-family: inherit;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+
+    .cards {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 var(--pad) var(--pad);
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: #333333 transparent;
+    }
+
+    .cards::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .cards::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .cards::-webkit-scrollbar-thumb {
+      background: #333333;
+      border-radius: 6px;
+    }
+
+    .cards::-webkit-scrollbar-thumb:hover {
+      background: #444444;
+    }
+
+    .cards-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap);
+    }
+
+    .cards-list.grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--gap);
+      align-items: stretch;
+    }
+
+    .cards-list.grid .card {
+      height: 100%;
+    }
+
+    @media (max-width: 400px) {
+      .app {
+        --app-max: 100%;
+      }
+
+      .cards-list,
+      .cards-list.grid {
+        gap: 12px;
+      }
+
+      .cards-list.grid {
+        width: 100%;
+      }
+
+      .cards-list.grid .card {
+        font-size: 12px;
+      }
+    }
+
+    @media (min-width: 801px) {
+      .app {
+        --app-max: 1400px;
+      }
+
+      .cards-list.grid {
+        grid-template-columns: repeat(6, 1fr);
+      }
+    }
+
+    .card {
+      background: var(--card);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.4;
+      padding: 14px;
+      border-radius: var(--radius);
+      border: none;
+      text-align: left;
+      font-family: inherit;
+      cursor: pointer;
+      width: 100%;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s ease, opacity 0.1s ease;
+    }
+
+    .card:active {
+      transform: scale(0.98);
+      opacity: 0.85;
+    }
+
+    .tabs {
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
+      background: var(--bg);
+      display: flex;
+      gap: 20px;
+      padding: 14px var(--pad);
+      padding-bottom: max(14px, env(safe-area-inset-bottom));
+      flex-shrink: 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tab {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 400;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      padding: 0;
+      opacity: 1;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .tab.active {
+      opacity: 0.7;
+    }
+
+    .toast {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%) translateY(-120%);
+      z-index: 100;
+      background: var(--toast);
+      color: #000000;
+      font-size: 14px;
+      font-weight: 400;
+      padding: 10px 18px;
+      border-radius: 20px;
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1 id="title">All</h1>
+      <p class="counter" id="counter">0 cards</p>
+    </header>
+
+    <button class="view-toggle" id="viewToggle" type="button">List</button>
+
+    <main class="cards" id="cardsWrap">
+      <div class="cards-list" id="cards"></div>
+    </main>
+
+    <nav class="tabs" id="tabs"></nav>
+  </div>
+
+  <div class="toast" id="toast">Copied!</div>
+
+  <script src="phrases.js"></script>
+  <script>
+    const state = {
+      category: "All",
+      view: "grid",
+      phrases: DATA.phrases,
+      categories: DATA.categories,
+    };
+
+    const titleEl = document.getElementById("title");
+    const counterEl = document.getElementById("counter");
+    const cardsEl = document.getElementById("cards");
+    const tabsEl = document.getElementById("tabs");
+    const viewToggleEl = document.getElementById("viewToggle");
+    const toastEl = document.getElementById("toast");
+
+    let toastTimer = null;
+
+    function filteredPhrases() {
+      if (state.category === "All") return state.phrases;
+      return state.phrases.filter((p) => p.category === state.category);
+    }
+
+    function renderTabs() {
+      tabsEl.innerHTML = "";
+      state.categories.forEach((name) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "tab" + (name === state.category ? " active" : "");
+        btn.textContent = name;
+        btn.addEventListener("click", () => {
+          state.category = name;
+          render();
+        });
+        tabsEl.appendChild(btn);
+      });
+    }
+
+    function showToast() {
+      toastEl.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastEl.classList.remove("show");
+      }, 1000);
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      showToast();
+    }
+
+    function renderCards() {
+      const items = filteredPhrases();
+      cardsEl.className = "cards-list" + (state.view === "grid" ? " grid" : "");
+      cardsEl.innerHTML = "";
+
+      items.forEach((phrase) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "card";
+        btn.textContent = phrase.text;
+        btn.addEventListener("click", () => copyText(phrase.text));
+        cardsEl.appendChild(btn);
+      });
+
+      const n = items.length;
+      counterEl.textContent = n + (n === 1 ? " card" : " cards");
+      titleEl.textContent = state.category;
+    }
+
+    function render() {
+      renderTabs();
+      renderCards();
+      viewToggleEl.textContent = state.view === "list" ? "Grid" : "List";
+    }
+
+    viewToggleEl.addEventListener("click", () => {
+      state.view = state.view === "list" ? "grid" : "list";
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
