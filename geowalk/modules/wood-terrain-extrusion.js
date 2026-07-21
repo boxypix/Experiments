@@ -34,10 +34,10 @@
         treeSpriteScale: 5,
         treeSpriteRadiusM: 800,
         treeSpriteSpawnAnim: true,
-        treeSpriteSpawnAnimSec: 0.5,
-        cellsPerPass: 40,
+        treeSpriteSpawnAnimSec: 1.5,
+        cellsPerPass: 28,
         woodQueryMoveM: 180,
-        flushMinIntervalMs: 120,
+        flushMinIntervalMs: 180,
         rebuildDebounceMs: 100
     };
 
@@ -55,6 +55,7 @@
     let lastZoomBucket = -1;
     let dirty = false;
     let lastFlushCount = -1;
+    let lastFlushSig = "";
     let lastFlushAt = 0;
     /** @type {Map<string, { feature: object|null, lng: number, lat: number }>} */
     let cellCache = new Map();
@@ -64,6 +65,36 @@
     let treeSpriteMat = null;
     let treePlaneGeom = null;
     let treeTex = null;
+    let originShiftHandler = null;
+
+    function repositionTreeSpritesOnOrigin() {
+        const T = window.GeowalkThree;
+        if (!T || !T.isReady()) return;
+        for (const rec of treeSpriteByKey.values()) {
+            const group = rec.group;
+            if (!group || group.userData.geoLng == null || group.userData.geoLat == null) continue;
+            const base = group.userData.geoBase != null ? group.userData.geoBase : (cfg ? cfg.extrusionBaseM : 1);
+            const p = T.geoToLocal(group.userData.geoLng, group.userData.geoLat, base);
+            group.position.set(p.x, p.y, p.z);
+        }
+    }
+
+    function bindOriginShiftHandler() {
+        const T = window.GeowalkThree;
+        if (!T || !T.onOriginShift) return;
+        if (!originShiftHandler) {
+            originShiftHandler = () => repositionTreeSpritesOnOrigin();
+            T.onOriginShift(originShiftHandler);
+        }
+    }
+
+    function unbindOriginShiftHandler() {
+        const T = window.GeowalkThree;
+        if (T && T.offOriginShift && originShiftHandler) {
+            T.offOriginShift(originShiftHandler);
+        }
+        originShiftHandler = null;
+    }
 
     function resetTreeSpriteCache() {
         clearAllTreeSprites();
@@ -116,10 +147,18 @@
         return r || extrusionRadiusM();
     }
 
+    function disposeTreeSprite(rec) {
+        if (!rec) return;
+        if (rec.mesh && rec.mesh.material) rec.mesh.material.dispose();
+    }
+
     function clearAllTreeSprites() {
         const T = window.GeowalkThree;
         if (T) {
-            for (const rec of treeSpriteByKey.values()) T.remove(rec.group);
+            for (const rec of treeSpriteByKey.values()) {
+                disposeTreeSprite(rec);
+                T.remove(rec.group);
+            }
         }
         treeSpriteByKey.clear();
     }
@@ -131,6 +170,14 @@
         mesh.scale.set(side * f, side * f, 1);
     }
 
+    function applyTreeSpriteOpacity(mesh, opacity) {
+        const mat = mesh.material;
+        if (!mat) return;
+        const o = opacity != null ? opacity : 1;
+        mat.opacity = o;
+        mat.alphaTest = o >= 1 ? 0.35 : 0;
+    }
+
     function createTreeBillboard(t3, T, mat, lng, lat, sizeM, base) {
         const p = T.geoToLocal(lng, lat, base);
         if (!treePlaneGeom) {
@@ -138,15 +185,20 @@
             // Ось вращения: низ по центру (локально y = 0).
             treePlaneGeom.translate(0, 0.5, 0);
         }
-        const mesh = new t3.Mesh(treePlaneGeom, mat);
+        const meshMat = mat.clone();
+        const mesh = new t3.Mesh(treePlaneGeom, meshMat);
         mesh.userData.side = sizeM;
         mesh.rotation.x = Math.PI / 2;
-        applyTreeSpriteScale(mesh, cfg && cfg.treeSpriteSpawnAnim !== false ? 0 : 1);
+        applyTreeSpriteScale(mesh, 1);
+        applyTreeSpriteOpacity(mesh, cfg && cfg.treeSpriteSpawnAnim !== false ? 0 : 1);
         const group = new t3.Group();
         group.add(mesh);
         group.position.set(p.x, p.y, p.z);
         group.rotation.z = randomYawForLngLat(lng, lat);
         group.userData.cellKey = null;
+        group.userData.geoLng = lng;
+        group.userData.geoLat = lat;
+        group.userData.geoBase = base;
         return group;
     }
 
@@ -179,6 +231,7 @@
 
         for (const [key, rec] of treeSpriteByKey) {
             if (!keepKeys.has(key)) {
+                disposeTreeSprite(rec);
                 T.remove(rec.group);
                 treeSpriteByKey.delete(key);
             }
@@ -205,25 +258,47 @@
             if (animOn) {
                 mesh.userData.spawnAnim = true;
                 mesh.userData.animT = 0;
-                applyTreeSpriteScale(mesh, 0);
+                applyTreeSpriteOpacity(mesh, 0);
             }
             T.add(group);
             treeSpriteByKey.set(entry.key, { group, mesh });
         }
     }
 
+    function hasActiveTreeSpawnAnim() {
+        if (!cfg || cfg.treeSpritesEnabled === false || cfg.treeSpriteSpawnAnim === false) return false;
+        for (const rec of treeSpriteByKey.values()) {
+            if (rec.mesh && rec.mesh.userData.spawnAnim) return true;
+        }
+        return false;
+    }
+
     function tickTreeSpriteAnim(dt) {
-        if (!cfg || !cfg.treeSpritesEnabled || cfg.treeSpriteSpawnAnim === false) return;
-        const dur = Math.max(0.05, cfg.treeSpriteSpawnAnimSec != null ? cfg.treeSpriteSpawnAnimSec : 0.5);
+        if (!hasActiveTreeSpawnAnim()) return;
+        const dur = Math.max(0.05, cfg.treeSpriteSpawnAnimSec != null ? cfg.treeSpriteSpawnAnimSec : 1.5);
         for (const rec of treeSpriteByKey.values()) {
             const mesh = rec.mesh;
             if (!mesh || !mesh.userData.spawnAnim) continue;
             mesh.userData.animT = Math.min(dur, (mesh.userData.animT || 0) + dt);
             const u = mesh.userData.animT / dur;
             const f = 1 - Math.pow(1 - u, 3);
-            applyTreeSpriteScale(mesh, f);
-            if (u >= 1) mesh.userData.spawnAnim = false;
+            applyTreeSpriteOpacity(mesh, f);
+            if (u >= 1) {
+                mesh.userData.spawnAnim = false;
+                applyTreeSpriteOpacity(mesh, 1);
+            }
         }
+    }
+
+    function extrusionFeatureSig(features) {
+        if (!features.length) return "0";
+        let h = features.length | 0;
+        const step = Math.max(1, Math.floor(features.length / 8));
+        for (let i = 0; i < features.length; i += step) {
+            const p = features[i].properties;
+            h = Math.imul(31, h) + ((p && p.h != null ? (p.h * 1000) | 0 : 0) ^ i);
+        }
+        return String(h);
     }
 
     function metersToDegLat(m) { return m / M_PER_DEG_LAT; }
@@ -461,9 +536,17 @@
         const layerId = cfg.fillLayerId;
         if (!mapRef.getLayer(layerId)) return [];
         try {
+            const pad = 64;
+            const sw = mapRef.project([bbox[0], bbox[1]]);
+            const ne = mapRef.project([bbox[2], bbox[3]]);
+            const x0 = Math.max(0, Math.min(sw.x, ne.x) - pad);
+            const y0 = Math.max(0, Math.min(sw.y, ne.y) - pad);
             const canvas = mapRef.getCanvas();
+            const x1 = Math.min(canvas.width, Math.max(sw.x, ne.x) + pad);
+            const y1 = Math.min(canvas.height, Math.max(sw.y, ne.y) + pad);
+            if (x1 <= x0 || y1 <= y0) return [];
             return dedupeFeatures(mapRef.queryRenderedFeatures(
-                [[0, 0], [canvas.width, canvas.height]],
+                [[x0, y0], [x1, y1]],
                 { layers: [layerId] }
             ), bbox);
         } catch (e) {
@@ -553,7 +636,7 @@
     }
 
     function flushToMap(lng, lat, force) {
-        if (!dirty && !force) return;
+        if (!dirty && !force) return false;
         const extrusionRadiusSq = extrusionRadiusM() * extrusionRadiusM();
         const pickedExtrusion = [];
         for (const entry of cellCache.values()) {
@@ -568,22 +651,28 @@
             pickedExtrusion.length = cap;
         }
         const features = pickedExtrusion.map(e => e.feature);
-        const spriteEntries = pickSpriteEntries(lng, lat);
-        if (!force && features.length === lastFlushCount && !dirty) {
-            syncThreeTrees(lng, lat, cfg.treeSpritesEnabled !== false ? spriteEntries : []);
-            return;
+        const spritesOn = cfg.treeSpritesEnabled !== false;
+        const spriteEntries = spritesOn ? pickSpriteEntries(lng, lat) : [];
+        const sig = extrusionFeatureSig(features);
+        if (!force && sig === lastFlushSig && !dirty) {
+            if (spritesOn) syncThreeTrees(lng, lat, spriteEntries);
+            return false;
         }
+        let flushed = false;
         try {
             if (cfg.enabled !== false && mapRef.getSource(SOURCE_ID)) {
                 mapRef.getSource(SOURCE_ID).setData({ type: "FeatureCollection", features });
+                flushed = true;
             }
         } catch (e) {
             console.warn("GeowalkWoodTerrainExtrude:", e);
         }
+        lastFlushSig = sig;
         lastFlushCount = features.length;
         lastFlushAt = performance.now();
         dirty = false;
-        syncThreeTrees(lng, lat, cfg.treeSpritesEnabled !== false ? spriteEntries : []);
+        if (spritesOn) syncThreeTrees(lng, lat, spriteEntries);
+        return flushed;
     }
 
     function evictFarCells(lng, lat) {
@@ -628,6 +717,7 @@
             cellCache.clear();
             woodSnapshot = null;
             lastFlushCount = -1;
+            lastFlushSig = "";
             clearAllTreeSprites();
             dirty = true;
         }
@@ -635,6 +725,7 @@
             cellCache.clear();
             woodSnapshot = null;
             lastFlushCount = -1;
+            lastFlushSig = "";
             clearAllTreeSprites();
             try { mapRef.getSource(SOURCE_ID).setData({ type: "FeatureCollection", features: [] }); } catch (e) {}
             return;
@@ -652,6 +743,8 @@
         evictFarCells(lng, lat);
 
         const missing = collectMissingCells(lng, lat, bbox, stepLng, stepLat);
+        if (!missing.length && !dirty) return;
+
         const budget = cfg.cellsPerPass;
         let added = 0;
         for (let i = 0; i < missing.length && added < budget; i++) {
@@ -698,6 +791,7 @@
         lastCellIy = null;
         lastZoomBucket = -1;
         lastFlushCount = -1;
+        lastFlushSig = "";
         dirty = false;
         try {
             if (mapRef && mapRef.getSource(SOURCE_ID)) {
@@ -730,6 +824,7 @@
     }
 
     function teardown() {
+        unbindOriginShiftHandler();
         resetTreeSpriteCache();
         deactivate();
         cfg = null;
@@ -805,6 +900,7 @@
         active = true;
         terrainOn = true;
         applyExtrusionRuntime(shouldRunExtrusion(cfg));
+        bindOriginShiftHandler();
         scheduleRebuild(0);
     }
 
@@ -847,24 +943,29 @@
     }
 
     function tick(state) {
-        if (!active || !terrainOn || !cfg || !mapRef || !state || !state.ready) return;
-        if (state.lng == null || state.lat == null) return;
+        if (!active || !terrainOn || !cfg || !mapRef || !state || !state.ready) return false;
+        if (state.lng == null || state.lat == null) return false;
         playerLng = state.lng;
         playerLat = state.lat;
 
         const dt = state.dt != null ? state.dt : 0;
-        tickTreeSpriteAnim(dt);
+        let needsRepaint = false;
+        if (hasActiveTreeSpawnAnim()) {
+            tickTreeSpriteAnim(dt);
+            needsRepaint = true;
+        }
 
         const stepLat = metersToDegLat(cfg.gridCellM);
         const stepLng = metersToDegLng(cfg.gridCellM, playerLat);
         const ix = Math.floor(playerLng / stepLng);
         const iy = Math.floor(playerLat / stepLat);
-        if (lastCellIx === ix && lastCellIy === iy) return;
+        if (lastCellIx === ix && lastCellIy === iy) return needsRepaint;
 
         lastCellIx = ix;
         lastCellIy = iy;
         if (cfg.treeSpritesEnabled !== false) refreshThreeTrees(playerLng, playerLat);
-        scheduleRebuild(cfg.rebuildDebounceMs);
+        if (!rebuildTimer) scheduleRebuild(cfg.rebuildDebounceMs);
+        return needsRepaint;
     }
 
     window.GeowalkWoodTerrainExtrude = { setup, sync, tick, reset, teardown, bindMapEvents };

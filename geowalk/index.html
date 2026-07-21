@@ -1161,19 +1161,13 @@
             <button type="button" class="panel-debug-toggle" data-panel-toggle="close">Hide Debug menu</button>
             <div class="title">Настройки</div>
         <label>Моя скорость <input id="walk" type="number" min="0" step="0.5" /></label>
-        <label>eyeHeight (м) <input id="eye-height" type="number" min="0.5" step="0.1" /></label>
         <label>Ускорение (Shift) <input id="run" type="number" min="1" step="1" /></label>
-        <label>Наклон Shift-бок (°) <input id="sprint-roll-max" type="number" min="0" max="45" step="1" /></label>
-        <label>Опускание рук при Shift (%) <input id="hands-sprint-drop" type="number" min="0" max="100" step="1" /></label>
-        <label>FOV (°) <input id="fov" type="number" min="30" max="120" step="1" /></label>
         <label>Взлёт / спуск <input id="fly" type="number" min="0" step="0.5" /></label>
         <label>FPS limit (0=без) <input id="fps-limit" type="number" min="0" step="1" /></label>
         <label>Sky вкл. <input id="sky-enabled" type="checkbox" checked /></label>
         <label>3dsky вкл. <input id="sky3d-enabled" type="checkbox" checked /></label>
+        <label>3dsky анимация <input id="sky3d-anim" type="checkbox" /></label>
         <label>3dsky высота (м) <input id="sky3d-alt" type="number" min="0" step="50" /></label>
-        <label>Туман (0–1) <input id="draw" type="number" min="0" max="1" step="0.05" /></label>
-        <label>Cutoff 3D <input id="clip3d" type="checkbox" /></label>
-        <label>Дальность 3D (0–1) <input id="clip3d-factor" type="number" min="0.05" max="1" step="0.05" /></label>
         <label>Машина
             <select id="car-sprite">
                 <option value="1">car_1</option>
@@ -1188,7 +1182,6 @@
         <label>Шлейф (шт.) <input id="car-wake-max" type="number" min="1" max="30" step="1" /></label>
         <label>3dcar повторяет рельеф <input id="car3d-follow-terrain" type="checkbox" checked /></label>
         <div class="sep"></div>
-        <label>3D рельеф (×, 0=выкл) <input id="relief" type="number" min="0" step="0.5" /></label>
         <label>Деревья threejs <input id="trees-threejs" type="checkbox" checked /></label>
         <label>Радиус деревьев (м) <input id="trees-threejs-radius" type="number" min="50" max="3000" step="10" /></label>
         <label>Анимация появления <input id="trees-threejs-spawn-anim" type="checkbox" checked /></label>
@@ -1206,6 +1199,37 @@
         <input id="style-file" type="file" accept=".json,application/json" hidden />
         <label>Понимать покрытия <input id="surface-probe" type="checkbox" /></label>
         <div id="surface-status" class="surface-status"></div>
+        <div class="sep"></div>
+        <div class="title">Оптимизация</div>
+        <label>Three origin shift (м) <input id="three-origin-shift" type="number" min="500" max="10000" step="100" /></label>
+        <label>Three кэш рельефа <input id="three-terrain-cache" type="number" min="64" max="4096" step="64" /></label>
+        <div class="hint">Three origin / кэш — быстрее на больших дистанциях.</div>
+        <div class="sep"></div>
+        <div class="title">Walk параметры</div>
+        <label>Высота глаз (м) <input id="eye-height" type="number" min="0.5" step="0.1" /></label>
+        <label>Уровень земли groundAlt (м) <input id="walk-ground-alt" type="number" step="0.1" /></label>
+        <label>Pitch фикс. pitchStart (°) <input id="walk-pitch-start" type="number" min="0" max="90" step="0.5" /></label>
+        <label>Pitch min (°) <input id="walk-pitch-min" type="number" min="0" max="90" step="0.5" /></label>
+        <label>Pitch max (°) <input id="walk-pitch-max" type="number" min="0" max="90" step="0.5" /></label>
+        <label>Макс. подъём maxClimbM (м) <input id="walk-max-climb" type="number" min="0" step="0.5" placeholder="∞" /></label>
+        <label>Прыжок высота (м) <input id="walk-jump-height" type="number" min="0" step="0.5" /></label>
+        <label>Прыжок время (с) <input id="walk-jump-sec" type="number" min="0.1" step="0.1" /></label>
+        <label>FOV (°) <input id="fov" type="number" min="30" max="120" step="1" /></label>
+        <label>Near clip (÷ высоты) <input id="near-clip-divisor" type="number" min="500" max="20000" step="100" /></label>
+        <label>Cutoff 3D <input id="clip3d" type="checkbox" /></label>
+        <label>Дальность 3D (0–1) <input id="clip3d-factor" type="number" min="0.05" max="1" step="0.05" /></label>
+        <label>maxSafeZoom <input id="walk-max-safe-zoom" type="number" min="1" max="24" step="0.5" /></label>
+        <label>Наклон Shift-бок (°) <input id="sprint-roll-max" type="number" min="0" max="45" step="1" /></label>
+        <label>Наклон Shift время (с) <input id="walk-sprint-roll-sec" type="number" min="0.05" step="0.05" /></label>
+        <label>Опускание рук Shift (%) <input id="hands-sprint-drop" type="number" min="0" max="100" step="1" /></label>
+        <label>mouseYaw (°/px) <input id="walk-mouse-yaw" type="number" min="0.01" max="2" step="0.01" /></label>
+        <label>mousePitch (°/px) <input id="walk-mouse-pitch" type="number" min="0.01" max="2" step="0.01" /></label>
+        <label>Стартовый курс (°) <input id="walk-start-bearing" type="number" min="0" max="359" step="1" /></label>
+        <label>Сглаживание рельефа (с) <input id="walk-terrain-smooth-sec" type="number" min="0.05" max="3" step="0.05" /></label>
+        <label>3D рельеф (×, 0=выкл) <input id="relief" type="number" min="0" step="0.5" /></label>
+        <label>LOD DEM (0–15) <input id="terrain-lod" type="number" min="0" max="15" step="1" /></label>
+        <label>Туман (0–1) <input id="draw" type="number" min="0" max="1" step="0.05" /></label>
+        <div class="hint">Камера режима «Прогулка»: pitch фиксирован, elevation по DEM.</div>
         <div class="hint">Esc — освободить курсор, чтобы менять поля</div>
         <div id="hud">
             <div class="row"><span>Коорд.</span><b id="hud-coord">—</b></div>
@@ -1536,7 +1560,7 @@
         eyeHeight: 3,
         startHeightMultiplier: 10, // при старте поднимаемся в N раз выше роста
         groundAlt: 0,         // уровень земли, м
-        fov: 85,              // вертикальный угол обзора
+        fov: 80,              // вертикальный угол обзора
         // Ближняя плоскость отсечения: MapLibre по умолчанию height/50, из-за чего
         // у плоской камеры близкие объекты сильно обрезаются. Больше делитель —
         // ближе плоскость — меньше обрезаются объекты у камеры (ценой точности глубины).
@@ -1545,7 +1569,7 @@
         runMultiplier: 50,    // ускорение по Shift (переопределяется settings.json)
         handsSprintDropPercent: 25, // опускание рук при Shift-ускорении, % высоты экрана
         flySpeed: 20,         // м/с — подъём (Space) / спуск (X)
-        fpsLimit: 60,         // лимит кадров/с (0 = без лимита)
+        fpsLimit: 35,         // лимит кадров/с (0 = без лимита)
         inertiaEnabled: true,   // инерция горизонтального движения (только settings.json)
         inertia: 0.14,          // степень инертности, сек (больше — плавнее разгон/торможение)
         mouseYaw: 0.16,       // чувств. поворота, град/пиксель
@@ -1555,7 +1579,6 @@
         pitchMin: 85,         // смотрим вниз (≈5° ниже горизонта)
         pitchMax: 88,         // самый ровный наклон без артефактов (≈2° вниз)
         pitchStart: 88,       // смотрим прямо и чуть вниз
-        walkCameraPitch: 90,  // walk: строго горизонт, не зависит от рельефа
         maxSafeZoom: 20,      // выше — нестабильно у горизонта
         // Небо + туман (градиент и дальность прорисовки) — править в settings.json → sky
         sky: {
@@ -1619,15 +1642,21 @@
         styleUrl: "maps/map5.json", // стиль по умолчанию (папка /maps)
         // 3D рельеф (DEM от AWS, terrarium). 0 = выключен.
         terrainExaggeration: 1,
+        // Макс. zoom DEM-тайлов (0–15): ниже — грубее рельеф, быстрее.
+        terrainDemMaxZoom: 9,
+        threeOriginShiftM: 3000,
+        threeTerrainCacheMax: 1024,
+        threeTerrainCacheCell: 0.00004,
         // «Игнорировать рельеф камерой»: вкл — фикс. высота (не меняется при подъёме).
-        // Выкл (прогулка) — высота = рельеф + eyeHeight; pitch фиксирован.
+        // Выкл — высота по рельефу под игроком, не под точкой прицела впереди.
         ignoreTerrainCollision: true,
         followTerrainEyeHeight: 3,   // высота глаз, м — галочка «игнорировать рельеф» выкл
-        ignoreTerrainEyeHeight: 23,     // высота глаз, м — галочка вкл
+        ignoreTerrainEyeHeight: 20,    // целевая высота дрона, м
+        ignoreTerrainEyeHeightStart: 4, // стартовая высота при выборе дрона, м
         heightAnimSec: 2,              // длительность анимации смены высоты, сек
-        cameraTerrainSmoothSec: 0.65,  // сглаживание рельефа walk (только высота)
         followTerrainJumpHeight: 14,   // прыжок Space в режиме «следовать рельефу», м
         followTerrainJumpSec: 1.4,     // длительность прыжка вверх-вниз, сек
+        cameraTerrainSmoothSec: 0.65,  // сглаживание высоты рельефа walk-камеры, сек
         movementMode: "ignore",        // ignore | follow | car | 3dmove
         // car* — править только в settings.json (ниже — запас для offline)
         carEyeHeight: 2.2,
@@ -1702,8 +1731,9 @@
         maxClimbM: null,
         // Cutoff 3D: уменьшает дальнюю плоскость отсечения (доля авто farZ, 0–1).
         clip3dEnabled: true,
-        clip3dFactor: 0.38,
+        clip3dFactor: 0.4,
         sky3dEnabled: true,
+        sky3dAnimEnabled: true,
         sky3dSrc: "images/cloud.png",
         sky3dAltM: 1800,
         sky3dSizeM: 12000,
@@ -1863,42 +1893,6 @@
     function isCarLikeMode() { return isCarMode() || is3dMoveMode(); }
     function isFollowMode() { return CONFIG.movementMode === "follow"; }
     function isIgnoreMode() { return CONFIG.movementMode === "ignore"; }
-    function isWalkMode() { return !isCarLikeMode(); }
-
-    function walkCameraPitchDeg() {
-        return CONFIG.walkCameraPitch != null ? CONFIG.walkCameraPitch : 90;
-    }
-
-    function resetWalkTerrainSmooth() {
-        smoothedWalkTerrainElev = null;
-    }
-
-    function resolveWalkTerrainElev(dt) {
-        if (!isFollowMode()) return null;
-        const raw = queryPlayerTerrainElevation();
-        if (raw == null) return smoothedWalkTerrainElev;
-        if (smoothedWalkTerrainElev == null) {
-            smoothedWalkTerrainElev = raw;
-            return raw;
-        }
-        const tau = CONFIG.cameraTerrainSmoothSec != null ? CONFIG.cameraTerrainSmoothSec : 0.65;
-        const blend = expBlend(dt, tau);
-        smoothedWalkTerrainElev += (raw - smoothedWalkTerrainElev) * blend;
-        return smoothedWalkTerrainElev;
-    }
-
-    function resolveWalkZoom(cosLat, eyeM) {
-        const key = Math.round(cosLat * 1e6) + "," + Math.round(eyeM * 100);
-        if (cachedWalkZoom != null && cachedWalkZoomKey === key) return cachedWalkZoom;
-        const tr = map.transform;
-        const ctc = tr.cameraToCenterDistance;
-        const prZoom = 89.5 * DEG;
-        let zoom = Math.log2(Math.cos(prZoom) * ctc * EARTH_CIRC * cosLat / (TILE * eyeM));
-        zoom = Math.min(CONFIG.maxSafeZoom, Math.max(1, zoom));
-        cachedWalkZoom = zoom;
-        cachedWalkZoomKey = key;
-        return zoom;
-    }
 
     function styleNameFromUrl(url) {
         if (!url || typeof url !== "string") return "embedded";
@@ -1907,13 +1901,21 @@
     }
 
     function totalEyeHeightForMode(mode) {
-        if (mode === "ignore") {
-            return CONFIG.ignoreTerrainEyeHeight != null
-                ? CONFIG.ignoreTerrainEyeHeight
-                : CONFIG.eyeHeight * CONFIG.startHeightMultiplier;
-        }
+        if (mode === "ignore") return droneTargetEyeHeightM();
         if (mode === "car" || mode === "3dmove") return CONFIG.carEyeHeight;
         return CONFIG.followTerrainEyeHeight != null ? CONFIG.followTerrainEyeHeight : CONFIG.eyeHeight;
+    }
+
+    function droneTargetEyeHeightM() {
+        return CONFIG.ignoreTerrainEyeHeight != null
+            ? CONFIG.ignoreTerrainEyeHeight
+            : CONFIG.eyeHeight * CONFIG.startHeightMultiplier;
+    }
+
+    function droneStartEyeHeightM() {
+        return CONFIG.ignoreTerrainEyeHeightStart != null
+            ? CONFIG.ignoreTerrainEyeHeightStart
+            : 4;
     }
 
     function totalEyeHeightForIgnore(ignore) {
@@ -1947,9 +1949,13 @@
     const elDraw = document.getElementById("draw");
     const elSkyEnabled = document.getElementById("sky-enabled");
     const elSky3dEnabled = document.getElementById("sky3d-enabled");
+    const elSky3dAnim = document.getElementById("sky3d-anim");
     const elSky3dAlt = document.getElementById("sky3d-alt");
     const elClip3d = document.getElementById("clip3d");
     const elClip3dFactor = document.getElementById("clip3d-factor");
+    const elNearClipDivisor = document.getElementById("near-clip-divisor");
+    const elThreeOriginShift = document.getElementById("three-origin-shift");
+    const elThreeTerrainCache = document.getElementById("three-terrain-cache");
     const elCarRoll = document.getElementById("car-roll");
     const elCarSprite = document.getElementById("car-sprite");
     const elCarRollMax = document.getElementById("car-roll-max");
@@ -1957,11 +1963,25 @@
     const elCarWakeMax = document.getElementById("car-wake-max");
     const elCar3dFollowTerrain = document.getElementById("car3d-follow-terrain");
     const elRelief = document.getElementById("relief");
+    const elTerrainLod = document.getElementById("terrain-lod");
     const elTreesThreejs = document.getElementById("trees-threejs");
     const elTreesThreejsRadius = document.getElementById("trees-threejs-radius");
     const elTreesThreejsSpawnAnim = document.getElementById("trees-threejs-spawn-anim");
     const elTrees3d = document.getElementById("trees3d");
     const elTrees3dDensity = document.getElementById("trees3d-density");
+    const elWalkGroundAlt = document.getElementById("walk-ground-alt");
+    const elWalkPitchStart = document.getElementById("walk-pitch-start");
+    const elWalkPitchMin = document.getElementById("walk-pitch-min");
+    const elWalkPitchMax = document.getElementById("walk-pitch-max");
+    const elWalkMaxClimb = document.getElementById("walk-max-climb");
+    const elWalkJumpHeight = document.getElementById("walk-jump-height");
+    const elWalkJumpSec = document.getElementById("walk-jump-sec");
+    const elWalkMaxSafeZoom = document.getElementById("walk-max-safe-zoom");
+    const elWalkSprintRollSec = document.getElementById("walk-sprint-roll-sec");
+    const elWalkMouseYaw = document.getElementById("walk-mouse-yaw");
+    const elWalkMousePitch = document.getElementById("walk-mouse-pitch");
+    const elWalkStartBearing = document.getElementById("walk-start-bearing");
+    const elWalkTerrainSmoothSec = document.getElementById("walk-terrain-smooth-sec");
     const elNoTerrCol = document.getElementById("noterrcol");
     const elMinimap = document.getElementById("minimap");
     const elPinStats = document.getElementById("pin-stats");
@@ -2010,10 +2030,7 @@
     let carYawVel = 0;
     let carTurnInput = 0;
     let lastCarTerrainElev = null;
-    let smoothedWalkTerrainElev = null;
-    let cachedWalkZoom = null;
-    let cachedWalkZoomKey = "";
-    let lastFrameDt = 1 / 60;
+    let lastFollowTerrainElev = null;
     let lastCameraAltM = 0;
     let carCameraRoll = 0;
     let sprintCameraRoll = 0;
@@ -2039,6 +2056,10 @@
         if (elFpsLimit) elFpsLimit.value = CONFIG.fpsLimit;
         if (elSkyEnabled) elSkyEnabled.checked = CONFIG.skyEnabled !== false;
         if (elSky3dEnabled) elSky3dEnabled.checked = CONFIG.sky3dEnabled !== false;
+        if (elSky3dAnim) {
+            elSky3dAnim.checked = CONFIG.sky3dAnimEnabled === true;
+            elSky3dAnim.disabled = CONFIG.sky3dEnabled === false;
+        }
         if (elSky3dAlt) {
             elSky3dAlt.value = CONFIG.sky3dAltM != null ? CONFIG.sky3dAltM : 1800;
             elSky3dAlt.disabled = CONFIG.sky3dEnabled === false;
@@ -2049,6 +2070,10 @@
         }
         if (elClip3d) elClip3d.checked = !!CONFIG.clip3dEnabled;
         if (elClip3dFactor) elClip3dFactor.value = CONFIG.clip3dFactor;
+        if (elNearClipDivisor) elNearClipDivisor.value = CONFIG.nearClipDivisor != null ? CONFIG.nearClipDivisor : 4000;
+        if (elTerrainLod) elTerrainLod.value = terrainDemMaxZoomFromConfig();
+        if (elThreeOriginShift) elThreeOriginShift.value = CONFIG.threeOriginShiftM != null ? CONFIG.threeOriginShiftM : 3000;
+        if (elThreeTerrainCache) elThreeTerrainCache.value = CONFIG.threeTerrainCacheMax != null ? CONFIG.threeTerrainCacheMax : 1024;
         if (elCarSprite) elCarSprite.value = String(carSpriteIdFromConfig());
         if (elCarRoll) elCarRoll.checked = CONFIG.carCameraRollEnabled !== false;
         if (elCarRollMax) elCarRollMax.value = CONFIG.carCameraRollMax;
@@ -2073,6 +2098,29 @@
         if (elPinStats) elPinStats.checked = CONFIG.pinStatsEnabled === true;
         syncPinStatsVisibility();
         if (elSurfaceProbe) elSurfaceProbe.checked = CONFIG.surfaceProbeEnabled !== false;
+        if (elWalkGroundAlt) elWalkGroundAlt.value = CONFIG.groundAlt != null ? CONFIG.groundAlt : 0;
+        if (elWalkPitchStart) elWalkPitchStart.value = CONFIG.pitchStart;
+        if (elWalkPitchMin) elWalkPitchMin.value = CONFIG.pitchMin;
+        if (elWalkPitchMax) elWalkPitchMax.value = CONFIG.pitchMax;
+        if (elWalkMaxClimb) {
+            elWalkMaxClimb.value = CONFIG.maxClimbM != null && CONFIG.maxClimbM > 0 ? CONFIG.maxClimbM : "";
+        }
+        if (elWalkJumpHeight) {
+            elWalkJumpHeight.value = CONFIG.followTerrainJumpHeight != null ? CONFIG.followTerrainJumpHeight : 14;
+        }
+        if (elWalkJumpSec) {
+            elWalkJumpSec.value = CONFIG.followTerrainJumpSec != null ? CONFIG.followTerrainJumpSec : 1.4;
+        }
+        if (elWalkMaxSafeZoom) elWalkMaxSafeZoom.value = CONFIG.maxSafeZoom;
+        if (elWalkSprintRollSec) {
+            elWalkSprintRollSec.value = CONFIG.sprintCameraRollSec != null ? CONFIG.sprintCameraRollSec : 0.35;
+        }
+        if (elWalkMouseYaw) elWalkMouseYaw.value = CONFIG.mouseYaw;
+        if (elWalkMousePitch) elWalkMousePitch.value = CONFIG.mousePitch;
+        if (elWalkStartBearing) elWalkStartBearing.value = CONFIG.startBearing;
+        if (elWalkTerrainSmoothSec) {
+            elWalkTerrainSmoothSec.value = CONFIG.cameraTerrainSmoothSec != null ? CONFIG.cameraTerrainSmoothSec : 0.65;
+        }
         elStyleStatus.textContent = "стиль: " + styleNameFromUrl(CONFIG.styleUrl);
         elHelpShift.innerHTML = "<kbd>Shift</kbd> — рывок /ускорение";
         elOverlayHint.textContent = "Некоммерческая гео-песочница для путешествий. By Boxypix design & dev. 2026";
@@ -2085,6 +2133,15 @@
         });
     }
 
+    function syncThreePerfFromConfig() {
+        if (!window.GeowalkThree || !GeowalkThree.configure) return;
+        GeowalkThree.configure({
+            originShiftM: CONFIG.threeOriginShiftM != null ? CONFIG.threeOriginShiftM : 3000,
+            terrainCacheMax: CONFIG.threeTerrainCacheMax != null ? CONFIG.threeTerrainCacheMax : 1024,
+            terrainCacheCell: CONFIG.threeTerrainCacheCell != null ? CONFIG.threeTerrainCacheCell : 0.00004
+        });
+    }
+
     function sky3dOptionsFromConfig() {
         return {
             enabled: CONFIG.sky3dEnabled !== false,
@@ -2093,6 +2150,7 @@
             sizeM: CONFIG.sky3dSizeM != null ? CONFIG.sky3dSizeM : 12000,
             repeat: CONFIG.sky3dRepeat != null ? CONFIG.sky3dRepeat : 3.5,
             opacity: CONFIG.sky3dOpacity != null ? CONFIG.sky3dOpacity : 0.92,
+            animEnabled: CONFIG.sky3dAnimEnabled === true,
             playerLng: player.lng,
             playerLat: player.lat
         };
@@ -2444,7 +2502,7 @@
         carTurnInput = 0;
         invalidateCameraCache();
         lastCarTerrainElev = null;
-        resetWalkTerrainSmooth();
+        lastFollowTerrainElev = null;
         carCameraRoll = 0;
         sprintCameraRoll = 0;
         sprintCameraRollTarget = 0;
@@ -2681,7 +2739,11 @@
         yaw: CONFIG.startBearing,    // курс, град
         pitch: CONFIG.pitchStart,    // наклон камеры, град (0=вниз,90=горизонт)
         cosLat: Math.cos(CONFIG.start.lat * DEG),
-        altOffset: altOffsetForTotalEye(totalEyeHeightForMode(CONFIG.movementMode)),
+        altOffset: altOffsetForTotalEye(
+            CONFIG.movementMode === "ignore"
+                ? droneStartEyeHeightM()
+                : totalEyeHeightForMode(CONFIG.movementMode)
+        ),
         speed: 0,
         eye: CONFIG.eyeHeight,
         collision: true
@@ -2763,12 +2825,25 @@
 
     function startHeightAnimForMode(mode) {
         jumpAnim = null;
-        const to = altOffsetForTotalEye(totalEyeHeightForMode(mode));
         if (mode === "follow") {
             heightAnim = null;
-            player.altOffset = to;
+            player.altOffset = altOffsetForTotalEye(totalEyeHeightForMode(mode));
             return;
         }
+        if (mode === "ignore") {
+            const from = altOffsetForTotalEye(droneStartEyeHeightM());
+            const to = altOffsetForTotalEye(droneTargetEyeHeightM());
+            player.altOffset = from;
+            fixedElevation = null;
+            heightAnim = {
+                from,
+                to,
+                elapsed: 0,
+                duration: Math.max(0.2, CONFIG.heightAnimSec || 2)
+            };
+            return;
+        }
+        const to = altOffsetForTotalEye(totalEyeHeightForMode(mode));
         heightAnim = {
             from: player.altOffset,
             to,
@@ -3250,8 +3325,11 @@
         fixedElevation = null;
         invalidateCameraCache();
         lastCarTerrainElev = null;
-        resetWalkTerrainSmooth();
+        lastFollowTerrainElev = null;
         if (window.GeowalkWoodTerrainExtrude) GeowalkWoodTerrainExtrude.reset(lng, lat);
+        if (window.GeowalkThree && GeowalkThree.setOrigin) {
+            GeowalkThree.setOrigin(lng, lat);
+        }
         if (ready) {
             recalcSky3dAtPlayer();
             applyCamera();
@@ -3366,7 +3444,6 @@
     function applyFov() {
         if (!map) return;
         try { map.setVerticalFieldOfView(clampFov(CONFIG.fov)); } catch (err) { console.warn("FOV:", err); }
-        invalidateCameraCache();
     }
     bindNumber(elFov, v => { CONFIG.fov = clampFov(v); applyFov(); });
     bindNumber(elFly, v => CONFIG.flySpeed = v);
@@ -3383,8 +3460,16 @@
         elSky3dEnabled.addEventListener("change", () => {
             CONFIG.sky3dEnabled = elSky3dEnabled.checked;
             if (elSky3dAlt) elSky3dAlt.disabled = !CONFIG.sky3dEnabled;
+            if (elSky3dAnim) elSky3dAnim.disabled = !CONFIG.sky3dEnabled;
             syncSky3dModule();
             if (map && map.transform) applyNearFarClip(map.transform);
+            if (map) map.triggerRepaint();
+        });
+    }
+    if (elSky3dAnim) {
+        elSky3dAnim.addEventListener("change", () => {
+            CONFIG.sky3dAnimEnabled = elSky3dAnim.checked;
+            syncSky3dModule();
             if (map) map.triggerRepaint();
         });
     }
@@ -3399,6 +3484,105 @@
         applySky();
     });
 
+    function applyWalkPitchFromConfig() {
+        const pitch = CONFIG.pitchStart != null ? CONFIG.pitchStart : 88;
+        player.pitch = pitch;
+        if (map && ready) {
+            invalidateCameraCache();
+            applyCamera();
+            map.triggerRepaint();
+        }
+    }
+
+    if (elWalkGroundAlt) {
+        bindNumber(elWalkGroundAlt, v => {
+            CONFIG.groundAlt = v;
+            if (isFollowMode()) {
+                player.altOffset = altOffsetForTotalEye(totalEyeHeightForMode("follow"));
+                invalidateCameraCache();
+            }
+        });
+    }
+    if (elWalkPitchStart) {
+        bindNumber(elWalkPitchStart, v => {
+            CONFIG.pitchStart = Math.max(0, Math.min(90, v));
+            elWalkPitchStart.value = CONFIG.pitchStart;
+            applyWalkPitchFromConfig();
+        });
+    }
+    if (elWalkPitchMin) {
+        bindNumber(elWalkPitchMin, v => {
+            CONFIG.pitchMin = Math.max(0, Math.min(90, v));
+            elWalkPitchMin.value = CONFIG.pitchMin;
+        });
+    }
+    if (elWalkPitchMax) {
+        bindNumber(elWalkPitchMax, v => {
+            CONFIG.pitchMax = Math.max(0, Math.min(90, v));
+            elWalkPitchMax.value = CONFIG.pitchMax;
+        });
+    }
+    if (elWalkMaxClimb) {
+        elWalkMaxClimb.addEventListener("input", () => {
+            const raw = elWalkMaxClimb.value.trim();
+            if (!raw) {
+                CONFIG.maxClimbM = null;
+                return;
+            }
+            const v = parseFloat(raw);
+            if (!isNaN(v) && v > 0) {
+                CONFIG.maxClimbM = v;
+                player.altOffset = clampPlayerAltOffset(player.altOffset);
+            }
+        });
+    }
+    if (elWalkJumpHeight) {
+        bindNumber(elWalkJumpHeight, v => {
+            CONFIG.followTerrainJumpHeight = Math.max(0, v);
+        });
+    }
+    if (elWalkJumpSec) {
+        bindNumber(elWalkJumpSec, v => {
+            CONFIG.followTerrainJumpSec = Math.max(0.1, v);
+        });
+    }
+    if (elWalkMaxSafeZoom) {
+        bindNumber(elWalkMaxSafeZoom, v => {
+            CONFIG.maxSafeZoom = Math.max(1, Math.min(24, v));
+            elWalkMaxSafeZoom.value = CONFIG.maxSafeZoom;
+            invalidateCameraCache();
+        });
+    }
+    if (elWalkSprintRollSec) {
+        bindNumber(elWalkSprintRollSec, v => {
+            CONFIG.sprintCameraRollSec = Math.max(0.05, v);
+        });
+    }
+    if (elWalkMouseYaw) {
+        bindNumber(elWalkMouseYaw, v => {
+            CONFIG.mouseYaw = Math.max(0.01, Math.min(2, v));
+            elWalkMouseYaw.value = CONFIG.mouseYaw;
+        });
+    }
+    if (elWalkMousePitch) {
+        bindNumber(elWalkMousePitch, v => {
+            CONFIG.mousePitch = Math.max(0.01, Math.min(2, v));
+            elWalkMousePitch.value = CONFIG.mousePitch;
+        });
+    }
+    if (elWalkStartBearing) {
+        bindNumber(elWalkStartBearing, v => {
+            CONFIG.startBearing = ((Math.round(v) % 360) + 360) % 360;
+            elWalkStartBearing.value = CONFIG.startBearing;
+        });
+    }
+    if (elWalkTerrainSmoothSec) {
+        bindNumber(elWalkTerrainSmoothSec, v => {
+            CONFIG.cameraTerrainSmoothSec = Math.max(0.05, Math.min(3, v));
+            elWalkTerrainSmoothSec.value = CONFIG.cameraTerrainSmoothSec;
+        });
+    }
+
     function syncClipPanelUI() {
         if (elClip3dFactor) elClip3dFactor.disabled = !elClip3d || !elClip3d.checked;
     }
@@ -3411,11 +3595,35 @@
         elClip3d.addEventListener("change", () => {
             CONFIG.clip3dEnabled = elClip3d.checked;
             syncClipPanelUI();
+            syncNearFarClip();
         });
     }
     bindNumber(elClip3dFactor, v => {
         CONFIG.clip3dFactor = Math.max(0.05, Math.min(1, v));
+        if (elClip3dFactor) elClip3dFactor.value = CONFIG.clip3dFactor;
+        syncNearFarClip();
     });
+    if (elNearClipDivisor) {
+        bindNumber(elNearClipDivisor, v => {
+            CONFIG.nearClipDivisor = Math.max(500, Math.min(20000, v));
+            elNearClipDivisor.value = CONFIG.nearClipDivisor;
+            syncNearFarClip();
+        });
+    }
+    if (elThreeOriginShift) {
+        bindNumber(elThreeOriginShift, v => {
+            CONFIG.threeOriginShiftM = Math.max(500, Math.min(10000, v | 0));
+            elThreeOriginShift.value = CONFIG.threeOriginShiftM;
+            syncThreePerfFromConfig();
+        });
+    }
+    if (elThreeTerrainCache) {
+        bindNumber(elThreeTerrainCache, v => {
+            CONFIG.threeTerrainCacheMax = Math.max(64, Math.min(4096, v | 0));
+            elThreeTerrainCache.value = CONFIG.threeTerrainCacheMax;
+            syncThreePerfFromConfig();
+        });
+    }
     if (elCarRoll) {
         elCarRoll.addEventListener("change", () => {
             CONFIG.carCameraRollEnabled = elCarRoll.checked;
@@ -3734,6 +3942,34 @@
         }
     }
 
+    function terrainDemMaxZoomFromConfig() {
+        const z = CONFIG.terrainDemMaxZoom != null ? (CONFIG.terrainDemMaxZoom | 0) : 9;
+        return Math.max(0, Math.min(15, z));
+    }
+
+    let lastTerrainDemMaxZoom = null;
+
+    function ensureTerrainDemSource(forceRecreate) {
+        if (!map) return;
+        const maxzoom = terrainDemMaxZoomFromConfig();
+        try {
+            const src = map.getSource("terrain-dem");
+            if (src && !forceRecreate && lastTerrainDemMaxZoom === maxzoom) return;
+            const ex = CONFIG.terrainExaggeration;
+            if (map.getTerrain()) map.setTerrain(null);
+            if (src) map.removeSource("terrain-dem");
+            map.addSource("terrain-dem", {
+                type: "raster-dem",
+                tiles: [CONFIG.demUrl],
+                tileSize: 256,
+                encoding: CONFIG.demEncoding,
+                maxzoom
+            });
+            lastTerrainDemMaxZoom = maxzoom;
+            applyTerrain(ex);
+        } catch (e) { console.warn("terrain DEM:", e); }
+    }
+
     function applyTerrain(ex) {
         try {
             if (ex && ex > 0) map.setTerrain({ source: "terrain-dem", exaggeration: ex });
@@ -3772,6 +4008,13 @@
         const v = parseFloat(elRelief.value);
         if (!isNaN(v)) { CONFIG.terrainExaggeration = v; applyTerrain(v); }
     });
+    if (elTerrainLod) {
+        bindNumber(elTerrainLod, v => {
+            CONFIG.terrainDemMaxZoom = Math.max(0, Math.min(15, v | 0));
+            elTerrainLod.value = CONFIG.terrainDemMaxZoom;
+            ensureTerrainDemSource(true);
+        });
+    }
     if (elTreesThreejs) {
         elTreesThreejs.addEventListener("change", () => {
             CONFIG.treesThreeJsEnabled = elTreesThreejs.checked;
@@ -4222,25 +4465,16 @@
         applySky();
 
         try {
-            if (!map.getSource("terrain-dem")) {
-                map.addSource("terrain-dem", {
-                    type: "raster-dem",
-                    tiles: [CONFIG.demUrl],
-                    tileSize: 256,
-                    encoding: CONFIG.demEncoding,
-                    maxzoom: 15
-                });
-            }
-            applyTerrain(CONFIG.terrainExaggeration);
+            ensureTerrainDemSource(true);
             fixedElevation = null;
-            resetWalkTerrainSmooth();
+            lastFollowTerrainElev = null;
         } catch (err) { console.warn("DEM:", err); }
 
         shadowLayer = null;
         if (CONFIG.shadows) enableShadows();
 
         fixedElevation = null;
-        resetWalkTerrainSmooth();
+        lastFollowTerrainElev = null;
         buildingCache = [];
         cacheTime = 0;
         surfaceCache = emptySurfaceCache();
@@ -4253,6 +4487,7 @@
                     originLng: CONFIG.start.lng,
                     originLat: CONFIG.start.lat
                 });
+                syncThreePerfFromConfig();
             } catch (err) { console.warn("Three layer:", err); }
         }
         if (window.Geowalk3dSky) {
@@ -4293,11 +4528,18 @@
         } catch (err) { /* near/far override недоступен */ }
     }
 
+    function syncNearFarClip() {
+        if (!map || !map.transform) return;
+        applyNearFarClip(map.transform);
+        map.triggerRepaint();
+    }
+
     map.on("load", () => {
         setupStyle();
         applyCarModeVisuals();
         if (window.GeowalkWoodTerrainExtrude) GeowalkWoodTerrainExtrude.bindMapEvents(map);
         ready = true;
+        if (isIgnoreMode()) startHeightAnimForMode("ignore");
         applyCamera();
     });
     map.on("idle", () => { reassertRenderHierarchy(); });
@@ -4350,8 +4592,6 @@
         lastAppliedCamSig = "";
         lastAppliedCamRoll = NaN;
         miniMapCamSig = "";
-        cachedWalkZoom = null;
-        cachedWalkZoomKey = "";
     }
 
     const CAM_ROLL_EPS = 0.015;
@@ -4359,7 +4599,7 @@
     function applyCameraJump(opts, sigParts) {
         const sig = cameraSig(sigParts);
         const roll = opts.roll != null ? opts.roll : 0;
-        const posChanged = isCarLikeMode() || sig !== lastAppliedCamSig;
+        const posChanged = sig !== lastAppliedCamSig;
         const rollChanged = !Number.isFinite(lastAppliedCamRoll) || Math.abs(roll - lastAppliedCamRoll) > CAM_ROLL_EPS;
         if (posChanged) {
             lastAppliedCamSig = sig;
@@ -4370,7 +4610,7 @@
             lastAppliedCamRoll = roll;
         }
         const changed = posChanged || rollChanged;
-        if (changed || isCarLikeMode()) applyNearFarClip(map.transform);
+        if (changed) applyNearFarClip(map.transform);
         return changed;
     }
 
@@ -4402,6 +4642,23 @@
         if (Math.abs(carYawVel) > 0.001) {
             player.yaw = ((player.yaw + carYawVel * dt) % 360 + 360) % 360;
         }
+    }
+
+    function hasWalkMoveInput() {
+        if (!controlsActive()) return false;
+        if (keys["KeyW"] || keys["KeyS"] || keys["ArrowUp"] || keys["ArrowDown"]) return true;
+        if (keys["KeyA"] || keys["KeyD"] || keys["ArrowLeft"] || keys["ArrowRight"]) return true;
+        if (isTouchUiActive() && !isCarLikeMode() && Math.abs(touchJoy.fwd) > 0.001) return true;
+        return false;
+    }
+
+    function resolveFollowTerrainElevation() {
+        if (!map.getTerrain() || !map.isSourceLoaded("terrain-dem")) return null;
+        if (hasWalkMoveInput() || lastFollowTerrainElev == null) {
+            const te = queryPlayerTerrainElevation();
+            if (te != null) lastFollowTerrainElev = te;
+        }
+        return lastFollowTerrainElev;
     }
 
     function queryPlayerTerrainElevation() {
@@ -4550,7 +4807,7 @@
     }
 
     function triggerSprintCameraRoll(strafeDir) {
-        if (isWalkMode() || !controlsActive() || !started || overlayVisible()) return;
+        if (!controlsActive() || !started || overlayVisible()) return;
         const rollMax = CONFIG.sprintCameraRollMax != null ? CONFIG.sprintCameraRollMax : 6;
         const dir = strafeDir > 0 ? 1 : strafeDir < 0 ? -1 : 0;
         if (!dir) return;
@@ -4558,11 +4815,6 @@
     }
 
     function updateSprintCameraRoll(dt) {
-        if (isWalkMode()) {
-            sprintCameraRollTarget = 0;
-            sprintCameraRoll = 0;
-            return;
-        }
         const rollBlend = expBlend(dt, CONFIG.sprintCameraRollSec != null ? CONFIG.sprintCameraRollSec : 0.35);
         if (!controlsActive() || overlayVisible()) {
             sprintCameraRollTarget = 0;
@@ -4575,7 +4827,6 @@
     }
 
     function mapCameraRollDeg() {
-        if (isWalkMode()) return 0;
         let roll = sprintCameraRoll;
         if (isCarLikeMode() && carCameraView !== "topdown" && CONFIG.carCameraRollEnabled !== false) {
             roll += carCameraRoll;
@@ -4599,10 +4850,11 @@
         carCameraRoll += (targetRoll - carCameraRoll) * rollBlend;
     }
 
-    // Walk: pitch/roll фиксированы; рельеф меняет только высоту (elevation + eyeM).
+    // Камера от первого лица: глаз держим точно в точке игрока.
+    // MapLibre ставит камеру позади center на расстоянии cameraToCenterDistance,
+    // поэтому center выносим вперёд ровно на это расстояние по земле.
     function applyCamera() {
         if (!ready) return false;
-        const dt = lastFrameDt;
         const cosLat = player.cosLat != null ? player.cosLat : Math.cos(player.lat * DEG);
 
         if (isCarLikeMode()) {
@@ -4673,22 +4925,33 @@
             ]);
         }
 
-        const camPitch = walkCameraPitchDeg();
-        player.pitch = camPitch;
-        const eyeM = (CONFIG.groundAlt || 0) + CONFIG.eyeHeight + (player.altOffset || 0);
-        player.eye = eyeM;
-        const zoom = resolveWalkZoom(cosLat, eyeM);
+        const tr = map.transform;
+        const ctc = tr.cameraToCenterDistance;
+        const pr = player.pitch * DEG;
+        const targetEye = CONFIG.groundAlt + CONFIG.eyeHeight + player.altOffset;
 
-        const centerLng = player.lng;
-        const centerLat = player.lat;
+        let zoom = Math.log2(Math.cos(pr) * ctc * EARTH_CIRC * cosLat / (TILE * targetEye));
+        zoom = Math.min(CONFIG.maxSafeZoom, Math.max(1, zoom));
 
+        const mpp = EARTH_CIRC * cosLat / (TILE * Math.pow(2, zoom));
+        const actualEye = Math.cos(pr) * ctc * mpp;
+        player.eye = actualEye;
+
+        const groundDist = Math.tan(pr) * actualEye;
+        const b = player.yaw * DEG;
+        const dLat = (Math.cos(b) * groundDist) / M_PER_DEG_LAT;
+        const dLng = (Math.sin(b) * groundDist) / (M_PER_DEG_LAT * cosLat);
+        const centerLng = player.lng + dLng;
+        const centerLat = player.lat + dLat;
+
+        const camRoll = mapCameraRollDeg();
         const opts = {
             center: [centerLng, centerLat],
             zoom,
             bearing: player.yaw,
-            pitch: camPitch,
-            eyeM,
-            roll: 0
+            pitch: player.pitch,
+            eyeM: player.eye,
+            roll: camRoll
         };
 
         let elevForSig = 0;
@@ -4708,16 +4971,13 @@
             } else if (!map.getCenterClampedToGround()) {
                 map.setCenterClampedToGround(true);
             }
-        } else if (isFollowMode()) {
+        } else {
             if (map.getCenterClampedToGround()) map.setCenterClampedToGround(false);
             if (map.getTerrain() && map.isSourceLoaded("terrain-dem")) {
-                const te = resolveWalkTerrainElev(dt);
+                const te = resolveFollowTerrainElevation();
                 if (te != null) {
                     opts.elevation = te;
                     elevForSig = te;
-                } else if (smoothedWalkTerrainElev != null) {
-                    opts.elevation = smoothedWalkTerrainElev;
-                    elevForSig = smoothedWalkTerrainElev;
                 } else if (!map.getCenterClampedToGround()) {
                     map.setCenterClampedToGround(true);
                 }
@@ -4728,10 +4988,10 @@
             }
         }
 
-        lastCameraAltM = elevForSig + eyeM;
+        lastCameraAltM = elevForSig + player.eye;
 
         return applyCameraJump(opts, [
-            centerLng, centerLat, zoom, player.yaw, camPitch, elevForSig, eyeM
+            centerLng, centerLat, zoom, player.yaw, player.pitch, elevForSig, player.eye
         ]);
     }
 
@@ -4772,6 +5032,7 @@
     }
 
     let lastSimT = performance.now();
+    let lastCarPivotKey = "";
     function frame(now) {
         const fps = CONFIG.fpsLimit;
         if (fps > 0) {
@@ -4783,7 +5044,6 @@
         }
         const dt = Math.min(0.05, (now - lastSimT) / 1000);
         lastSimT = now;
-        lastFrameDt = dt;
         update(dt);
         syncSpeedOverlay();
         const camChanged = applyCamera();
@@ -4793,7 +5053,7 @@
         }
         const worldSimActive = player.speed > VEL_SNAP || Math.abs(velFwd) > VEL_SNAP ||
             Math.abs(velStrafe) > VEL_SNAP || Math.abs(carYawVel) > 0.05;
-        const renderSimActive = camChanged || worldSimActive;
+        const renderSimActive = camChanged || worldSimActive || !!heightAnim || !!jumpAnim;
         const sky3dActive = CONFIG.sky3dEnabled !== false && window.Geowalk3dSky;
         if (sky3dActive && ready) {
             Geowalk3dSky.tick({
@@ -4823,22 +5083,30 @@
                 dt
             });
         }
-        if (ready && (camChanged || originShifted || isCarLikeMode() || renderSimActive || sky3dActive)) {
-            map.triggerRepaint();
-        }
+        let woodNeedsRepaint = false;
         if (window.GeowalkWoodTerrainExtrude && ready) {
-            GeowalkWoodTerrainExtrude.tick({
+            woodNeedsRepaint = !!GeowalkWoodTerrainExtrude.tick({
                 lng: player.lng,
                 lat: player.lat,
                 ready: true,
                 dt
             });
         }
-        if (window.GeowalkCarDrive && isCarMode() && ready && renderSimActive) {
-            const rect = map.getCanvas().getBoundingClientRect();
-            // Ось машины — позиция игрока; carLookAheadM смещает только центр камеры вперёд.
-            const pt = map.project([player.lng, player.lat]);
-            GeowalkCarDrive.setPivot(rect.left + pt.x, rect.top + pt.y);
+        if (ready && (camChanged || originShifted || isCarLikeMode() || renderSimActive || sky3dActive || woodNeedsRepaint)) {
+            map.triggerRepaint();
+        }
+        let carMapRect = null;
+        if (window.GeowalkCarDrive && isCarMode() && ready) {
+            carMapRect = map.getCanvas().getBoundingClientRect();
+        }
+        if (window.GeowalkCarDrive && isCarMode() && ready && (renderSimActive || camChanged)) {
+            const rect = carMapRect || map.getCanvas().getBoundingClientRect();
+            const pivotKey = Math.round(player.lng * 1e5) + "," + Math.round(player.lat * 1e5);
+            if (renderSimActive || camChanged || pivotKey !== lastCarPivotKey) {
+                const pt = map.project([player.lng, player.lat]);
+                GeowalkCarDrive.setPivot(rect.left + pt.x, rect.top + pt.y);
+                lastCarPivotKey = pivotKey;
+            }
             if (carSkinPickerOpen) updateCarSkinPickerPosition();
         }
         updateHUD();
@@ -4853,7 +5121,7 @@
             });
         }
         if (window.GeowalkCarDrive && isCarMode()) {
-            const mapRect = map.getCanvas().getBoundingClientRect();
+            const rect = carMapRect || map.getCanvas().getBoundingClientRect();
             GeowalkCarDrive.tick({
                 speed: player.speed,
                 dt,
@@ -4868,11 +5136,11 @@
                 onSand: isCarSandSurface(playerSurfaceLayers),
                 projectPoint(lng, lat) {
                     const pt = map.project([lng, lat]);
-                    return { x: mapRect.left + pt.x, y: mapRect.top + pt.y };
+                    return { x: rect.left + pt.x, y: rect.top + pt.y };
                 }
             });
         }
-        if (window.GeowalkCarPins && pinsActiveForCurrentMode() && ready && worldSimActive) {
+        if (window.GeowalkCarPins && pinsActiveForCurrentMode() && ready && (worldSimActive || originShifted)) {
             GeowalkCarPins.tick({
                 lng: player.lng,
                 lat: player.lat,
@@ -4883,7 +5151,7 @@
         if (window.GeowalkSavePin && ready) {
             GeowalkSavePin.tick({ lng: player.lng, lat: player.lat });
         }
-        if (window.GeowalkGiantMob && ready && renderSimActive) {
+        if (window.GeowalkGiantMob && ready && (renderSimActive || originShifted)) {
             const mobRect = map.getCanvas().getBoundingClientRect();
             GeowalkGiantMob.tick({
                 lng: player.lng,

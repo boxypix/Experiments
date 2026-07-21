@@ -9,6 +9,7 @@
 //
 // API:
 //   GeowalkThree.setup(map, { afterLayer, originLng, originLat })
+//   GeowalkThree.configure({ originShiftM, terrainCacheMax, terrainCacheCell })
 //   GeowalkThree.onReady(fn) / updateOrigin(lng, lat) / geoToLocal(lng, lat, alt)
 //   GeowalkThree.add(obj) / remove(obj)
 (function () {
@@ -16,7 +17,10 @@
 
     const M_PER_DEG_LAT = 111320;
     const DEG = Math.PI / 180;
-    const ORIGIN_SHIFT_M = 3000;
+
+    let originShiftM = 3000;
+    let terrainCacheCell = 0.00004;
+    let terrainCacheMax = 1024;
 
     let map = null;
     let renderer = null;
@@ -28,15 +32,26 @@
     const origin = { lng: null, lat: null, merc: null, scale: 1, cosLat: 1 };
     const readyListeners = [];
     const beforeRenderListeners = [];
+    const originShiftListeners = [];
     let pending = [];
 
-    const TERRAIN_CACHE_CELL = 0.00004;
-    const TERRAIN_CACHE_MAX = 640;
     const terrainCache = new Map();
     let frameGround = { lng: null, lat: null, z: null };
+    let frameQueryKey = null;
+    let frameQueryZ = null;
+
+    const projLocal = { m: null, l: null, v: null, s: null };
 
     function terrainCacheKey(lng, lat) {
-        return Math.round(lng / TERRAIN_CACHE_CELL) + "," + Math.round(lat / TERRAIN_CACHE_CELL);
+        return Math.round(lng / terrainCacheCell) + "," + Math.round(lat / terrainCacheCell);
+    }
+
+    function trimTerrainCache() {
+        while (terrainCache.size > terrainCacheMax) {
+            const first = terrainCache.keys().next().value;
+            if (first == null) break;
+            terrainCache.delete(first);
+        }
     }
 
     function clearTerrainCache() {
@@ -44,6 +59,8 @@
         frameGround.lng = null;
         frameGround.lat = null;
         frameGround.z = null;
+        frameQueryKey = null;
+        frameQueryZ = null;
     }
 
     function setFrameGround(lng, lat, ground) {
@@ -51,7 +68,10 @@
         frameGround.lng = lng;
         frameGround.lat = lat;
         frameGround.z = ground;
-        terrainCache.set(terrainCacheKey(lng, lat), ground);
+        const key = terrainCacheKey(lng, lat);
+        terrainCache.delete(key);
+        terrainCache.set(key, ground);
+        trimTerrainCache();
     }
 
     function terrainAt(lng, lat) {
@@ -62,7 +82,15 @@
             if (dLng * dLng + dLat * dLat < 0.25) return frameGround.z;
         }
         const key = terrainCacheKey(lng, lat);
-        if (terrainCache.has(key)) return terrainCache.get(key);
+        if (frameQueryKey === key && frameQueryZ != null) return frameQueryZ;
+        if (terrainCache.has(key)) {
+            const cached = terrainCache.get(key);
+            terrainCache.delete(key);
+            terrainCache.set(key, cached);
+            frameQueryKey = key;
+            frameQueryZ = cached;
+            return cached;
+        }
         if (!map || !map.getTerrain || !map.getTerrain()) return 0;
         let ground = 0;
         try {
@@ -70,7 +98,9 @@
             if (typeof te === "number" && isFinite(te)) ground = te;
         } catch (e) { /* пропускаем редкий сбой кадра */ }
         terrainCache.set(key, ground);
-        if (terrainCache.size > TERRAIN_CACHE_MAX) terrainCache.clear();
+        trimTerrainCache();
+        frameQueryKey = key;
+        frameQueryZ = ground;
         return ground;
     }
 
@@ -95,24 +125,31 @@
         return false;
     }
 
+    function fireOriginShift(dx, dy, lng, lat) {
+        for (const fn of originShiftListeners) {
+            try { fn({ dx, dy, lng, lat }); } catch (e) { console.warn("GeowalkThree onOriginShift:", e); }
+        }
+    }
+
     function shiftScene(dx, dy) {
-        if (!scene) return;
-        scene.traverse((obj) => {
-            if (obj.isLight) return;
-            if (isAnchoredSceneObject(obj)) return;
-            if (obj.isMesh) {
-                obj.position.x += dx;
-                obj.position.y += dy;
-            }
-        });
+        if (!scene || (!dx && !dy)) return;
+        for (let i = 0; i < scene.children.length; i++) {
+            const obj = scene.children[i];
+            if (obj.isLight) continue;
+            if (isAnchoredSceneObject(obj)) continue;
+            obj.position.x += dx;
+            obj.position.y += dy;
+        }
     }
 
     function setOrigin(lng, lat) {
         if (!hasTHREE()) return;
+        let dx = 0;
+        let dy = 0;
         if (origin.lng != null && scene) {
             const cosLat = Math.cos(lat * DEG) || 1e-6;
-            const dx = (origin.lng - lng) * M_PER_DEG_LAT * cosLat;
-            const dy = (origin.lat - lat) * M_PER_DEG_LAT;
+            dx = (origin.lng - lng) * M_PER_DEG_LAT * cosLat;
+            dy = (origin.lat - lat) * M_PER_DEG_LAT;
             shiftScene(dx, dy);
         }
         origin.lng = lng;
@@ -123,6 +160,7 @@
             origin.merc = maplibregl.MercatorCoordinate.fromLngLat([lng, lat], 0);
             origin.scale = origin.merc.meterInMercatorCoordinateUnits();
         }
+        if (dx !== 0 || dy !== 0) fireOriginShift(dx, dy, lng, lat);
     }
 
     function updateOrigin(lng, lat) {
@@ -130,11 +168,21 @@
         if (origin.lng == null) { setOrigin(lng, lat); return true; }
         const east = (lng - origin.lng) * M_PER_DEG_LAT * origin.cosLat;
         const north = (lat - origin.lat) * M_PER_DEG_LAT;
-        if (Math.hypot(east, north) > ORIGIN_SHIFT_M) {
+        if (Math.hypot(east, north) > originShiftM) {
             setOrigin(lng, lat);
             return true;
         }
         return false;
+    }
+
+    function sceneHasRenderableMeshes() {
+        if (!scene) return false;
+        let found = false;
+        scene.traverse((obj) => {
+            if (found || !obj.isMesh || !obj.visible) return;
+            found = true;
+        });
+        return found;
     }
 
     function fireReady() {
@@ -206,6 +254,12 @@
                 });
                 renderer.autoClear = false;
                 renderer.toneMapping = THREE.NoToneMapping;
+                if (!projLocal.m) {
+                    projLocal.m = new THREE.Matrix4();
+                    projLocal.l = new THREE.Matrix4();
+                    projLocal.v = new THREE.Vector3();
+                    projLocal.s = new THREE.Vector3();
+                }
                 if (origin.lng != null) {
                     origin.merc = maplibregl.MercatorCoordinate.fromLngLat([origin.lng, origin.lat], 0);
                     origin.scale = origin.merc.meterInMercatorCoordinateUnits();
@@ -220,16 +274,20 @@
             },
             render(gl, args) {
                 if (!scene || !camera || !renderer || origin.merc == null) return;
+                if (!sceneHasRenderableMeshes()) return;
+                frameQueryKey = null;
+                frameQueryZ = null;
                 for (const fn of beforeRenderListeners) {
                     try { fn(camera, map, args); } catch (e) { /* кадр */ }
                 }
                 const THREE = window.THREE;
                 const s = origin.scale;
-                const l = new THREE.Matrix4()
-                    .makeTranslation(origin.merc.x, origin.merc.y, origin.merc.z || 0)
-                    .scale(new THREE.Vector3(s, -s, s));
-                const m = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix);
-                camera.projectionMatrix = m.multiply(l);
+                projLocal.v.set(origin.merc.x, origin.merc.y, origin.merc.z || 0);
+                projLocal.s.set(s, -s, s);
+                projLocal.l.makeTranslation(projLocal.v.x, projLocal.v.y, projLocal.v.z);
+                projLocal.l.scale(projLocal.s);
+                projLocal.m.fromArray(args.defaultProjectionData.mainMatrix);
+                camera.projectionMatrix = projLocal.m.multiply(projLocal.l);
                 renderer.resetState();
                 renderer.render(scene, camera);
             }
@@ -262,6 +320,30 @@
             }
             ensureLayer(m);
         },
+        configure(options) {
+            const o = options || {};
+            let cacheChanged = false;
+            if (o.originShiftM != null) {
+                const next = Math.max(500, Math.min(10000, +o.originShiftM || 0));
+                if (next !== originShiftM) originShiftM = next;
+            }
+            if (o.terrainCacheMax != null) {
+                const next = Math.max(64, Math.min(4096, o.terrainCacheMax | 0));
+                if (next !== terrainCacheMax) {
+                    terrainCacheMax = next;
+                    cacheChanged = true;
+                }
+            }
+            if (o.terrainCacheCell != null) {
+                const next = Math.max(0.00001, +o.terrainCacheCell || 0.00004);
+                if (next !== terrainCacheCell) {
+                    terrainCacheCell = next;
+                    cacheChanged = true;
+                }
+            }
+            if (cacheChanged) clearTerrainCache();
+            else trimTerrainCache();
+        },
         onReady(fn) {
             if (typeof fn !== "function") return;
             if (readyListeners.indexOf(fn) === -1) readyListeners.push(fn);
@@ -274,6 +356,14 @@
         offBeforeRender(fn) {
             const i = beforeRenderListeners.indexOf(fn);
             if (i >= 0) beforeRenderListeners.splice(i, 1);
+        },
+        onOriginShift(fn) {
+            if (typeof fn !== "function") return;
+            if (originShiftListeners.indexOf(fn) === -1) originShiftListeners.push(fn);
+        },
+        offOriginShift(fn) {
+            const i = originShiftListeners.indexOf(fn);
+            if (i >= 0) originShiftListeners.splice(i, 1);
         },
         isReady() { return !!scene; },
         getMap() { return map; },

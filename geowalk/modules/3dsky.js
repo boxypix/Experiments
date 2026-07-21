@@ -10,6 +10,7 @@
         repeat: 3.5,
         opacity: 0.92,
         driftSpeed: 0.012,
+        animEnabled: true,
         topDownHidePitchDeg: 50
     };
 
@@ -137,7 +138,7 @@
             skyPlane.position.set(0, 0, resolveSkyAbsZM(GT) + playerLiftM);
         }
 
-        if (!o.skipDrift && lastPlayerLocalX != null && lastPlayerLocalY != null) {
+        if (!o.skipDrift && cfg.animEnabled !== false && lastPlayerLocalX != null && lastPlayerLocalY != null) {
             const dx = local.x - lastPlayerLocalX;
             const dy = local.y - lastPlayerLocalY;
             if (Math.abs(dx) > 1e-4 || Math.abs(dy) > 1e-4) {
@@ -293,6 +294,7 @@
             if (s.repeat != null) cfg.repeat = s.repeat;
             if (s.opacity != null) cfg.opacity = s.opacity;
             if (s.driftSpeed != null) cfg.driftSpeed = s.driftSpeed;
+            if (s.animEnabled != null) cfg.animEnabled = s.animEnabled !== false;
             applyPlayerState(s);
             if (s.altM != null) resetSkyHeight();
             cfg.enabled = want;
@@ -312,7 +314,7 @@
             const s = state || {};
             applySkyPlacement(s);
             const d = s.dt != null ? s.dt : 0;
-            if (d > 0 && cfg.driftSpeed > 0) {
+            if (d > 0 && cfg.animEnabled !== false && cfg.driftSpeed > 0) {
                 driftU += cfg.driftSpeed * d;
                 driftV += cfg.driftSpeed * 0.35 * d;
                 updatePlaneTextureOffset();
@@ -323,7 +325,13 @@
             if (!cfg || !cfg.enabled) return;
             applyPlayerState(state);
             resetSkyHeight();
-            if (skyRoot) applySkyPlacement(null, { skipDrift: true, recalcHeight: true });
+            driftU = 0;
+            driftV = 0;
+            resetPlayerFollow();
+            if (skyRoot) {
+                applySkyPlacement(state, { skipDrift: true, recalcHeight: true, resetFollow: true });
+                updatePlaneTextureOffset();
+            }
         },
         teardown() {
             disposeSkyRoot();

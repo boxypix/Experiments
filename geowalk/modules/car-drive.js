@@ -52,6 +52,24 @@
     let wakeSystems = [];
     let wakeMaxCount = 5;
     let spriteWidthOverride = null;
+    let projectCache = null;
+    let wakeFrame = 0;
+
+    function resetProjectCache() {
+        projectCache = new Map();
+    }
+
+    function projectCached(lng, lat, motion) {
+        const project = motion && motion.projectPoint;
+        if (!project) return null;
+        const key = Math.round(lng * 1e5) + "," + Math.round(lat * 1e5);
+        let pt = projectCache.get(key);
+        if (!pt) {
+            pt = project(lng, lat);
+            if (pt) projectCache.set(key, pt);
+        }
+        return pt;
+    }
 
     function injectStyles() {
         if (styleEl) return;
@@ -266,6 +284,11 @@
         slot.el.style.opacity = "1";
         slot.el.style.display = "block";
         applyWakeTransform(slot, system.profile);
+        const pt = projectCached(slot.lng, slot.lat, motion);
+        if (pt) {
+            slot.el.style.left = pt.x + "px";
+            slot.el.style.top = pt.y + "px";
+        }
     }
 
     function carScreenY() {
@@ -274,9 +297,7 @@
     }
 
     function projectWake(slot, motion) {
-        const project = motion && motion.projectPoint;
-        if (!project) return null;
-        try { return project(slot.lng, slot.lat); } catch (e) { return null; }
+        return projectCached(slot.lng, slot.lat, motion);
     }
 
     function updateSurfaceWake(dt, motion) {
@@ -285,6 +306,7 @@
         const viewMode = motion && motion.viewMode ? motion.viewMode : "chase";
         const canMove = visible
             && motion.lng != null && motion.lat != null && speed > 0.05;
+        const updateDomPos = wakeFrame % 2 === 0 || speed > 25;
 
         for (const system of wakeSystems) {
             const onSurface = isWakeActive(system.profile, motion);
@@ -307,6 +329,7 @@
                     deactivateWake(slot);
                     continue;
                 }
+                if (!updateDomPos) continue;
                 const pt = projectWake(slot, motion);
                 if (!pt) {
                     slot.el.style.display = "none";
@@ -321,8 +344,6 @@
                 slot.el.style.left = pt.x + "px";
                 slot.el.style.top = pt.y + "px";
                 slot.el.style.opacity = "1";
-                applyWakeSize(slot.el, slot.widthPx, slot.heightPx);
-                applyWakeTransform(slot, system.profile);
             }
         }
     }
@@ -484,6 +505,8 @@
 
     function tick(motion) {
         if (!root || !sprite || !visible || !opts) return;
+        resetProjectCache();
+        wakeFrame++;
         const dt = motion && motion.dt != null ? motion.dt : 0;
         updateDropAnim(dt);
         const viewMode = motion && motion.viewMode ? motion.viewMode : "chase";

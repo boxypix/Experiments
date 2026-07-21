@@ -1,0 +1,19 @@
+{
+  "name": "geowalk",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "snapshot": "node make-snapshot.mjs",
+    "serve": "npx --yes http-server -p 8800 -c-1 .",
+    "start": "npm run snapshot && npm run serve",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "png-to-ico": "^2.1.8",
+    "puppeteer-core": "^23.11.1"
+  }
+}
