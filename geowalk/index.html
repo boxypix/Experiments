@@ -1,21 +1,21 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="utf-8" />
     <title>World Walk Cam</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <link rel="icon" href="images/favicon.ico" sizes="any" />
 
-    <meta name="description" content="World Walk Cam — 3D-бродилка от первого лица по реальной карте мира." />
+    <meta name="description" content="World Walk Cam — first-person 3D explorer on a real-world map." />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="World Walk Cam" />
-    <meta property="og:description" content="3D-бродилка от первого лица по реальной карте мира. Гуляй между зданий, взлетай и осматривайся." />
+    <meta property="og:description" content="First-person 3D explorer on a real-world map. Walk between buildings, fly, and look around." />
     <meta property="og:image" content="images/cover.jpg" />
     <meta property="og:image:width" content="1068" />
     <meta property="og:image:height" content="562" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="World Walk Cam" />
-    <meta name="twitter:description" content="3D-бродилка от первого лица по реальной карте мира." />
+    <meta name="twitter:description" content="First-person 3D explorer on a real-world map." />
     <meta name="twitter:image" content="images/cover.jpg" />
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" />
     <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
@@ -738,13 +738,32 @@
         /* Поиск места — сверху по центру */
         #search-wrap {
             position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
-            z-index: 22; display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+            z-index: 22; display: flex; flex-direction: row; align-items: flex-start; gap: 10px;
             width: min(560px, calc(100vw - 280px));
+        }
+        #search-style-btn {
+            flex: 0 0 auto;
+            width: 44px; height: 44px;
+            padding: 0; margin: 0;
+            border: none; border-radius: 10px;
+            background: #fff;
+            cursor: pointer;
+            pointer-events: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+        }
+        #search-style-btn:hover { background: #dedede; }
+        #search-style-btn:active { transform: scale(0.98); }
+        #search-style-btn img {
+            width: 20px; height: 20px;
+            display: block;
         }
         #search-bar {
             pointer-events: auto;
+            flex: 1; min-width: 0;
             display: flex; flex-direction: column; align-items: center; gap: 6px;
-            width: 100%;
         }
         #search-bar .search-row {
             display: flex; align-items: stretch; gap: 10px; width: 100%;
@@ -758,17 +777,50 @@
         }
         #search-bar input::placeholder { color: rgba(207, 232, 255, 0.45); }
         #search-bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(106, 209, 255, 0.15); }
-        #search-bar button {
+        #search-bar .search-row button {
             flex: 0 0 auto; padding: 11px 22px; cursor: pointer;
             font: 600 15px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             color: #eaf6ff; background: var(--ui-bg);
             border: 1px solid rgba(106, 209, 255, 0.45); border-radius: 10px;
         }
-        #search-bar button:hover { background: rgba(0, 0, 0, 0.92); }
+        #search-bar .search-row button:hover { background: rgba(0, 0, 0, 0.92); }
         #search-bar #city-status {
             min-height: 16px; color: var(--accent);
             font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             text-align: center; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+        }
+        #search-chips {
+            display: none;
+            flex-direction: column;
+            align-items: flex-start;
+            align-self: flex-start;
+            gap: 8px;
+            pointer-events: auto;
+            padding-top: 2px;
+        }
+        #search-chips.visible {
+            display: flex;
+        }
+        #search-chips .search-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            font: 700 15px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #000;
+            background: #fff;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
+            white-space: nowrap;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+        }
+        #search-chips .search-chip:hover { background: #dedede; }
+        #search-chips .search-chip:active { transform: scale(0.98); }
+        #search-chips .search-chip img {
+            width: 14px; height: 14px;
+            flex: 0 0 14px;
+            display: block;
         }
         @media (max-width: 1000px) {
             #search-wrap { width: 95vw; }
@@ -835,11 +887,30 @@
             color: #eaf6ff; text-align: center; cursor: pointer;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             transition: opacity 0.25s ease;
+            isolation: isolate;
+        }
+        #overlay .logo,
+        #overlay-body {
+            position: relative; z-index: 1;
         }
         #overlay .logo {
             width: min(900px, 90vw); max-width: 100%; height: auto; display: block; flex-shrink: 0;
         }
-        #overlay p { margin: 0; opacity: 0.85; font-size: 15px; max-width: 460px; line-height: 1.45; }
+        #overlay-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            width: 100%;
+            opacity: 0;
+            transition: opacity 300ms ease;
+        }
+        #overlay-body.visible {
+            opacity: 1;
+        }
+        #overlay-body > p {
+            margin: 0; opacity: 0.85; font-size: 15px; max-width: 460px; line-height: 1.45;
+        }
         #overlay .play {
             padding: 12px 28px; border-radius: 999px; flex-shrink: 0;
             border: 1px solid rgb(233, 233, 233); background: rgb(228, 228, 228);
@@ -850,6 +921,48 @@
         #loading {
             margin: 0; color: #9fd0ff; font-size: 13px; line-height: 1.4;
             font-family: ui-monospace, monospace; max-width: 460px;
+        }
+        #overlay-guide {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 14px;
+            width: min(720px, 100%);
+            max-width: 100%;
+            flex-shrink: 0;
+        }
+        .overlay-guide-tile {
+            flex: 1 1 0;
+            min-width: 0;
+            max-width: 220px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .overlay-guide-tile img {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            object-fit: cover;
+            display: block;
+            border-radius: 10px;
+        }
+        .overlay-guide-tile p {
+            margin: 0;
+            color: #fff;
+            font: 400 12px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            text-align: center;
+        }
+        @media (max-width: 700px) {
+            #overlay-guide {
+                flex-direction: column;
+                align-items: center;
+                gap: 18px;
+            }
+            .overlay-guide-tile {
+                max-width: min(280px, 100%);
+            }
         }
 
         /* Переход после поиска: затемнение + полоса телепорта снизу вверх */
@@ -1138,13 +1251,32 @@
         }
         #reality-hint.visible { opacity: 1; visibility: visible; }
         #reality-hint b { font-weight: 700; }
-        #reality-swap {
-            position: fixed; inset: 0; z-index: 10000;
+        #overlay #reality-swap {
+            position: absolute; inset: 0; z-index: 0;
             pointer-events: none; opacity: 0; display: none;
-            background: #000;
+            background: transparent;
         }
-        #reality-swap img {
-            width: 100%; height: 100%; object-fit: fill; display: block;
+        #overlay #reality-swap.page-intro {
+            display: block; opacity: 1; background: #000;
+        }
+        #reality-swap.fullscreen {
+            position: fixed; inset: 0; z-index: 10000;
+            pointer-events: none; opacity: 1; display: block;
+            background: transparent;
+        }
+        #reality-swap canvas {
+            width: 100%; height: 100%; display: block;
+        }
+        #reality-swap-caption {
+            position: absolute; left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0; padding: 0;
+            color: #fff; font: 700 40px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            text-align: center; white-space: nowrap;
+            opacity: 0; pointer-events: none;
+        }
+        #reality-swap-caption.visible {
+            opacity: 1;
         }
     </style>
 </head>
@@ -1159,16 +1291,16 @@
         </div>
         <div class="panel-body">
             <button type="button" class="panel-debug-toggle" data-panel-toggle="close">Hide Debug menu</button>
-            <div class="title">Настройки</div>
-        <label>Моя скорость <input id="walk" type="number" min="0" step="0.5" /></label>
-        <label>Ускорение (Shift) <input id="run" type="number" min="1" step="1" /></label>
-        <label>Взлёт / спуск <input id="fly" type="number" min="0" step="0.5" /></label>
-        <label>FPS limit (0=без) <input id="fps-limit" type="number" min="0" step="1" /></label>
-        <label>Sky вкл. <input id="sky-enabled" type="checkbox" checked /></label>
-        <label>3dsky вкл. <input id="sky3d-enabled" type="checkbox" checked /></label>
-        <label>3dsky анимация <input id="sky3d-anim" type="checkbox" /></label>
-        <label>3dsky высота (м) <input id="sky3d-alt" type="number" min="0" step="50" /></label>
-        <label>Машина
+            <div class="title">Settings</div>
+        <label>Walk speed <input id="walk" type="number" min="0" step="0.5" /></label>
+        <label>Sprint (Shift) <input id="run" type="number" min="1" step="1" /></label>
+        <label>Ascend / descend <input id="fly" type="number" min="0" step="0.5" /></label>
+        <label>FPS limit (0=off) <input id="fps-limit" type="number" min="0" step="1" /></label>
+        <label>Sky enabled <input id="sky-enabled" type="checkbox" checked /></label>
+        <label>3dsky enabled <input id="sky3d-enabled" type="checkbox" checked /></label>
+        <label>3dsky animation <input id="sky3d-anim" type="checkbox" /></label>
+        <label>3dsky height (m) <input id="sky3d-alt" type="number" min="0" step="50" /></label>
+        <label>Car
             <select id="car-sprite">
                 <option value="1">car_1</option>
                 <option value="2">car_2</option>
@@ -1176,68 +1308,118 @@
                 <option value="4">car_4</option>
             </select>
         </label>
-        <label>Наклон в car <input id="car-roll" type="checkbox" /></label>
-        <label>Угол наклона (°) <input id="car-roll-max" type="number" min="0" max="45" step="1" /></label>
-        <label>Время наклона (с) <input id="car-roll-sec" type="number" min="0.05" step="0.05" /></label>
-        <label>Шлейф (шт.) <input id="car-wake-max" type="number" min="1" max="30" step="1" /></label>
-        <label>3dcar повторяет рельеф <input id="car3d-follow-terrain" type="checkbox" checked /></label>
+        <label>Roll in car mode <input id="car-roll" type="checkbox" /></label>
+        <label>Roll angle (°) <input id="car-roll-max" type="number" min="0" max="45" step="1" /></label>
+        <label>Roll duration (s) <input id="car-roll-sec" type="number" min="0.05" step="0.05" /></label>
+        <label>Wake count <input id="car-wake-max" type="number" min="1" max="30" step="1" /></label>
         <div class="sep"></div>
-        <label>Деревья threejs <input id="trees-threejs" type="checkbox" checked /></label>
-        <label>Радиус деревьев (м) <input id="trees-threejs-radius" type="number" min="50" max="3000" step="10" /></label>
-        <label>Анимация появления <input id="trees-threejs-spawn-anim" type="checkbox" checked /></label>
-        <label>3D деревья <input id="trees3d" type="checkbox" /></label>
-        <label>Плотность деревьев <input id="trees3d-density" type="number" min="0.2" max="2" step="0.1" /></label>
-        <label>Игнор. рельеф <input id="noterrcol" type="checkbox" /></label>
-        <label>RT тени (сломаны) <input id="shadows" type="checkbox" /></label>
-        <label>Мини-карта <input id="minimap" type="checkbox" /></label>
-        <label>Статистика пинов <input id="pin-stats" type="checkbox" /></label>
+        <div class="title">3D model</div>
+        <label>Model offset from pitch axis X (m) <input id="car3d-pitch-pivot-x" type="number" step="0.1" /></label>
+        <label>Model offset from pitch axis Y (m) <input id="car3d-pitch-pivot-y" type="number" step="0.1" /></label>
+        <label>Model offset from pitch axis Z (m) <input id="car3d-pitch-pivot-z" type="number" step="0.1" /></label>
+        <div class="hint">Shifts the 3D mesh relative to the fixed pitch/tilt axis (car anchor). X=east, Y=north, Z=up.</div>
+        <label>Boost fire offset X (m) <input id="car3d-boost-fire-x" type="number" step="0.1" /></label>
+        <label>Boost fire offset Y (m) <input id="car3d-boost-fire-y" type="number" step="0.1" /></label>
+        <label>Boost fire offset Z (m) <input id="car3d-boost-fire-z" type="number" step="0.1" /></label>
+        <label>Boost fire tilt (deg) <input id="car3d-boost-fire-tilt" type="number" step="1" /></label>
+        <label>Boost fire size (%) <input id="car3d-boost-fire-size" type="number" min="1" max="500" step="1" /></label>
+        <label>Stop light offset X (m) <input id="car3d-stop-flame-x" type="number" step="0.1" /></label>
+        <label>Stop light offset Y (m) <input id="car3d-stop-flame-y" type="number" step="0.1" /></label>
+        <label>Stop light offset Z (m) <input id="car3d-stop-flame-z" type="number" step="0.1" /></label>
+        <label>Stop light tilt (deg) <input id="car3d-stop-flame-tilt" type="number" step="1" /></label>
+        <label>Stop light size (%) <input id="car3d-stop-flame-size" type="number" min="1" max="500" step="1" /></label>
+        <label>Stop light show always <input id="car3d-stop-flame-always" type="checkbox" /></label>
+        <label>Driver offset X (m) <input id="car3d-driver-x" type="number" step="0.1" /></label>
+        <label>Driver offset Y (m) <input id="car3d-driver-y" type="number" step="0.1" /></label>
+        <label>Driver offset Z (m) <input id="car3d-driver-z" type="number" step="0.1" /></label>
+        <label>Driver rotation X (deg) <input id="car3d-driver-rot-x" type="number" step="1" /></label>
+        <label>Driver rotation Y (deg) <input id="car3d-driver-rot-y" type="number" step="1" /></label>
+        <label>Driver rotation Z (deg) <input id="car3d-driver-rot-z" type="number" step="1" /></label>
+        <label>Driver size (%) <input id="car3d-driver-size" type="number" min="1" max="500" step="1" /></label>
+        <label>Talk bubble offset X (m) <input id="car3d-talk-x" type="number" step="0.1" /></label>
+        <label>Talk bubble offset Y (m) <input id="car3d-talk-y" type="number" step="0.1" /></label>
+        <label>Talk bubble offset Z (m) <input id="car3d-talk-z" type="number" step="0.1" /></label>
+        <label>Talk bubble font size (px) <input id="car3d-talk-font" type="number" min="8" max="200" step="1" /></label>
+        <label>Talk bubble size (%) <input id="car3d-talk-size" type="number" min="1" max="500" step="1" /></label>
+        <label>Talk bubble rotation X (deg) <input id="car3d-talk-rot-x" type="number" step="1" /></label>
+        <label>Talk bubble rotation Y (deg) <input id="car3d-talk-rot-y" type="number" step="1" /></label>
+        <label>Talk bubble rotation Z (deg) <input id="car3d-talk-rot-z" type="number" step="1" /></label>
+        <label>3dcar follows terrain <input id="car3d-follow-terrain" type="checkbox" checked /></label>
+        <div class="sep"></div>
+        <label>Three.js trees <input id="trees-threejs" type="checkbox" checked /></label>
+        <label>Tree radius (m) <input id="trees-threejs-radius" type="number" min="50" max="3000" step="10" /></label>
+        <label>Spawn animation <input id="trees-threejs-spawn-anim" type="checkbox" checked /></label>
+        <label>3D trees <input id="trees3d" type="checkbox" /></label>
+        <label>Tree density <input id="trees3d-density" type="number" min="0.2" max="2" step="0.1" /></label>
+        <label>Ignore terrain <input id="noterrcol" type="checkbox" /></label>
+        <label>Minimap <input id="minimap" type="checkbox" /></label>
+        <label>Pin stats <input id="pin-stats" type="checkbox" /></label>
         <div class="sep"></div>
         <div class="style-row">
-            <button id="style-swap" class="mini style-swap" type="button">Стиль реальности</button>
+            <button id="style-swap" class="mini style-swap" type="button">Reality style</button>
             <span id="style-status"></span>
         </div>
         <input id="style-file" type="file" accept=".json,application/json" hidden />
-        <label>Понимать покрытия <input id="surface-probe" type="checkbox" /></label>
+        <label>Detect surface layers <input id="surface-probe" type="checkbox" /></label>
         <div id="surface-status" class="surface-status"></div>
         <div class="sep"></div>
-        <div class="title">Оптимизация</div>
-        <label>Three origin shift (м) <input id="three-origin-shift" type="number" min="500" max="10000" step="100" /></label>
-        <label>Three кэш рельефа <input id="three-terrain-cache" type="number" min="64" max="4096" step="64" /></label>
-        <div class="hint">Three origin / кэш — быстрее на больших дистанциях.</div>
+        <div class="title">RT shadows</div>
+        <label>Enabled <input id="shadows" type="checkbox" /></label>
+        <label>Wall shade <input id="shadow-wall-shade" type="checkbox" /></label>
+        <label>Ground FX <input id="shadow-ground-fx" type="checkbox" checked /></label>
+        <label>Light intensity <input id="shadow-light-intensity" type="number" min="0" max="1" step="0.05" /></label>
+        <label>Light azimuth (°) <input id="shadow-light-azimuth" type="number" min="0" max="359" step="1" /></label>
+        <label>Light polar (°) <input id="shadow-light-polar" type="number" min="0" max="90" step="1" /></label>
+        <label>Wall AO strength <input id="shadow-wall-strength" type="number" min="0" max="1" step="0.05" /></label>
+        <label>Wall AO band <input id="shadow-wall-band" type="number" min="0.01" max="2" step="0.05" /></label>
+        <label>Ground shadow α <input id="shadow-alpha" type="number" min="0" max="1" step="0.05" /></label>
+        <label>Building height scale <input id="shadow-height-scale" type="number" min="0.1" max="2" step="0.05" /></label>
+        <label>Shadow blur <input id="shadow-blur" type="number" min="0" max="8" step="0.5" /></label>
+        <label>AO intensity <input id="shadow-ao-intensity" type="number" min="0" max="1.5" step="0.05" /></label>
+        <label>AO radius min (px) <input id="shadow-ao-radius-min" type="number" min="1" max="200" step="1" /></label>
+        <label>AO radius max (px) <input id="shadow-ao-radius-max" type="number" min="1" max="400" step="1" /></label>
+        <label>Shadow map size <input id="shadow-sdf-res" type="number" min="128" max="2048" step="128" /></label>
+        <div class="hint">Low-quality BasicShadowMap. Light/map snap while walking; casters rebuild rarely. Smaller map size = less GPU.</div>
         <div class="sep"></div>
-        <div class="title">Walk параметры</div>
-        <label>Высота глаз (м) <input id="eye-height" type="number" min="0.5" step="0.1" /></label>
-        <label>Уровень земли groundAlt (м) <input id="walk-ground-alt" type="number" step="0.1" /></label>
-        <label>Pitch фикс. pitchStart (°) <input id="walk-pitch-start" type="number" min="0" max="90" step="0.5" /></label>
+        <div class="title">Optimization</div>
+        <label>Three origin shift (m) <input id="three-origin-shift" type="number" min="500" max="10000" step="100" /></label>
+        <label>Three terrain cache <input id="three-terrain-cache" type="number" min="64" max="4096" step="64" /></label>
+        <label>3D pixel ratio (× display) <input id="three-pixel-ratio" type="number" min="0.25" max="1" step="0.05" /></label>
+        <div class="hint">Three origin / cache — faster over long distances. Lower 3D pixel ratio = less GPU load.</div>
+        <div class="sep"></div>
+        <div class="title">Walk parameters</div>
+        <label>Eye height (m) <input id="eye-height" type="number" min="0.5" step="0.1" /></label>
+        <label>Ground level groundAlt (m) <input id="walk-ground-alt" type="number" step="0.1" /></label>
+        <label>Fixed pitch pitchStart (°) <input id="walk-pitch-start" type="number" min="0" max="90" step="0.5" /></label>
         <label>Pitch min (°) <input id="walk-pitch-min" type="number" min="0" max="90" step="0.5" /></label>
         <label>Pitch max (°) <input id="walk-pitch-max" type="number" min="0" max="90" step="0.5" /></label>
-        <label>Макс. подъём maxClimbM (м) <input id="walk-max-climb" type="number" min="0" step="0.5" placeholder="∞" /></label>
-        <label>Прыжок высота (м) <input id="walk-jump-height" type="number" min="0" step="0.5" /></label>
-        <label>Прыжок время (с) <input id="walk-jump-sec" type="number" min="0.1" step="0.1" /></label>
+        <label>Max climb maxClimbM (m) <input id="walk-max-climb" type="number" min="0" step="0.5" placeholder="∞" /></label>
+        <label>Jump height (m) <input id="walk-jump-height" type="number" min="0" step="0.5" /></label>
+        <label>Jump duration (s) <input id="walk-jump-sec" type="number" min="0.1" step="0.1" /></label>
         <label>FOV (°) <input id="fov" type="number" min="30" max="120" step="1" /></label>
-        <label>Near clip (÷ высоты) <input id="near-clip-divisor" type="number" min="500" max="20000" step="100" /></label>
+        <label>Near clip (÷ height) <input id="near-clip-divisor" type="number" min="500" max="20000" step="100" /></label>
         <label>Cutoff 3D <input id="clip3d" type="checkbox" /></label>
-        <label>Дальность 3D (0–1) <input id="clip3d-factor" type="number" min="0.05" max="1" step="0.05" /></label>
+        <label>3D range (0–1) <input id="clip3d-factor" type="number" min="0.05" max="1" step="0.05" /></label>
         <label>maxSafeZoom <input id="walk-max-safe-zoom" type="number" min="1" max="24" step="0.5" /></label>
-        <label>Наклон Shift-бок (°) <input id="sprint-roll-max" type="number" min="0" max="45" step="1" /></label>
-        <label>Наклон Shift время (с) <input id="walk-sprint-roll-sec" type="number" min="0.05" step="0.05" /></label>
-        <label>Опускание рук Shift (%) <input id="hands-sprint-drop" type="number" min="0" max="100" step="1" /></label>
+        <label>Sprint strafe roll (°) <input id="sprint-roll-max" type="number" min="0" max="45" step="1" /></label>
+        <label>Sprint roll duration (s) <input id="walk-sprint-roll-sec" type="number" min="0.05" step="0.05" /></label>
+        <label>Hands drop on sprint (%) <input id="hands-sprint-drop" type="number" min="0" max="100" step="1" /></label>
         <label>mouseYaw (°/px) <input id="walk-mouse-yaw" type="number" min="0.01" max="2" step="0.01" /></label>
         <label>mousePitch (°/px) <input id="walk-mouse-pitch" type="number" min="0.01" max="2" step="0.01" /></label>
-        <label>Стартовый курс (°) <input id="walk-start-bearing" type="number" min="0" max="359" step="1" /></label>
-        <label>Сглаживание рельефа (с) <input id="walk-terrain-smooth-sec" type="number" min="0.05" max="3" step="0.05" /></label>
-        <label>3D рельеф (×, 0=выкл) <input id="relief" type="number" min="0" step="0.5" /></label>
+        <label>Start bearing (°) <input id="walk-start-bearing" type="number" min="0" max="359" step="1" /></label>
+        <label>Terrain smoothing (s) <input id="walk-terrain-smooth-sec" type="number" min="0.05" max="3" step="0.05" /></label>
+        <label>3D relief (×, 0=off) <input id="relief" type="number" min="0" step="0.5" /></label>
         <label>LOD DEM (0–15) <input id="terrain-lod" type="number" min="0" max="15" step="1" /></label>
-        <label>Туман (0–1) <input id="draw" type="number" min="0" max="1" step="0.05" /></label>
-        <div class="hint">Камера режима «Прогулка»: pitch фиксирован, elevation по DEM.</div>
-        <div class="hint">Esc — освободить курсор, чтобы менять поля</div>
+        <label>Fog (0–1) <input id="draw" type="number" min="0" max="1" step="0.05" /></label>
+        <div class="hint">Walk mode camera: fixed pitch, elevation from DEM.</div>
+        <div class="hint">Esc — release cursor to edit fields</div>
         <div id="hud">
-            <div class="row"><span>Коорд.</span><b id="hud-coord">—</b></div>
-            <div class="row"><span>Курс</span><b id="hud-bearing">—</b></div>
-            <div class="row"><span>Взгляд</span><b id="hud-look">—</b></div>
-            <div class="row"><span>Высота</span><b id="hud-alt">—</b></div>
-            <div class="row"><span>Скорость</span><b id="hud-speed">—</b></div>
-            <div class="row"><span>Стены</span><b id="hud-collision">—</b></div>
+            <div class="row"><span>Coords</span><b id="hud-coord">—</b></div>
+            <div class="row"><span>Bearing</span><b id="hud-bearing">—</b></div>
+            <div class="row"><span>Look</span><b id="hud-look">—</b></div>
+            <div class="row"><span>Altitude</span><b id="hud-alt">—</b></div>
+            <div class="row"><span>Speed</span><b id="hud-speed">—</b></div>
+            <div class="row"><span>Walls</span><b id="hud-collision">—</b></div>
         </div>
         </div>
     </div>
@@ -1245,15 +1427,15 @@
     <div id="debug-menu" aria-hidden="true" hidden>
         <div class="debug-menu-header">
             <span class="debug-menu-title">debug dots</span>
-            <button type="button" class="debug-menu-close" id="debug-menu-close" aria-label="Закрыть">×</button>
+            <button type="button" class="debug-menu-close" id="debug-menu-close" aria-label="Close">×</button>
         </div>
         <div id="dbg-pin-table" class="dbg-pin-table"></div>
         <div class="debug-menu-sep"></div>
-        <div class="debug-menu-subtitle">Показывать в режимах</div>
-        <label>Дрон<input id="dbg-pin-mode-ignore" type="checkbox" checked /></label>
-        <label>Прогулка <input id="dbg-pin-mode-follow" type="checkbox" checked /></label>
-        <label>2DМашинка <input id="dbg-pin-mode-car" type="checkbox" checked /></label>
-        <div class="hint">F — открыть / закрыть</div>
+        <div class="debug-menu-subtitle">Show in modes</div>
+        <label>Drone<input id="dbg-pin-mode-ignore" type="checkbox" checked /></label>
+        <label>Walk <input id="dbg-pin-mode-follow" type="checkbox" checked /></label>
+        <label>2D Car <input id="dbg-pin-mode-car" type="checkbox" checked /></label>
+        <div class="hint">F — open / close</div>
     </div>
 
     <div id="stats-wrap">
@@ -1269,7 +1451,7 @@
                     <span class="stat-max" id="stat-max-green"></span>
                 </div>
             </div>
-            <div class="stat-label">Обычные</div>
+            <div class="stat-label">Common</div>
         </div>
         <div class="stat">
             <div class="stat-ring">
@@ -1282,7 +1464,7 @@
                     <span class="stat-max" id="stat-max-orange"></span>
                 </div>
             </div>
-            <div class="stat-label">Редкие</div>
+            <div class="stat-label">Rare</div>
         </div>
         <div class="stat">
             <div class="stat-ring">
@@ -1295,56 +1477,54 @@
                     <span class="stat-max" id="stat-max-blue"></span>
                 </div>
             </div>
-            <div class="stat-label">Поймай их</div>
+            <div class="stat-label">Catch them</div>
         </div>
     </div>
     <div id="stats-teleporter">
         <img id="stats-teleporter-icon" src="images/mo_teleporter_s.png" width="40" height="40" alt="" />
         <div id="stats-teleporter-info">
-            <p id="stats-teleporter-title">Карманный телепортер</p>
-            <div><kbd>T</kbd> — Поставить точку</div>
-            <div><kbd>Y</kbd> — Телепортироваться</div>
-            <div class="hint" style="font-size: 9px;">Храним даже после перезагрузки</div>
+            <p id="stats-teleporter-title">Pocket teleporter</p>
+            <div><kbd>T</kbd> — Set point</div>
+            <div><kbd>Y</kbd> — Teleport</div>
+            <div class="hint" style="font-size: 9px;">Saved even after reload</div>
         </div>
     </div>
     </div>
 
     <div id="style-menu-overlay" aria-hidden="true" hidden>
-        <button type="button" class="style-menu-close" id="style-menu-close" aria-label="Закрыть">×</button>
+        <button type="button" class="style-menu-close" id="style-menu-close" aria-label="Close">×</button>
         <div class="style-menu-inner">
-            <h2 class="style-menu-title">Стиль реальности</h2>
-            <p class="style-menu-desc">Выбери стиль карты для путешествий</p>
+            <h2 class="style-menu-title">Reality style</h2>
+            <p class="style-menu-desc">Choose a map style for your journey</p>
             <div class="style-menu-actions">
-                <button type="button" class="style-menu-btn" data-style-url="maps/map1.json">Тест – отличный денек</button>
-                <button type="button" class="style-menu-btn" data-style-url="maps/trees3.json">Тест – горячий рассвет</button>
-                <button type="button" class="style-menu-btn" data-style-url="maps/map3.json">Тест – арктическое зарево</button>
-                <button type="button" class="style-menu-btn" data-style-url="maps/map4.json">Тест - хилшейд</button>
-                <button type="button" class="style-menu-btn" data-style-url="maps/trees.json">Trees (лес 3D)</button>
-                <button type="button" class="style-menu-btn style-menu-btn-white" id="style-menu-upload">Загрузить свой</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/map1.json">Test – nice day</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/trees3.json">Test – hot sunrise</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/map3.json">Test – arctic glow</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/map4.json">Test - hillshade</button>
+                <button type="button" class="style-menu-btn" data-style-url="maps/trees.json">Trees (3D forest)</button>
+                <button type="button" class="style-menu-btn style-menu-btn-white" id="style-menu-upload">Upload your own</button>
             </div>
-            <button type="button" class="style-menu-cancel" id="style-menu-cancel">Остаться в этой реальности</button>
+            <button type="button" class="style-menu-cancel" id="style-menu-cancel">Stay in this reality</button>
         </div>
     </div>
 
-    <div id="reality-hint" aria-hidden="true">Нажми <b>E</b> чтобы сменить реальность</div>
-
-    <div id="reality-swap" aria-hidden="true"><img src="images/ui_swapreal.gif" alt="" /></div>
+    <div id="reality-hint" aria-hidden="true">Press <b>E</b> to switch reality</div>
 
     <div id="terrain-choose-wrap">
-        <p class="terrain-choose-hint" id="terrain-choose-hint-q">Q – менять стиль движения</p>
-        <p class="terrain-choose-hint" id="terrain-choose-hint-car" hidden>С – вид машины сбоку / сверху</p>
+        <p class="terrain-choose-hint" id="terrain-choose-hint-q">Q – change movement mode</p>
+        <p class="terrain-choose-hint" id="terrain-choose-hint-car" hidden>C – car view side / top</p>
         <div id="terrain-choose">
-            <button type="button" id="choose-terrain-ignore" title="Игнорировать рельеф камерой">
-                <img src="images/ui_choose1.png" width="80" height="80" alt="Игнорировать рельеф" />
+            <button type="button" id="choose-terrain-ignore" title="Ignore terrain with camera">
+                <img src="images/ui_choose1.png" width="80" height="80" alt="Ignore terrain" />
             </button>
-            <button type="button" id="choose-terrain-follow" title="Следовать рельефу">
-                <img src="images/ui_choose2.png" width="80" height="80" alt="Следовать рельефу" />
+            <button type="button" id="choose-terrain-follow" title="Follow terrain">
+                <img src="images/ui_choose2.png" width="80" height="80" alt="Follow terrain" />
             </button>
-            <button type="button" id="choose-terrain-car" title="Езда на машине">
-                <img src="images/ui_choose3.png" width="80" height="80" alt="Машина" />
+            <button type="button" id="choose-terrain-car" title="Car driving">
+                <img src="images/ui_choose3.png" width="80" height="80" alt="Car" />
             </button>
-            <button type="button" id="choose-terrain-3dmove" title="3D машинка">
-                <img src="images/ui_choose4.png" width="80" height="80" alt="3D машинка" />
+            <button type="button" id="choose-terrain-3dmove" title="3D car">
+                <img src="images/ui_choose4.png" width="80" height="80" alt="3D car" />
             </button>
         </div>
     </div>
@@ -1352,122 +1532,126 @@
     <div id="movement-mode-toast" aria-live="polite"></div>
 
     <div id="save-pin-toast" aria-live="polite">
-        <p class="save-pin-toast-title">Точка карманного телепортера установлена</p>
-        <p class="save-pin-toast-hint">Потом нажми Y чтобы вернуться сюда</p>
+        <p class="save-pin-toast-title">Pocket teleporter point set</p>
+        <p class="save-pin-toast-hint">Press Y later to return here</p>
     </div>
 
     <div id="car-skin-picker" aria-hidden="true" hidden>
         <div class="car-skin-picker-inner">
             <div class="car-skin-picker-talk">
                 <img class="car-skin-picker-talk-photo" src="images/ui_talk1.png" alt="" width="72" height="72" />
-                <p class="car-skin-picker-talk-text">путешествовать по этому миру может быть скучно, но с кастомной машинкой это веселее</p>
+                <p class="car-skin-picker-talk-text">Exploring this world can be boring, but a custom car makes it fun</p>
             </div>
-            <p class="car-skin-picker-title">Скин машины</p>
+            <p class="car-skin-picker-title">Car skin</p>
             <div class="car-skin-picker-row">
                 <button type="button" class="car-skin-btn" data-car-sprite-id="1">
-                    <img class="car-skin-thumb" src="images/car_1ava.png" alt="Просто машина" width="136" height="90" />
-                    <span class="car-skin-label">Просто машина</span>
+                    <img class="car-skin-thumb" src="images/car_1ava.png" alt="Plain car" width="136" height="90" />
+                    <span class="car-skin-label">Plain car</span>
                 </button>
                 <button type="button" class="car-skin-btn" data-car-sprite-id="2">
-                    <img class="car-skin-thumb" src="images/car_2ava.png" alt="Багги / Карт" width="136" height="90" />
-                    <span class="car-skin-label">Багги / Карт</span>
+                    <img class="car-skin-thumb" src="images/car_2ava.png" alt="Buggy / Kart" width="136" height="90" />
+                    <span class="car-skin-label">Buggy / Kart</span>
                 </button>
                 <button type="button" class="car-skin-btn" data-car-sprite-id="3">
-                    <img class="car-skin-thumb" src="images/car_3ava.png" alt="Джип" width="136" height="90" />
-                    <span class="car-skin-label">Джип</span>
+                    <img class="car-skin-thumb" src="images/car_3ava.png" alt="Jeep" width="136" height="90" />
+                    <span class="car-skin-label">Jeep</span>
                 </button>
                 <button type="button" class="car-skin-btn" data-car-sprite-id="4">
-                    <img class="car-skin-thumb" src="images/car_4ava.png" alt="Скользкий мужик" width="136" height="90" />
-                    <span class="car-skin-label">Скользкий мужик</span>
+                    <img class="car-skin-thumb" src="images/car_4ava.png" alt="Slippery dude" width="136" height="90" />
+                    <span class="car-skin-label">Slippery dude</span>
                 </button>
             </div>
         </div>
     </div>
 
     <div id="search-wrap">
+        <button type="button" id="search-style-btn" aria-label="Reality style">
+            <img src="images/ico_styles.svg" width="20" height="20" alt="" />
+        </button>
         <div id="search-bar">
             <div class="search-row">
-                <input id="city" type="search" placeholder="Попади в любой город или место…" autocomplete="off" spellcheck="false" />
-                <button id="city-go" type="button">Телепорт</button>
+                <input id="city" type="search" placeholder="Go to any city or place…" autocomplete="off" spellcheck="false" />
+                <button id="city-go" type="button">Teleport</button>
             </div>
+            <div id="search-chips" aria-hidden="true"></div>
             <div id="city-status"></div>
         </div>
     </div>
 
-    <div id="resume-hint">Кликни по карте, чтобы вернуться к обзору</div>
-    <div id="flight-hint"><kbd>Esc</kbd> выйти</div>
+    <div id="resume-hint">Click the map to resume view</div>
+    <div id="flight-hint"><kbd>Esc</kbd> exit</div>
 
     <div id="touch-controls" aria-hidden="true">
         <div class="touch-cross">
-            <button type="button" class="touch-btn" id="touch-up" aria-label="Вверх">↑</button>
-            <button type="button" class="touch-btn" id="touch-left" aria-label="Стрейф влево">←</button>
-            <button type="button" class="touch-btn" id="touch-right" aria-label="Стрейф вправо">→</button>
-            <button type="button" class="touch-btn" id="touch-down" aria-label="Вниз">↓</button>
+            <button type="button" class="touch-btn" id="touch-up" aria-label="Up">↑</button>
+            <button type="button" class="touch-btn" id="touch-left" aria-label="Strafe left">←</button>
+            <button type="button" class="touch-btn" id="touch-right" aria-label="Strafe right">→</button>
+            <button type="button" class="touch-btn" id="touch-down" aria-label="Down">↓</button>
         </div>
         <div class="touch-joystick" id="touch-joystick">
             <div class="touch-joystick-base"></div>
             <div class="touch-joystick-stick" id="touch-joystick-stick"></div>
         </div>
         <div class="touch-car-actions">
-            <button type="button" class="touch-btn touch-btn-wide" id="touch-cam" aria-label="Сменить камеру">Cam</button>
-            <button type="button" class="touch-btn touch-btn-go" id="touch-go" aria-label="Ехать вперёд">Go</button>
+            <button type="button" class="touch-btn touch-btn-wide" id="touch-cam" aria-label="Switch camera">Cam</button>
+            <button type="button" class="touch-btn touch-btn-go" id="touch-go" aria-label="Drive forward">Go</button>
         </div>
     </div>
 
     <div id="help">
-        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — ходьба</div>
-        <div><kbd>Мышь</kbd> — обзор</div>
-        <div><kbd>Space</kbd> — вверх/прыгать/тормоз · <kbd>X</kbd> — вниз</div>
-        <div id="help-shift"><kbd>Shift</kbd> — мощно ускориться</div>
-        <div><kbd>Esc</kbd> — освободить курсор</div>
-        <div><kbd>M</kbd> — показать карту города</div>
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — walk</div>
+        <div><kbd>Mouse</kbd> — look</div>
+        <div><kbd>Space</kbd> — up/jump/brake · <kbd>X</kbd> — down</div>
+        <div id="help-shift"><kbd>Shift</kbd> — sprint boost</div>
+        <div><kbd>Esc</kbd> — release cursor</div>
+        <div><kbd>M</kbd> — show city map</div>
         <div id="help-car" hidden>
             <div class="help-sep"></div>
-            <div><kbd>C</kbd> — сменить камеру авто</div>
-            <div><kbd>Q</kbd> — выбор скина машины</div>
+            <div><kbd>C</kbd> — switch car camera</div>
+            <div><kbd>Q</kbd> — car skin picker</div>
         </div>
     </div>
 
-    <aside id="explore-checklist" aria-label="Резвись на карте">
-        <p class="explore-checklist-title">Освойся на карте:</p>
+    <aside id="explore-checklist" aria-label="Explore the map">
+        <p class="explore-checklist-title">Get comfortable on the map:</p>
         <ul>
             <li>
                 <input id="explore-old-home" type="checkbox" />
-                <label for="explore-old-home">Найди свой старый дом</label>
+                <label for="explore-old-home">Find your old home</label>
             </li>
             <li>
                 <input id="explore-pocket-teleporter" type="checkbox" />
-                <label for="explore-pocket-teleporter">Попробуй карманный телепортер</label>
+                <label for="explore-pocket-teleporter">Try the pocket teleporter</label>
             </li>
             <li>
                 <input id="explore-travel-places" type="checkbox" />
-                <label for="explore-travel-places">Поищи места куда путешествовал</label>
+                <label for="explore-travel-places">Search places you have traveled to</label>
             </li>
             <li>
                 <input id="explore-fav-mountain" type="checkbox" />
-                <label for="explore-fav-mountain">Взберись на любимую гору</label>
+                <label for="explore-fav-mountain">Climb your favorite mountain</label>
             </li>
             <li>
                 <input id="explore-slalom" type="checkbox" />
-                <label for="explore-slalom">Устрой слалом через леса и реки</label>
+                <label for="explore-slalom">Slalom through forests and rivers</label>
             </li>
             <li>
                 <input id="explore-teleport" type="checkbox" />
-                <label for="explore-teleport">Телепортируйся в особые места и адреса</label>
+                <label for="explore-teleport">Teleport to special places and addresses</label>
             </li>
         </ul>
         <div class="explore-checklist-tips" id="explore-checklist-tips">
             <div class="explore-checklist-tip" id="explore-checklist-tip">
-                <button type="button" class="explore-checklist-tip-close" aria-label="Закрыть">×</button>
+                <button type="button" class="explore-checklist-tip-close" aria-label="Close">×</button>
                 <div class="explore-checklist-tip-inner">
-                    <p class="explore-checklist-tip-text">Помни, ты можешь телепортирваться вообще куда угодно!</p>
+                    <p class="explore-checklist-tip-text">Remember, you can teleport anywhere!</p>
                     <img class="explore-checklist-tip-photo" src="images/ui_talk1a.png" alt="" width="56" height="56" />
                 </div>
             </div>
             <div class="explore-checklist-tip" id="explore-checklist-tip-2">
-                <button type="button" class="explore-checklist-tip-close" aria-label="Закрыть">×</button>
+                <button type="button" class="explore-checklist-tip-close" aria-label="Close">×</button>
                 <div class="explore-checklist-tip-inner">
-                    <p class="explore-checklist-tip-text">Летай в тысячу раз быстрее, используй песочницу параметров в Debug menu</p>
+                    <p class="explore-checklist-tip-text">Fly a thousand times faster — tweak parameters in the Debug menu</p>
                     <img class="explore-checklist-tip-photo" src="images/ui_talk1a.png" alt="" width="56" height="56" />
                 </div>
             </div>
@@ -1478,7 +1662,7 @@
         <div id="mini-map"></div>
         <div id="mini-map-ui">
             <img id="mini-map-marker" src="images/ui_minimap_1.png" width="50" height="50" alt="" />
-            <img id="mini-map-compass" src="images/ui_minimap_n.png" width="140" height="140" alt="Север" />
+            <img id="mini-map-compass" src="images/ui_minimap_n.png" width="140" height="140" alt="North" />
         </div>
     </div>
 
@@ -1488,7 +1672,7 @@
         <div class="teleport-buddy-wrap" aria-hidden="true">
             <img class="teleport-buddy" src="images/ui_buddy.png" alt="" />
         </div>
-        <p class="teleport-caption">Телепортируем тебя...</p>
+        <p class="teleport-caption">Teleporting you...</p>
     </div>
 
     <div id="save-flash-overlay" aria-hidden="true">
@@ -1496,7 +1680,7 @@
         <img class="save-flash-strip" src="images/ui_teleport_2.png" width="324" height="1532" alt="" />
         <div class="save-teleporter-hud">
             <img class="save-teleporter-icon" src="images/mo_teleporter.png" width="300" height="300" alt="" />
-            <p class="save-teleporter-caption">Карманный телепортер</p>
+            <p class="save-teleporter-caption">Pocket teleporter</p>
         </div>
     </div>
 
@@ -1505,11 +1689,31 @@
     </div>
 
     <div id="overlay">
+        <div id="reality-swap" class="page-intro" aria-hidden="false">
+            <canvas id="reality-swap-canvas"></canvas>
+            <p id="reality-swap-caption">Rebuilding reality...</p>
+        </div>
         <img class="logo" src="images/logo_big.png" width="900" alt="World Geo Walk" />
-        <p>3D-бродилка от первого лица по реальной карте. Гуляй между зданий, взлетай и осматривайся.</p>
-        <div class="play">Кликни, чтобы начать ▶</div>
-        <div id="loading">Это копия реального мира. 148,9 млн км² уже загружены!</div>
+        <div id="overlay-body">
+        <p>First-person 3D explorer on a real-world map. Walk between buildings, fly, and look around.</p>
+        <div id="loading">This is a copy of the real world. 148.9 million km² already loaded!</div>
+        <div id="overlay-guide" aria-hidden="false">
+            <div class="overlay-guide-tile">
+                <img src="images/guide1.gif" width="220" height="165" alt="" />
+                <p>Ride wherever you want</p>
+            </div>
+            <div class="overlay-guide-tile">
+                <img src="images/guide2.gif" width="220" height="165" alt="" />
+                <p>Fly and look around</p>
+            </div>
+            <div class="overlay-guide-tile">
+                <img src="images/guide3.gif" width="220" height="165" alt="" />
+                <p>Run and jump</p>
+            </div>
+        </div>
+        <div class="play">Click to start ▶</div>
         <p class="muted" id="overlay-hint"></p>
+        </div>
     </div>
 
     <!-- Запасные данные для открытия через file:// (двойным кликом), когда
@@ -1534,6 +1738,7 @@
     </script>
     <script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
     <script src="modules/three-layer.js"></script>
+    <script src="modules/rt-shadows-three.js"></script>
     <script src="modules/3dsky.js"></script>
     <script src="modules/follow-terrain-hands.js"></script>
     <script src="modules/car-drive.js"></script>
@@ -1555,12 +1760,12 @@
     // ----------------------------------------------------------------------
     const CONFIG = (function () {
         const defaults = {
-        start: { lng: 44.80148, lat: 41.69354 }, // Тбилиси (проспект Руставели)
-        startBearing: 35,
+        start: { lng: 18.83731, lat: 42.28032 }, // Budva
+        startBearing: 146,
         eyeHeight: 3,
         startHeightMultiplier: 10, // при старте поднимаемся в N раз выше роста
         groundAlt: 0,         // уровень земли, м
-        fov: 80,              // вертикальный угол обзора
+        fov: 75,              // вертикальный угол обзора
         // Ближняя плоскость отсечения: MapLibre по умолчанию height/50, из-за чего
         // у плоской камеры близкие объекты сильно обрезаются. Больше делитель —
         // ближе плоскость — меньше обрезаются объекты у камеры (ценой точности глубины).
@@ -1577,9 +1782,9 @@
         // Наклон камеры (0 = вниз, 90 = горизонт). MapLibre у земли стабилен
         // только в этом диапазоне, иначе рендер мерцает/падает.
         pitchMin: 85,         // смотрим вниз (≈5° ниже горизонта)
-        pitchMax: 88,         // самый ровный наклон без артефактов (≈2° вниз)
-        pitchStart: 88,       // смотрим прямо и чуть вниз
-        maxSafeZoom: 20,      // выше — нестабильно у горизонта
+        pitchMax: 85,         // фиксированный наклон
+        pitchStart: 85,       // фиксированный наклон
+        maxSafeZoom: 20.5,    // выше — нестабильно у горизонта
         // Небо + туман (градиент и дальность прорисовки) — править в settings.json → sky
         sky: {
             color: "#001973",
@@ -1643,16 +1848,17 @@
         // 3D рельеф (DEM от AWS, terrarium). 0 = выключен.
         terrainExaggeration: 1,
         // Макс. zoom DEM-тайлов (0–15): ниже — грубее рельеф, быстрее.
-        terrainDemMaxZoom: 9,
+        terrainDemMaxZoom: 11,
         threeOriginShiftM: 3000,
         threeTerrainCacheMax: 1024,
         threeTerrainCacheCell: 0.00004,
+        threePixelRatioScale: 0.6,
         // «Игнорировать рельеф камерой»: вкл — фикс. высота (не меняется при подъёме).
         // Выкл — высота по рельефу под игроком, не под точкой прицела впереди.
         ignoreTerrainCollision: true,
         followTerrainEyeHeight: 3,   // высота глаз, м — галочка «игнорировать рельеф» выкл
-        ignoreTerrainEyeHeight: 20,    // целевая высота дрона, м
-        ignoreTerrainEyeHeightStart: 4, // стартовая высота при выборе дрона, м
+        ignoreTerrainEyeHeight: 25,    // целевая высота дрона, м
+        ignoreTerrainEyeHeightStart: 25, // стартовая высота при выборе дрона, м
         heightAnimSec: 2,              // длительность анимации смены высоты, сек
         followTerrainJumpHeight: 14,   // прыжок Space в режиме «следовать рельефу», м
         followTerrainJumpSec: 1.4,     // длительность прыжка вверх-вниз, сек
@@ -1684,19 +1890,42 @@
         carCameraRollSpeedMin: 30,
         carCameraRollSec: 0.8,
         carWakeMaxCount: 5,
-        car3dModelUrl: "models/puegeot.glb",
-        car3dBoatModelUrl: "models/boat.glb",
+        car3dModelUrl: "models/car1.glb",
         car3dScale: 5.88,
-        car3dBoatScale: 5.88,
         car3dYawOffsetDeg: 90,
-        car3dBoatYawOffsetDeg: 270,
         car3dBaseM: 0.35,
-        car3dBoatBaseM: 0.35,
         car3dTurnLeanDeg: 30,
         car3dTurnLeanSec: 0.4,
-        car3dBoatTurnLeanDeg: 24,
-        car3dBoatTurnLeanSec: 0.55,
         car3dFollowTerrain: true,
+        car3dPitchPivotOffsetX: 0,
+        car3dPitchPivotOffsetY: 0,
+        car3dPitchPivotOffsetZ: 0,
+        car3dBoostFireOffsetX: 0,
+        car3dBoostFireOffsetY: 2.3,
+        car3dBoostFireOffsetZ: 1.6,
+        car3dBoostFireTiltDeg: 280,
+        car3dBoostFireSizePct: 120,
+        car3dStopFlameOffsetX: 0,
+        car3dStopFlameOffsetY: 1.7,
+        car3dStopFlameOffsetZ: 2.9,
+        car3dStopFlameTiltDeg: -19,
+        car3dStopFlameAlwaysVisible: false,
+        car3dStopFlameSizePct: 200,
+        car3dDriverOffsetX: 1.6,
+        car3dDriverOffsetY: 1.5,
+        car3dDriverOffsetZ: 2.2,
+        car3dDriverRotXDeg: 99,
+        car3dDriverRotYDeg: 180,
+        car3dDriverRotZDeg: 0,
+        car3dDriverSizePct: 220,
+        car3dTalkOffsetX: 0,
+        car3dTalkOffsetY: 0,
+        car3dTalkOffsetZ: 5.7,
+        car3dTalkFontSize: 60,
+        car3dTalkSizePct: 70,
+        car3dTalkRotXDeg: 0,
+        car3dTalkRotYDeg: 180,
+        car3dTalkRotZDeg: 0,
         carSpriteId: 1,
         carSpriteSrc: "images/car_1.png",
         carSpriteWidthPx: 280,
@@ -1707,8 +1936,24 @@
         carSpriteTurnFrameThresholdsDeg: [15, 35, 55, 75],
         demUrl: "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
         demEncoding: "terrarium",
-        // Тени зданий в реальном времени (CustomLayer, проекция следа + AO).
+        // RT building shadows (MapLibre WallShadowLayer custom layer).
         shadows: false,
+        shadowWallShade: false,
+        shadowGroundFx: true,
+        shadowLightIntensity: 0.85,
+        shadowLightAzimuth: 210,
+        shadowLightPolar: 30,
+        shadowWallStrength: 0.5,
+        shadowWallBand: 1.0,
+        shadowAlpha: 0.35,
+        shadowHeightScale: 1,
+        shadowBlur: 0,
+        shadowAoIntensity: 0.8,
+        shadowAoRadiusMin: 30,
+        shadowAoRadiusMax: 120,
+        shadowSdfResolution: 256,
+        shadowRadiusM: 160,
+        shadowMaxBuildings: 80,
         trees3dEnabled: false,
         treesThreeJsEnabled: true,
         trees3dDensity: 2,
@@ -1956,12 +2201,42 @@
     const elNearClipDivisor = document.getElementById("near-clip-divisor");
     const elThreeOriginShift = document.getElementById("three-origin-shift");
     const elThreeTerrainCache = document.getElementById("three-terrain-cache");
+    const elThreePixelRatio = document.getElementById("three-pixel-ratio");
     const elCarRoll = document.getElementById("car-roll");
     const elCarSprite = document.getElementById("car-sprite");
     const elCarRollMax = document.getElementById("car-roll-max");
     const elCarRollSec = document.getElementById("car-roll-sec");
     const elCarWakeMax = document.getElementById("car-wake-max");
     const elCar3dFollowTerrain = document.getElementById("car3d-follow-terrain");
+    const elCar3dPitchPivotX = document.getElementById("car3d-pitch-pivot-x");
+    const elCar3dPitchPivotY = document.getElementById("car3d-pitch-pivot-y");
+    const elCar3dPitchPivotZ = document.getElementById("car3d-pitch-pivot-z");
+    const elCar3dBoostFireX = document.getElementById("car3d-boost-fire-x");
+    const elCar3dBoostFireY = document.getElementById("car3d-boost-fire-y");
+    const elCar3dBoostFireZ = document.getElementById("car3d-boost-fire-z");
+    const elCar3dBoostFireTilt = document.getElementById("car3d-boost-fire-tilt");
+    const elCar3dBoostFireSize = document.getElementById("car3d-boost-fire-size");
+    const elCar3dStopFlameX = document.getElementById("car3d-stop-flame-x");
+    const elCar3dStopFlameY = document.getElementById("car3d-stop-flame-y");
+    const elCar3dStopFlameZ = document.getElementById("car3d-stop-flame-z");
+    const elCar3dStopFlameTilt = document.getElementById("car3d-stop-flame-tilt");
+    const elCar3dStopFlameSize = document.getElementById("car3d-stop-flame-size");
+    const elCar3dStopFlameAlways = document.getElementById("car3d-stop-flame-always");
+    const elCar3dDriverX = document.getElementById("car3d-driver-x");
+    const elCar3dDriverY = document.getElementById("car3d-driver-y");
+    const elCar3dDriverZ = document.getElementById("car3d-driver-z");
+    const elCar3dDriverRotX = document.getElementById("car3d-driver-rot-x");
+    const elCar3dDriverRotY = document.getElementById("car3d-driver-rot-y");
+    const elCar3dDriverRotZ = document.getElementById("car3d-driver-rot-z");
+    const elCar3dDriverSize = document.getElementById("car3d-driver-size");
+    const elCar3dTalkX = document.getElementById("car3d-talk-x");
+    const elCar3dTalkY = document.getElementById("car3d-talk-y");
+    const elCar3dTalkZ = document.getElementById("car3d-talk-z");
+    const elCar3dTalkFont = document.getElementById("car3d-talk-font");
+    const elCar3dTalkSize = document.getElementById("car3d-talk-size");
+    const elCar3dTalkRotX = document.getElementById("car3d-talk-rot-x");
+    const elCar3dTalkRotY = document.getElementById("car3d-talk-rot-y");
+    const elCar3dTalkRotZ = document.getElementById("car3d-talk-rot-z");
     const elRelief = document.getElementById("relief");
     const elTerrainLod = document.getElementById("terrain-lod");
     const elTreesThreejs = document.getElementById("trees-threejs");
@@ -1998,10 +2273,10 @@
         { id: "3dmove", button: elChoose3dMove }
     ];
     const MOVEMENT_MODE_LABELS = {
-        ignore: "Дрон",
-        follow: "Прогулка",
-        car: "2D Машинка",
-        "3dmove": "3D машинка"
+        ignore: "Drone",
+        follow: "Walk",
+        car: "2D Car",
+        "3dmove": "3D Car"
     };
     // Показывать ли debug dots в каждом режиме передвижения (по умолчанию — везде).
     const pinModeEnabled = { ignore: true, follow: true, car: true, "3dmove": true };
@@ -2010,6 +2285,20 @@
             && !document.body.classList.contains("overlay-open");
     }
     const elShadows = document.getElementById("shadows");
+    const elShadowWallShade = document.getElementById("shadow-wall-shade");
+    const elShadowGroundFx = document.getElementById("shadow-ground-fx");
+    const elShadowLightIntensity = document.getElementById("shadow-light-intensity");
+    const elShadowLightAzimuth = document.getElementById("shadow-light-azimuth");
+    const elShadowLightPolar = document.getElementById("shadow-light-polar");
+    const elShadowWallStrength = document.getElementById("shadow-wall-strength");
+    const elShadowWallBand = document.getElementById("shadow-wall-band");
+    const elShadowAlpha = document.getElementById("shadow-alpha");
+    const elShadowHeightScale = document.getElementById("shadow-height-scale");
+    const elShadowBlur = document.getElementById("shadow-blur");
+    const elShadowAoIntensity = document.getElementById("shadow-ao-intensity");
+    const elShadowAoRadiusMin = document.getElementById("shadow-ao-radius-min");
+    const elShadowAoRadiusMax = document.getElementById("shadow-ao-radius-max");
+    const elShadowSdfRes = document.getElementById("shadow-sdf-res");
     const elStyleStatus = document.getElementById("style-status");
     const elHelpShift = document.getElementById("help-shift");
     const elHelpCar = document.getElementById("help-car");
@@ -2074,12 +2363,102 @@
         if (elTerrainLod) elTerrainLod.value = terrainDemMaxZoomFromConfig();
         if (elThreeOriginShift) elThreeOriginShift.value = CONFIG.threeOriginShiftM != null ? CONFIG.threeOriginShiftM : 3000;
         if (elThreeTerrainCache) elThreeTerrainCache.value = CONFIG.threeTerrainCacheMax != null ? CONFIG.threeTerrainCacheMax : 1024;
+        if (elThreePixelRatio) {
+            elThreePixelRatio.value = CONFIG.threePixelRatioScale != null ? CONFIG.threePixelRatioScale : 0.6;
+        }
         if (elCarSprite) elCarSprite.value = String(carSpriteIdFromConfig());
         if (elCarRoll) elCarRoll.checked = CONFIG.carCameraRollEnabled !== false;
         if (elCarRollMax) elCarRollMax.value = CONFIG.carCameraRollMax;
         if (elCarRollSec) elCarRollSec.value = CONFIG.carCameraRollSec;
         if (elCarWakeMax) elCarWakeMax.value = CONFIG.carWakeMaxCount;
         if (elCar3dFollowTerrain) elCar3dFollowTerrain.checked = CONFIG.car3dFollowTerrain !== false;
+        if (elCar3dPitchPivotX) {
+            elCar3dPitchPivotX.value = CONFIG.car3dPitchPivotOffsetX != null ? CONFIG.car3dPitchPivotOffsetX : 0;
+        }
+        if (elCar3dPitchPivotY) {
+            elCar3dPitchPivotY.value = CONFIG.car3dPitchPivotOffsetY != null ? CONFIG.car3dPitchPivotOffsetY : 0;
+        }
+        if (elCar3dPitchPivotZ) {
+            elCar3dPitchPivotZ.value = CONFIG.car3dPitchPivotOffsetZ != null ? CONFIG.car3dPitchPivotOffsetZ : 0;
+        }
+        if (elCar3dBoostFireX) {
+            elCar3dBoostFireX.value = CONFIG.car3dBoostFireOffsetX != null ? CONFIG.car3dBoostFireOffsetX : 0;
+        }
+        if (elCar3dBoostFireY) {
+            elCar3dBoostFireY.value = CONFIG.car3dBoostFireOffsetY != null ? CONFIG.car3dBoostFireOffsetY : 2.3;
+        }
+        if (elCar3dBoostFireZ) {
+            elCar3dBoostFireZ.value = CONFIG.car3dBoostFireOffsetZ != null ? CONFIG.car3dBoostFireOffsetZ : 1.6;
+        }
+        if (elCar3dBoostFireTilt) {
+            elCar3dBoostFireTilt.value = CONFIG.car3dBoostFireTiltDeg != null ? CONFIG.car3dBoostFireTiltDeg : 280;
+        }
+        if (elCar3dBoostFireSize) {
+            elCar3dBoostFireSize.value = CONFIG.car3dBoostFireSizePct != null ? CONFIG.car3dBoostFireSizePct : 120;
+        }
+        if (elCar3dStopFlameX) {
+            elCar3dStopFlameX.value = CONFIG.car3dStopFlameOffsetX != null ? CONFIG.car3dStopFlameOffsetX : 0;
+        }
+        if (elCar3dStopFlameY) {
+            elCar3dStopFlameY.value = CONFIG.car3dStopFlameOffsetY != null ? CONFIG.car3dStopFlameOffsetY : 1.7;
+        }
+        if (elCar3dStopFlameZ) {
+            elCar3dStopFlameZ.value = CONFIG.car3dStopFlameOffsetZ != null ? CONFIG.car3dStopFlameOffsetZ : 2.9;
+        }
+        if (elCar3dStopFlameTilt) {
+            elCar3dStopFlameTilt.value = CONFIG.car3dStopFlameTiltDeg != null ? CONFIG.car3dStopFlameTiltDeg : -19;
+        }
+        if (elCar3dStopFlameSize) {
+            elCar3dStopFlameSize.value = CONFIG.car3dStopFlameSizePct != null ? CONFIG.car3dStopFlameSizePct : 200;
+        }
+        if (elCar3dStopFlameAlways) {
+            elCar3dStopFlameAlways.checked = !!CONFIG.car3dStopFlameAlwaysVisible;
+        }
+        if (elCar3dDriverX) {
+            elCar3dDriverX.value = CONFIG.car3dDriverOffsetX != null ? CONFIG.car3dDriverOffsetX : 1.6;
+        }
+        if (elCar3dDriverY) {
+            elCar3dDriverY.value = CONFIG.car3dDriverOffsetY != null ? CONFIG.car3dDriverOffsetY : 1.5;
+        }
+        if (elCar3dDriverZ) {
+            elCar3dDriverZ.value = CONFIG.car3dDriverOffsetZ != null ? CONFIG.car3dDriverOffsetZ : 2.2;
+        }
+        if (elCar3dDriverRotX) {
+            elCar3dDriverRotX.value = CONFIG.car3dDriverRotXDeg != null ? CONFIG.car3dDriverRotXDeg : 99;
+        }
+        if (elCar3dDriverRotY) {
+            elCar3dDriverRotY.value = CONFIG.car3dDriverRotYDeg != null ? CONFIG.car3dDriverRotYDeg : 180;
+        }
+        if (elCar3dDriverRotZ) {
+            elCar3dDriverRotZ.value = CONFIG.car3dDriverRotZDeg != null ? CONFIG.car3dDriverRotZDeg : 0;
+        }
+        if (elCar3dDriverSize) {
+            elCar3dDriverSize.value = CONFIG.car3dDriverSizePct != null ? CONFIG.car3dDriverSizePct : 220;
+        }
+        if (elCar3dTalkX) {
+            elCar3dTalkX.value = CONFIG.car3dTalkOffsetX != null ? CONFIG.car3dTalkOffsetX : 0;
+        }
+        if (elCar3dTalkY) {
+            elCar3dTalkY.value = CONFIG.car3dTalkOffsetY != null ? CONFIG.car3dTalkOffsetY : 0;
+        }
+        if (elCar3dTalkZ) {
+            elCar3dTalkZ.value = CONFIG.car3dTalkOffsetZ != null ? CONFIG.car3dTalkOffsetZ : 5.7;
+        }
+        if (elCar3dTalkFont) {
+            elCar3dTalkFont.value = CONFIG.car3dTalkFontSize != null ? CONFIG.car3dTalkFontSize : 60;
+        }
+        if (elCar3dTalkSize) {
+            elCar3dTalkSize.value = CONFIG.car3dTalkSizePct != null ? CONFIG.car3dTalkSizePct : 70;
+        }
+        if (elCar3dTalkRotX) {
+            elCar3dTalkRotX.value = CONFIG.car3dTalkRotXDeg != null ? CONFIG.car3dTalkRotXDeg : 0;
+        }
+        if (elCar3dTalkRotY) {
+            elCar3dTalkRotY.value = CONFIG.car3dTalkRotYDeg != null ? CONFIG.car3dTalkRotYDeg : 180;
+        }
+        if (elCar3dTalkRotZ) {
+            elCar3dTalkRotZ.value = CONFIG.car3dTalkRotZDeg != null ? CONFIG.car3dTalkRotZDeg : 0;
+        }
         syncClipPanelUI();
         syncCarRollPanelUI();
         elRelief.value = CONFIG.terrainExaggeration;
@@ -2094,6 +2473,41 @@
         if (elTrees3dDensity) elTrees3dDensity.value = CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 2;
         elNoTerrCol.checked = CONFIG.ignoreTerrainCollision;
         elShadows.checked = CONFIG.shadows;
+        if (elShadowWallShade) elShadowWallShade.checked = !!CONFIG.shadowWallShade;
+        if (elShadowGroundFx) elShadowGroundFx.checked = CONFIG.shadowGroundFx !== false;
+        if (elShadowLightIntensity) {
+            elShadowLightIntensity.value = CONFIG.shadowLightIntensity != null ? CONFIG.shadowLightIntensity : 0.85;
+        }
+        if (elShadowLightAzimuth) {
+            elShadowLightAzimuth.value = CONFIG.shadowLightAzimuth != null ? CONFIG.shadowLightAzimuth : 210;
+        }
+        if (elShadowLightPolar) {
+            elShadowLightPolar.value = CONFIG.shadowLightPolar != null ? CONFIG.shadowLightPolar : 30;
+        }
+        if (elShadowWallStrength) {
+            elShadowWallStrength.value = CONFIG.shadowWallStrength != null ? CONFIG.shadowWallStrength : 0.5;
+        }
+        if (elShadowWallBand) {
+            elShadowWallBand.value = CONFIG.shadowWallBand != null ? CONFIG.shadowWallBand : 1.0;
+        }
+        if (elShadowAlpha) elShadowAlpha.value = CONFIG.shadowAlpha != null ? CONFIG.shadowAlpha : 0.35;
+        if (elShadowHeightScale) {
+            elShadowHeightScale.value = CONFIG.shadowHeightScale != null ? CONFIG.shadowHeightScale : 1;
+        }
+        if (elShadowBlur) elShadowBlur.value = CONFIG.shadowBlur != null ? CONFIG.shadowBlur : 0;
+        if (elShadowAoIntensity) {
+            elShadowAoIntensity.value = CONFIG.shadowAoIntensity != null ? CONFIG.shadowAoIntensity : 0.8;
+        }
+        if (elShadowAoRadiusMin) {
+            elShadowAoRadiusMin.value = CONFIG.shadowAoRadiusMin != null ? CONFIG.shadowAoRadiusMin : 30;
+        }
+        if (elShadowAoRadiusMax) {
+            elShadowAoRadiusMax.value = CONFIG.shadowAoRadiusMax != null ? CONFIG.shadowAoRadiusMax : 120;
+        }
+        if (elShadowSdfRes) {
+            elShadowSdfRes.value = CONFIG.shadowSdfResolution != null ? CONFIG.shadowSdfResolution : 256;
+        }
+        syncShadowPanelUI();
         if (elMinimap) elMinimap.checked = CONFIG.minimapEnabled !== false;
         if (elPinStats) elPinStats.checked = CONFIG.pinStatsEnabled === true;
         syncPinStatsVisibility();
@@ -2121,9 +2535,9 @@
         if (elWalkTerrainSmoothSec) {
             elWalkTerrainSmoothSec.value = CONFIG.cameraTerrainSmoothSec != null ? CONFIG.cameraTerrainSmoothSec : 0.65;
         }
-        elStyleStatus.textContent = "стиль: " + styleNameFromUrl(CONFIG.styleUrl);
-        elHelpShift.innerHTML = "<kbd>Shift</kbd> — рывок /ускорение";
-        elOverlayHint.textContent = "Некоммерческая гео-песочница для путешествий. By Boxypix design & dev. 2026";
+        elStyleStatus.textContent = "style: " + styleNameFromUrl(CONFIG.styleUrl);
+        elHelpShift.innerHTML = "<kbd>Shift</kbd> — sprint boost";
+        elOverlayHint.textContent = "Non-commercial geo sandbox for travel. By Boxypix design & dev. 2026";
         syncMovementChooseUI();
     }
     applyConfigToUI();
@@ -2140,6 +2554,18 @@
             terrainCacheMax: CONFIG.threeTerrainCacheMax != null ? CONFIG.threeTerrainCacheMax : 1024,
             terrainCacheCell: CONFIG.threeTerrainCacheCell != null ? CONFIG.threeTerrainCacheCell : 0.00004
         });
+    }
+
+    function renderPixelRatioFromConfig() {
+        const dpr = window.devicePixelRatio || 1;
+        const scale = CONFIG.threePixelRatioScale != null ? CONFIG.threePixelRatioScale : 0.6;
+        const s = Math.max(0.25, Math.min(1, +scale || 1));
+        return dpr * s;
+    }
+
+    function syncRenderPixelRatioFromConfig() {
+        if (typeof map === "undefined" || !map || !map.setPixelRatio) return;
+        try { map.setPixelRatio(renderPixelRatioFromConfig()); } catch (e) {}
     }
 
     function sky3dOptionsFromConfig() {
@@ -2226,18 +2652,41 @@
         if (!window.GeowalkCar3d) return;
         GeowalkCar3d.init({
             modelUrl: CONFIG.car3dModelUrl,
-            boatModelUrl: CONFIG.car3dBoatModelUrl,
             scale: CONFIG.car3dScale,
-            boatScale: CONFIG.car3dBoatScale,
             yawOffsetDeg: CONFIG.car3dYawOffsetDeg,
-            boatYawOffsetDeg: CONFIG.car3dBoatYawOffsetDeg,
             baseM: CONFIG.car3dBaseM,
-            boatBaseM: CONFIG.car3dBoatBaseM,
             turnLeanDeg: CONFIG.car3dTurnLeanDeg,
             turnLeanSec: CONFIG.car3dTurnLeanSec,
-            boatTurnLeanDeg: CONFIG.car3dBoatTurnLeanDeg,
-            boatTurnLeanSec: CONFIG.car3dBoatTurnLeanSec,
-            followTerrain: CONFIG.car3dFollowTerrain !== false
+            followTerrain: CONFIG.car3dFollowTerrain !== false,
+            pitchPivotOffsetX: CONFIG.car3dPitchPivotOffsetX != null ? CONFIG.car3dPitchPivotOffsetX : 0,
+            pitchPivotOffsetY: CONFIG.car3dPitchPivotOffsetY != null ? CONFIG.car3dPitchPivotOffsetY : 0,
+            pitchPivotOffsetZ: CONFIG.car3dPitchPivotOffsetZ != null ? CONFIG.car3dPitchPivotOffsetZ : 0,
+            boostFireOffsetX: CONFIG.car3dBoostFireOffsetX != null ? CONFIG.car3dBoostFireOffsetX : 0,
+            boostFireOffsetY: CONFIG.car3dBoostFireOffsetY != null ? CONFIG.car3dBoostFireOffsetY : 2.3,
+            boostFireOffsetZ: CONFIG.car3dBoostFireOffsetZ != null ? CONFIG.car3dBoostFireOffsetZ : 1.6,
+            boostFireTiltDeg: CONFIG.car3dBoostFireTiltDeg != null ? CONFIG.car3dBoostFireTiltDeg : 280,
+            boostFireSizePct: CONFIG.car3dBoostFireSizePct != null ? CONFIG.car3dBoostFireSizePct : 120,
+            stopFlameOffsetX: CONFIG.car3dStopFlameOffsetX != null ? CONFIG.car3dStopFlameOffsetX : 0,
+            stopFlameOffsetY: CONFIG.car3dStopFlameOffsetY != null ? CONFIG.car3dStopFlameOffsetY : 1.7,
+            stopFlameOffsetZ: CONFIG.car3dStopFlameOffsetZ != null ? CONFIG.car3dStopFlameOffsetZ : 2.9,
+            stopFlameTiltDeg: CONFIG.car3dStopFlameTiltDeg != null ? CONFIG.car3dStopFlameTiltDeg : -19,
+            stopFlameAlwaysVisible: !!CONFIG.car3dStopFlameAlwaysVisible,
+            stopFlameSizePct: CONFIG.car3dStopFlameSizePct != null ? CONFIG.car3dStopFlameSizePct : 200,
+            driverOffsetX: CONFIG.car3dDriverOffsetX != null ? CONFIG.car3dDriverOffsetX : 1.6,
+            driverOffsetY: CONFIG.car3dDriverOffsetY != null ? CONFIG.car3dDriverOffsetY : 1.5,
+            driverOffsetZ: CONFIG.car3dDriverOffsetZ != null ? CONFIG.car3dDriverOffsetZ : 2.2,
+            driverRotXDeg: CONFIG.car3dDriverRotXDeg != null ? CONFIG.car3dDriverRotXDeg : 99,
+            driverRotYDeg: CONFIG.car3dDriverRotYDeg != null ? CONFIG.car3dDriverRotYDeg : 180,
+            driverRotZDeg: CONFIG.car3dDriverRotZDeg != null ? CONFIG.car3dDriverRotZDeg : 0,
+            driverSizePct: CONFIG.car3dDriverSizePct != null ? CONFIG.car3dDriverSizePct : 220,
+            talkOffsetX: CONFIG.car3dTalkOffsetX != null ? CONFIG.car3dTalkOffsetX : 0,
+            talkOffsetY: CONFIG.car3dTalkOffsetY != null ? CONFIG.car3dTalkOffsetY : 0,
+            talkOffsetZ: CONFIG.car3dTalkOffsetZ != null ? CONFIG.car3dTalkOffsetZ : 5.7,
+            talkFontSize: CONFIG.car3dTalkFontSize != null ? CONFIG.car3dTalkFontSize : 60,
+            talkSizePct: CONFIG.car3dTalkSizePct != null ? CONFIG.car3dTalkSizePct : 70,
+            talkRotXDeg: CONFIG.car3dTalkRotXDeg != null ? CONFIG.car3dTalkRotXDeg : 0,
+            talkRotYDeg: CONFIG.car3dTalkRotYDeg != null ? CONFIG.car3dTalkRotYDeg : 180,
+            talkRotZDeg: CONFIG.car3dTalkRotZDeg != null ? CONFIG.car3dTalkRotZDeg : 0
         });
     }
     initCar3dModule();
@@ -2430,8 +2879,8 @@
         if (elHelpCarQ) elHelpCarQ.hidden = is3dMoveMode();
         if (elTerrainChooseHintQ) {
             elTerrainChooseHintQ.textContent = isCarMode()
-                ? "Q – выбор скина машины"
-                : "Q – менять стиль движения";
+                ? "Q – car skin picker"
+                : "Q – change movement mode";
         }
         syncFollowTerrainHandsModule();
         syncCarDriveModule();
@@ -2516,6 +2965,9 @@
         applyCarModeVisuals();
         if (changed && is3dMoveMode() && window.GeowalkCar3d && GeowalkCar3d.playDropAnim) {
             GeowalkCar3d.playDropAnim();
+        }
+        if (changed && is3dMoveMode() && window.GeowalkCar3d && GeowalkCar3d.scheduleDriverFall) {
+            GeowalkCar3d.scheduleDriverFall();
         }
         if (changed) showMovementModeToast(modeId);
         if (ready) {
@@ -2636,7 +3088,8 @@
         maxPitch: 90,
         maxZoom: 24,
         fadeDuration: 0,
-        crossSourceCollisions: false
+        crossSourceCollisions: false,
+        pixelRatio: renderPixelRatioFromConfig()
     });
 
     let miniMap = null;
@@ -2904,12 +3357,30 @@
     // Ввод
     // ----------------------------------------------------------------------
     const overlay = document.getElementById("overlay");
+    const elOverlayBody = document.getElementById("overlay-body");
     const resumeHint = document.getElementById("resume-hint");
     const flightHint = document.getElementById("flight-hint");
     const canvasEl = map && map.getCanvas ? map.getCanvas() : null;
 
     function overlayVisible() {
         return !overlay.classList.contains("hidden");
+    }
+
+    const OVERLAY_BODY_DELAY_MS = 1500;
+
+    function scheduleOverlayBodyReveal() {
+        if (!elOverlayBody) return;
+        const wait = Math.max(0, OVERLAY_BODY_DELAY_MS - performance.now());
+        setTimeout(() => elOverlayBody.classList.add("visible"), wait);
+    }
+
+    scheduleOverlayBodyReveal();
+
+    const OVERLAY_IDLE_BEARING_DEG_PER_SEC = 5;
+
+    function updateOverlayIdleBearing(dt) {
+        if (!ready || !overlayVisible()) return;
+        player.yaw = ((player.yaw + OVERLAY_IDLE_BEARING_DEG_PER_SEC * dt) % 360 + 360) % 360;
     }
 
     function isTouchUiActive() {
@@ -2946,13 +3417,13 @@
             elDown.classList.remove("touch-btn-disabled");
             if (isCarLikeMode()) {
                 elDown.textContent = "_";
-                elDown.setAttribute("aria-label", "Тормоз");
+                elDown.setAttribute("aria-label", "Brake");
             } else if (isFollowMode()) {
                 elDown.textContent = "J";
-                elDown.setAttribute("aria-label", "Прыжок");
+                elDown.setAttribute("aria-label", "Jump");
             } else {
                 elDown.textContent = "↓";
-                elDown.setAttribute("aria-label", "Вниз");
+                elDown.setAttribute("aria-label", "Down");
             }
         }
         if (isCarLikeMode()) {
@@ -3237,6 +3708,7 @@
     const elCity = document.getElementById("city");
     const elCityGo = document.getElementById("city-go");
     const elCityStatus = document.getElementById("city-status");
+    const elSearchChips = document.getElementById("search-chips");
     const teleportOverlay = document.getElementById("teleport-overlay");
     const saveFlashOverlay = document.getElementById("save-flash-overlay");
     const speedOverlay = document.getElementById("speed-overlay");
@@ -3485,7 +3957,7 @@
     });
 
     function applyWalkPitchFromConfig() {
-        const pitch = CONFIG.pitchStart != null ? CONFIG.pitchStart : 88;
+        const pitch = CONFIG.pitchStart != null ? CONFIG.pitchStart : 85;
         player.pitch = pitch;
         if (map && ready) {
             invalidateCameraCache();
@@ -3624,6 +4096,13 @@
             syncThreePerfFromConfig();
         });
     }
+    if (elThreePixelRatio) {
+        bindNumber(elThreePixelRatio, v => {
+            CONFIG.threePixelRatioScale = Math.max(0.25, Math.min(1, v));
+            elThreePixelRatio.value = CONFIG.threePixelRatioScale;
+            syncRenderPixelRatioFromConfig();
+        });
+    }
     if (elCarRoll) {
         elCarRoll.addEventListener("change", () => {
             CONFIG.carCameraRollEnabled = elCarRoll.checked;
@@ -3653,6 +4132,276 @@
             }
         });
     }
+    function syncCar3dPitchPivotFromPanel() {
+        if (window.GeowalkCar3d && GeowalkCar3d.configure) {
+            GeowalkCar3d.configure({
+                pitchPivotOffsetX: CONFIG.car3dPitchPivotOffsetX != null ? CONFIG.car3dPitchPivotOffsetX : 0,
+                pitchPivotOffsetY: CONFIG.car3dPitchPivotOffsetY != null ? CONFIG.car3dPitchPivotOffsetY : 0,
+                pitchPivotOffsetZ: CONFIG.car3dPitchPivotOffsetZ != null ? CONFIG.car3dPitchPivotOffsetZ : 0
+            });
+        }
+    }
+    if (elCar3dPitchPivotX) {
+        bindNumber(elCar3dPitchPivotX, v => {
+            CONFIG.car3dPitchPivotOffsetX = v;
+            elCar3dPitchPivotX.value = CONFIG.car3dPitchPivotOffsetX;
+            syncCar3dPitchPivotFromPanel();
+        });
+    }
+    if (elCar3dPitchPivotY) {
+        bindNumber(elCar3dPitchPivotY, v => {
+            CONFIG.car3dPitchPivotOffsetY = v;
+            elCar3dPitchPivotY.value = CONFIG.car3dPitchPivotOffsetY;
+            syncCar3dPitchPivotFromPanel();
+        });
+    }
+    if (elCar3dPitchPivotZ) {
+        bindNumber(elCar3dPitchPivotZ, v => {
+            CONFIG.car3dPitchPivotOffsetZ = v;
+            elCar3dPitchPivotZ.value = CONFIG.car3dPitchPivotOffsetZ;
+            syncCar3dPitchPivotFromPanel();
+        });
+    }
+    function syncCar3dBoostFireFromPanel() {
+        if (window.GeowalkCar3d && GeowalkCar3d.configure) {
+            GeowalkCar3d.configure({
+                boostFireOffsetX: CONFIG.car3dBoostFireOffsetX != null ? CONFIG.car3dBoostFireOffsetX : 0,
+                boostFireOffsetY: CONFIG.car3dBoostFireOffsetY != null ? CONFIG.car3dBoostFireOffsetY : 2.3,
+                boostFireOffsetZ: CONFIG.car3dBoostFireOffsetZ != null ? CONFIG.car3dBoostFireOffsetZ : 1.6,
+                boostFireTiltDeg: CONFIG.car3dBoostFireTiltDeg != null ? CONFIG.car3dBoostFireTiltDeg : 280,
+                boostFireSizePct: CONFIG.car3dBoostFireSizePct != null ? CONFIG.car3dBoostFireSizePct : 120
+            });
+        }
+    }
+    if (elCar3dBoostFireX) {
+        bindNumber(elCar3dBoostFireX, v => {
+            CONFIG.car3dBoostFireOffsetX = v;
+            elCar3dBoostFireX.value = CONFIG.car3dBoostFireOffsetX;
+            syncCar3dBoostFireFromPanel();
+        });
+    }
+    if (elCar3dBoostFireY) {
+        bindNumber(elCar3dBoostFireY, v => {
+            CONFIG.car3dBoostFireOffsetY = v;
+            elCar3dBoostFireY.value = CONFIG.car3dBoostFireOffsetY;
+            syncCar3dBoostFireFromPanel();
+        });
+    }
+    if (elCar3dBoostFireZ) {
+        bindNumber(elCar3dBoostFireZ, v => {
+            CONFIG.car3dBoostFireOffsetZ = v;
+            elCar3dBoostFireZ.value = CONFIG.car3dBoostFireOffsetZ;
+            syncCar3dBoostFireFromPanel();
+        });
+    }
+    if (elCar3dBoostFireTilt) {
+        bindNumber(elCar3dBoostFireTilt, v => {
+            CONFIG.car3dBoostFireTiltDeg = v;
+            elCar3dBoostFireTilt.value = CONFIG.car3dBoostFireTiltDeg;
+            syncCar3dBoostFireFromPanel();
+        });
+    }
+    if (elCar3dBoostFireSize) {
+        bindNumber(elCar3dBoostFireSize, v => {
+            CONFIG.car3dBoostFireSizePct = Math.max(1, Math.min(500, v));
+            elCar3dBoostFireSize.value = CONFIG.car3dBoostFireSizePct;
+            syncCar3dBoostFireFromPanel();
+        });
+    }
+    function syncCar3dStopFlameFromPanel() {
+        if (window.GeowalkCar3d && GeowalkCar3d.configure) {
+            GeowalkCar3d.configure({
+                stopFlameOffsetX: CONFIG.car3dStopFlameOffsetX != null ? CONFIG.car3dStopFlameOffsetX : 0,
+                stopFlameOffsetY: CONFIG.car3dStopFlameOffsetY != null ? CONFIG.car3dStopFlameOffsetY : 1.7,
+                stopFlameOffsetZ: CONFIG.car3dStopFlameOffsetZ != null ? CONFIG.car3dStopFlameOffsetZ : 2.9,
+                stopFlameTiltDeg: CONFIG.car3dStopFlameTiltDeg != null ? CONFIG.car3dStopFlameTiltDeg : -19,
+                stopFlameAlwaysVisible: !!CONFIG.car3dStopFlameAlwaysVisible,
+                stopFlameSizePct: CONFIG.car3dStopFlameSizePct != null ? CONFIG.car3dStopFlameSizePct : 200
+            });
+        }
+    }
+    if (elCar3dStopFlameAlways) {
+        elCar3dStopFlameAlways.addEventListener("change", () => {
+            CONFIG.car3dStopFlameAlwaysVisible = elCar3dStopFlameAlways.checked;
+            syncCar3dStopFlameFromPanel();
+        });
+    }
+    if (elCar3dStopFlameX) {
+        bindNumber(elCar3dStopFlameX, v => {
+            CONFIG.car3dStopFlameOffsetX = v;
+            elCar3dStopFlameX.value = CONFIG.car3dStopFlameOffsetX;
+            syncCar3dStopFlameFromPanel();
+        });
+    }
+    if (elCar3dStopFlameY) {
+        bindNumber(elCar3dStopFlameY, v => {
+            CONFIG.car3dStopFlameOffsetY = v;
+            elCar3dStopFlameY.value = CONFIG.car3dStopFlameOffsetY;
+            syncCar3dStopFlameFromPanel();
+        });
+    }
+    if (elCar3dStopFlameZ) {
+        bindNumber(elCar3dStopFlameZ, v => {
+            CONFIG.car3dStopFlameOffsetZ = v;
+            elCar3dStopFlameZ.value = CONFIG.car3dStopFlameOffsetZ;
+            syncCar3dStopFlameFromPanel();
+        });
+    }
+    if (elCar3dStopFlameTilt) {
+        bindNumber(elCar3dStopFlameTilt, v => {
+            CONFIG.car3dStopFlameTiltDeg = v;
+            elCar3dStopFlameTilt.value = CONFIG.car3dStopFlameTiltDeg;
+            syncCar3dStopFlameFromPanel();
+        });
+    }
+    if (elCar3dStopFlameSize) {
+        bindNumber(elCar3dStopFlameSize, v => {
+            CONFIG.car3dStopFlameSizePct = Math.max(1, Math.min(500, v));
+            elCar3dStopFlameSize.value = CONFIG.car3dStopFlameSizePct;
+            syncCar3dStopFlameFromPanel();
+        });
+    }
+    function syncCar3dTalkFromPanel() {
+        if (window.GeowalkCar3d && GeowalkCar3d.configure) {
+            GeowalkCar3d.configure({
+                talkOffsetX: CONFIG.car3dTalkOffsetX != null ? CONFIG.car3dTalkOffsetX : 0,
+                talkOffsetY: CONFIG.car3dTalkOffsetY != null ? CONFIG.car3dTalkOffsetY : 0,
+                talkOffsetZ: CONFIG.car3dTalkOffsetZ != null ? CONFIG.car3dTalkOffsetZ : 5.7,
+                talkFontSize: CONFIG.car3dTalkFontSize != null ? CONFIG.car3dTalkFontSize : 60,
+                talkSizePct: CONFIG.car3dTalkSizePct != null ? CONFIG.car3dTalkSizePct : 70,
+            talkRotXDeg: CONFIG.car3dTalkRotXDeg != null ? CONFIG.car3dTalkRotXDeg : 0,
+            talkRotYDeg: CONFIG.car3dTalkRotYDeg != null ? CONFIG.car3dTalkRotYDeg : 180,
+            talkRotZDeg: CONFIG.car3dTalkRotZDeg != null ? CONFIG.car3dTalkRotZDeg : 0
+            });
+        }
+        if (map) map.triggerRepaint();
+    }
+    function syncCar3dDriverFromPanel() {
+        if (window.GeowalkCar3d && GeowalkCar3d.configure) {
+            GeowalkCar3d.configure({
+                driverOffsetX: CONFIG.car3dDriverOffsetX != null ? CONFIG.car3dDriverOffsetX : 1.6,
+                driverOffsetY: CONFIG.car3dDriverOffsetY != null ? CONFIG.car3dDriverOffsetY : 1.5,
+                driverOffsetZ: CONFIG.car3dDriverOffsetZ != null ? CONFIG.car3dDriverOffsetZ : 2.2,
+                driverRotXDeg: CONFIG.car3dDriverRotXDeg != null ? CONFIG.car3dDriverRotXDeg : 99,
+                driverRotYDeg: CONFIG.car3dDriverRotYDeg != null ? CONFIG.car3dDriverRotYDeg : 180,
+                driverRotZDeg: CONFIG.car3dDriverRotZDeg != null ? CONFIG.car3dDriverRotZDeg : 0,
+                driverSizePct: CONFIG.car3dDriverSizePct != null ? CONFIG.car3dDriverSizePct : 220,
+                talkOffsetX: CONFIG.car3dTalkOffsetX != null ? CONFIG.car3dTalkOffsetX : 0,
+                talkOffsetY: CONFIG.car3dTalkOffsetY != null ? CONFIG.car3dTalkOffsetY : 0,
+                talkOffsetZ: CONFIG.car3dTalkOffsetZ != null ? CONFIG.car3dTalkOffsetZ : 5.7,
+                talkFontSize: CONFIG.car3dTalkFontSize != null ? CONFIG.car3dTalkFontSize : 60,
+                talkSizePct: CONFIG.car3dTalkSizePct != null ? CONFIG.car3dTalkSizePct : 70,
+            talkRotXDeg: CONFIG.car3dTalkRotXDeg != null ? CONFIG.car3dTalkRotXDeg : 0,
+            talkRotYDeg: CONFIG.car3dTalkRotYDeg != null ? CONFIG.car3dTalkRotYDeg : 180,
+            talkRotZDeg: CONFIG.car3dTalkRotZDeg != null ? CONFIG.car3dTalkRotZDeg : 0
+            });
+        }
+    }
+    if (elCar3dDriverX) {
+        bindNumber(elCar3dDriverX, v => {
+            CONFIG.car3dDriverOffsetX = v;
+            elCar3dDriverX.value = CONFIG.car3dDriverOffsetX;
+            syncCar3dDriverFromPanel();
+        });
+    }
+    if (elCar3dDriverY) {
+        bindNumber(elCar3dDriverY, v => {
+            CONFIG.car3dDriverOffsetY = v;
+            elCar3dDriverY.value = CONFIG.car3dDriverOffsetY;
+            syncCar3dDriverFromPanel();
+        });
+    }
+    if (elCar3dDriverZ) {
+        bindNumber(elCar3dDriverZ, v => {
+            CONFIG.car3dDriverOffsetZ = v;
+            elCar3dDriverZ.value = CONFIG.car3dDriverOffsetZ;
+            syncCar3dDriverFromPanel();
+        });
+    }
+    if (elCar3dDriverRotX) {
+        bindNumber(elCar3dDriverRotX, v => {
+            CONFIG.car3dDriverRotXDeg = v;
+            elCar3dDriverRotX.value = CONFIG.car3dDriverRotXDeg;
+            syncCar3dDriverFromPanel();
+        });
+    }
+    if (elCar3dDriverRotY) {
+        bindNumber(elCar3dDriverRotY, v => {
+            CONFIG.car3dDriverRotYDeg = v;
+            elCar3dDriverRotY.value = CONFIG.car3dDriverRotYDeg;
+            syncCar3dDriverFromPanel();
+        });
+    }
+    if (elCar3dDriverRotZ) {
+        bindNumber(elCar3dDriverRotZ, v => {
+            CONFIG.car3dDriverRotZDeg = v;
+            elCar3dDriverRotZ.value = CONFIG.car3dDriverRotZDeg;
+            syncCar3dDriverFromPanel();
+        });
+    }
+    if (elCar3dDriverSize) {
+        bindNumber(elCar3dDriverSize, v => {
+            CONFIG.car3dDriverSizePct = Math.max(1, Math.min(500, v));
+            elCar3dDriverSize.value = CONFIG.car3dDriverSizePct;
+            syncCar3dDriverFromPanel();
+        });
+    }
+    if (elCar3dTalkX) {
+        bindNumber(elCar3dTalkX, v => {
+            CONFIG.car3dTalkOffsetX = v;
+            elCar3dTalkX.value = CONFIG.car3dTalkOffsetX;
+            syncCar3dTalkFromPanel();
+        });
+    }
+    if (elCar3dTalkY) {
+        bindNumber(elCar3dTalkY, v => {
+            CONFIG.car3dTalkOffsetY = v;
+            elCar3dTalkY.value = CONFIG.car3dTalkOffsetY;
+            syncCar3dTalkFromPanel();
+        });
+    }
+    if (elCar3dTalkZ) {
+        bindNumber(elCar3dTalkZ, v => {
+            CONFIG.car3dTalkOffsetZ = v;
+            elCar3dTalkZ.value = CONFIG.car3dTalkOffsetZ;
+            syncCar3dTalkFromPanel();
+        });
+    }
+    if (elCar3dTalkFont) {
+        bindNumber(elCar3dTalkFont, v => {
+            CONFIG.car3dTalkFontSize = Math.max(8, Math.min(200, v));
+            elCar3dTalkFont.value = CONFIG.car3dTalkFontSize;
+            syncCar3dTalkFromPanel();
+        });
+    }
+    if (elCar3dTalkSize) {
+        bindNumber(elCar3dTalkSize, v => {
+            CONFIG.car3dTalkSizePct = Math.max(1, Math.min(500, v));
+            elCar3dTalkSize.value = CONFIG.car3dTalkSizePct;
+            syncCar3dTalkFromPanel();
+        });
+    }
+    if (elCar3dTalkRotX) {
+        bindNumber(elCar3dTalkRotX, v => {
+            CONFIG.car3dTalkRotXDeg = v;
+            elCar3dTalkRotX.value = CONFIG.car3dTalkRotXDeg;
+            syncCar3dTalkFromPanel();
+        });
+    }
+    if (elCar3dTalkRotY) {
+        bindNumber(elCar3dTalkRotY, v => {
+            CONFIG.car3dTalkRotYDeg = v;
+            elCar3dTalkRotY.value = CONFIG.car3dTalkRotYDeg;
+            syncCar3dTalkFromPanel();
+        });
+    }
+    if (elCar3dTalkRotZ) {
+        bindNumber(elCar3dTalkRotZ, v => {
+            CONFIG.car3dTalkRotZDeg = v;
+            elCar3dTalkRotZ.value = CONFIG.car3dTalkRotZDeg;
+            syncCar3dTalkFromPanel();
+        });
+    }
 
     // ---- Debug-меню точек (клавиша F) ----
     const elDebugMenu = document.getElementById("debug-menu");
@@ -3662,23 +4411,23 @@
 
     // Строки таблицы параметров (ключ setParam, подпись, min, step).
     const PIN_PARAM_ROWS = [
-        { key: "enabled", field: "enabled", label: "Вкл", type: "bool" },
-        { key: "spawnRadius", field: "spawnMaxM", label: "Радиус генерации (м)", min: 2, step: 1 },
-        { key: "count", field: "count", label: "Кол-во точек", min: 1, max: 50, step: 1 },
-        { key: "hitRadius", field: "hitRadiusM", label: "Радиус сбора (м)", min: 0.5, step: 0.5 },
-        { key: "size", field: "sizeM", label: "Размер кубика (м)", min: 0.1, step: 0.5 },
-        { key: "base", field: "baseM", label: "Высота над землёй (м)", min: 0, step: 0.5 },
-        { key: "spin", field: "spinEnabled", label: "Вращение", type: "bool" }
+        { key: "enabled", field: "enabled", label: "On", type: "bool" },
+        { key: "spawnRadius", field: "spawnMaxM", label: "Spawn radius (m)", min: 2, step: 1 },
+        { key: "count", field: "count", label: "Point count", min: 1, max: 50, step: 1 },
+        { key: "hitRadius", field: "hitRadiusM", label: "Collect radius (m)", min: 0.5, step: 0.5 },
+        { key: "size", field: "sizeM", label: "Cube size (m)", min: 0.1, step: 0.5 },
+        { key: "base", field: "baseM", label: "Height above ground (m)", min: 0, step: 0.5 },
+        { key: "spin", field: "spinEnabled", label: "Spin", type: "bool" }
     ];
 
     // Строки блока движения/шлейфа (только для подвижных типов, moveSpeedM > 0).
     const PIN_MOVE_ROWS = [
-        { key: "moveSpeed", field: "moveSpeedM", label: "Скорость (м/с)", min: 0, step: 1 },
-        { key: "turnMin", field: "turnMinSec", label: "Смена угла: мин (с)", min: 0.05, step: 0.1 },
-        { key: "turnMax", field: "turnMaxSec", label: "Смена угла: макс (с)", min: 0.05, step: 0.1 },
-        { key: "trailEnabled", field: "trailEnabled", label: "Шлейф вкл", type: "bool" },
-        { key: "trailCount", field: "trailCount", label: "Шлейф: кубиков", min: 0, max: 10, step: 1 },
-        { key: "trailSpacing", field: "trailSpacingM", label: "Шлейф: шаг (м)", min: 0.2, step: 0.5 }
+        { key: "moveSpeed", field: "moveSpeedM", label: "Speed (m/s)", min: 0, step: 1 },
+        { key: "turnMin", field: "turnMinSec", label: "Turn change: min (s)", min: 0.05, step: 0.1 },
+        { key: "turnMax", field: "turnMaxSec", label: "Turn change: max (s)", min: 0.05, step: 0.1 },
+        { key: "trailEnabled", field: "trailEnabled", label: "Trail enabled", type: "bool" },
+        { key: "trailCount", field: "trailCount", label: "Trail: cubes", min: 0, max: 10, step: 1 },
+        { key: "trailSpacing", field: "trailSpacingM", label: "Trail: spacing (m)", min: 0.2, step: 0.5 }
     ];
 
     function buildTypeHead(t) {
@@ -3701,7 +4450,7 @@
         const htr = document.createElement("tr");
         const corner = document.createElement("th");
         corner.className = "dbg-corner";
-        corner.textContent = "Параметр";
+        corner.textContent = "Parameter";
         htr.appendChild(corner);
         for (const t of list) htr.appendChild(buildTypeHead(t));
         thead.appendChild(htr);
@@ -3761,7 +4510,7 @@
             elDbgPinTable.appendChild(sep);
             const sub = document.createElement("div");
             sub.className = "debug-menu-subtitle";
-            sub.textContent = "Движение и шлейф";
+            sub.textContent = "Movement and trail";
             elDbgPinTable.appendChild(sub);
             elDbgPinTable.appendChild(makePinTable(PIN_MOVE_ROWS, moving));
         }
@@ -3771,10 +4520,10 @@
 
     // Строки блока спрайт-моба it_sprite1 (отдельный модуль GeowalkGiantMob).
     const SPRITE1_ROWS = [
-        { key: "enabled", field: "enabled", label: "Вкл", type: "bool" },
-        { key: "spawnRadius", field: "spawnRadiusM", label: "Радиус появления (м)", min: 10, step: 10 },
-        { key: "count", field: "count", label: "Количество", min: 0, max: 50, step: 1 },
-        { key: "size", field: "sizeM", label: "Размер ширины (м)", min: 1, step: 1 }
+        { key: "enabled", field: "enabled", label: "On", type: "bool" },
+        { key: "spawnRadius", field: "spawnRadiusM", label: "Spawn radius (m)", min: 10, step: 10 },
+        { key: "count", field: "count", label: "Count", min: 0, max: 50, step: 1 },
+        { key: "size", field: "sizeM", label: "Width size (m)", min: 1, step: 1 }
     ];
 
     function buildSprite1Block() {
@@ -3786,7 +4535,7 @@
         elDbgPinTable.appendChild(sep);
         const sub = document.createElement("div");
         sub.className = "debug-menu-subtitle";
-        sub.textContent = "Спрайт it_sprite1";
+        sub.textContent = "Sprite it_sprite1";
         elDbgPinTable.appendChild(sub);
 
         const table = document.createElement("table");
@@ -3795,7 +4544,7 @@
         const htr = document.createElement("tr");
         const corner = document.createElement("th");
         corner.className = "dbg-corner";
-        corner.textContent = "Параметр";
+        corner.textContent = "Parameter";
         htr.appendChild(corner);
         const th = document.createElement("th");
         const wrap = document.createElement("span");
@@ -3943,7 +4692,7 @@
     }
 
     function terrainDemMaxZoomFromConfig() {
-        const z = CONFIG.terrainDemMaxZoom != null ? (CONFIG.terrainDemMaxZoom | 0) : 9;
+        const z = CONFIG.terrainDemMaxZoom != null ? (CONFIG.terrainDemMaxZoom | 0) : 11;
         return Math.max(0, Math.min(15, z));
     }
 
@@ -3982,26 +4731,66 @@
         setMovementMode(ignore ? "ignore" : "follow");
     }
 
-    let ShadowClass = null;
-    let shadowLayer = null;
-    async function enableShadows() {
-        try {
-            if (shadowLayer) return;
-            if (!map.getLayer(CONFIG.buildingsLayerId)) { console.warn("shadows: нет слоя зданий"); return; }
-            if (!ShadowClass) {
-                const mod = await import(CONFIG.shadowModuleUrl);
-                ShadowClass = mod.AOShadowLayer;
-            }
-            shadowLayer = new ShadowClass({
-                buildingsLayerId: CONFIG.buildingsLayerId,
-                sourceId: CONFIG.buildingsSourceId
-            });
-            map.addLayer(shadowLayer, CONFIG.buildingsLayerId);
-            map.setLight({ anchor: "map", position: [1.2, 210, 30], intensity: 0.5 });
-        } catch (e) { console.warn("shadows:", e); }
+    function rtShadowsOptionsFromConfig() {
+        return {
+            enabled: !!CONFIG.shadows,
+            wallShade: !!CONFIG.shadowWallShade,
+            groundFx: CONFIG.shadowGroundFx !== false,
+            lightIntensity: CONFIG.shadowLightIntensity != null ? CONFIG.shadowLightIntensity : 0.85,
+            lightAzimuth: CONFIG.shadowLightAzimuth != null ? CONFIG.shadowLightAzimuth : 210,
+            lightPolar: CONFIG.shadowLightPolar != null ? CONFIG.shadowLightPolar : 30,
+            wallStrength: CONFIG.shadowWallStrength != null ? CONFIG.shadowWallStrength : 0.5,
+            wallBand: CONFIG.shadowWallBand != null ? CONFIG.shadowWallBand : 1.0,
+            shadowAlpha: CONFIG.shadowAlpha != null ? CONFIG.shadowAlpha : 0.35,
+            heightScale: CONFIG.shadowHeightScale != null ? CONFIG.shadowHeightScale : 1,
+            blur: CONFIG.shadowBlur != null ? CONFIG.shadowBlur : 0,
+            aoIntensity: CONFIG.shadowAoIntensity != null ? CONFIG.shadowAoIntensity : 0.8,
+            aoRadiusMin: CONFIG.shadowAoRadiusMin != null ? CONFIG.shadowAoRadiusMin : 30,
+            aoRadiusMax: CONFIG.shadowAoRadiusMax != null ? CONFIG.shadowAoRadiusMax : 120,
+            mapSize: CONFIG.shadowSdfResolution != null ? CONFIG.shadowSdfResolution : 256,
+            radiusM: CONFIG.shadowRadiusM != null ? CONFIG.shadowRadiusM : 160,
+            maxBuildings: CONFIG.shadowMaxBuildings != null ? CONFIG.shadowMaxBuildings : 80,
+            sourceId: CONFIG.buildingsSourceId,
+            sourceLayer: CONFIG.buildingsSourceLayer
+        };
     }
+
+    function syncRtShadowsFromConfig() {
+        if (!window.GeowalkRtShadowsThree) return;
+        GeowalkRtShadowsThree.setPlayer(player.lng, player.lat);
+        GeowalkRtShadowsThree.sync(rtShadowsOptionsFromConfig());
+    }
+
+    function applyShadowLayerRuntimeParams() {
+        syncRtShadowsFromConfig();
+    }
+
+    function recreateShadowsIfEnabled() {
+        if (!CONFIG.shadows || !window.GeowalkRtShadowsThree) return;
+        GeowalkRtShadowsThree.rebuildShadowMap();
+    }
+
+    function enableShadows() {
+        CONFIG.shadows = true;
+        syncRtShadowsFromConfig();
+    }
+
     function disableShadows() {
-        try { if (shadowLayer) { map.removeLayer(shadowLayer.id); shadowLayer = null; } } catch (e) {}
+        CONFIG.shadows = false;
+        syncRtShadowsFromConfig();
+    }
+
+    function syncShadowPanelUI() {
+        const on = elShadows && elShadows.checked;
+        const ids = [
+            elShadowWallShade, elShadowGroundFx, elShadowLightIntensity, elShadowLightAzimuth,
+            elShadowLightPolar, elShadowWallStrength, elShadowWallBand, elShadowAlpha,
+            elShadowHeightScale, elShadowBlur, elShadowAoIntensity, elShadowAoRadiusMin,
+            elShadowAoRadiusMax, elShadowSdfRes
+        ];
+        for (const el of ids) {
+            if (el) el.disabled = !on;
+        }
     }
 
     elRelief.addEventListener("input", () => {
@@ -4072,8 +4861,108 @@
         mode.button.addEventListener("click", () => applyMovementChooseIndex(i));
     });
     elShadows.addEventListener("change", () => {
+        CONFIG.shadows = elShadows.checked;
+        syncShadowPanelUI();
         if (elShadows.checked) enableShadows(); else disableShadows();
     });
+    if (elShadowWallShade) {
+        elShadowWallShade.addEventListener("change", () => {
+            CONFIG.shadowWallShade = elShadowWallShade.checked;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowGroundFx) {
+        elShadowGroundFx.addEventListener("change", () => {
+            CONFIG.shadowGroundFx = elShadowGroundFx.checked;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowLightIntensity) {
+        bindNumber(elShadowLightIntensity, v => {
+            CONFIG.shadowLightIntensity = Math.max(0, Math.min(1, v));
+            elShadowLightIntensity.value = CONFIG.shadowLightIntensity;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowLightAzimuth) {
+        bindNumber(elShadowLightAzimuth, v => {
+            CONFIG.shadowLightAzimuth = Math.max(0, Math.min(359, v | 0));
+            elShadowLightAzimuth.value = CONFIG.shadowLightAzimuth;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowLightPolar) {
+        bindNumber(elShadowLightPolar, v => {
+            CONFIG.shadowLightPolar = Math.max(0, Math.min(90, v));
+            elShadowLightPolar.value = CONFIG.shadowLightPolar;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowWallStrength) {
+        bindNumber(elShadowWallStrength, v => {
+            CONFIG.shadowWallStrength = Math.max(0, Math.min(1, v));
+            elShadowWallStrength.value = CONFIG.shadowWallStrength;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowWallBand) {
+        bindNumber(elShadowWallBand, v => {
+            CONFIG.shadowWallBand = Math.max(0.01, Math.min(2, v));
+            elShadowWallBand.value = CONFIG.shadowWallBand;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowAlpha) {
+        bindNumber(elShadowAlpha, v => {
+            CONFIG.shadowAlpha = Math.max(0, Math.min(1, v));
+            elShadowAlpha.value = CONFIG.shadowAlpha;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowHeightScale) {
+        bindNumber(elShadowHeightScale, v => {
+            CONFIG.shadowHeightScale = Math.max(0.1, Math.min(2, v));
+            elShadowHeightScale.value = CONFIG.shadowHeightScale;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowBlur) {
+        bindNumber(elShadowBlur, v => {
+            CONFIG.shadowBlur = Math.max(0, Math.min(8, v));
+            elShadowBlur.value = CONFIG.shadowBlur;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowAoIntensity) {
+        bindNumber(elShadowAoIntensity, v => {
+            CONFIG.shadowAoIntensity = Math.max(0, Math.min(1.5, v));
+            elShadowAoIntensity.value = CONFIG.shadowAoIntensity;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowAoRadiusMin) {
+        bindNumber(elShadowAoRadiusMin, v => {
+            CONFIG.shadowAoRadiusMin = Math.max(1, Math.min(200, v | 0));
+            elShadowAoRadiusMin.value = CONFIG.shadowAoRadiusMin;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowAoRadiusMax) {
+        bindNumber(elShadowAoRadiusMax, v => {
+            CONFIG.shadowAoRadiusMax = Math.max(1, Math.min(400, v | 0));
+            elShadowAoRadiusMax.value = CONFIG.shadowAoRadiusMax;
+            applyShadowLayerRuntimeParams();
+        });
+    }
+    if (elShadowSdfRes) {
+        bindNumber(elShadowSdfRes, v => {
+            const next = Math.max(128, Math.min(2048, Math.round(v / 128) * 128));
+            if (CONFIG.shadowSdfResolution === next) return;
+            CONFIG.shadowSdfResolution = next;
+            elShadowSdfRes.value = CONFIG.shadowSdfResolution;
+            recreateShadowsIfEnabled();
+        });
+    }
 
     // Swap style: полноэкранное меню выбора стиля карты
     const elStyleFile = document.getElementById("style-file");
@@ -4159,6 +5048,14 @@
         });
     });
 
+    const elSearchStyleBtn = document.getElementById("search-style-btn");
+    if (elSearchStyleBtn) {
+        elSearchStyleBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openStyleMenu();
+        });
+    }
+
     if (elStyleMenuClose) elStyleMenuClose.addEventListener("click", closeStyleMenu);
     const elStyleMenuCancel = document.getElementById("style-menu-cancel");
     if (elStyleMenuCancel) elStyleMenuCancel.addEventListener("click", closeStyleMenu);
@@ -4178,7 +5075,7 @@
 
     async function loadStyleFromUrl(url) {
         if (!url) return;
-        if (elStyleStatus) elStyleStatus.textContent = "загрузка…";
+        if (elStyleStatus) elStyleStatus.textContent = "loading…";
         closeStyleMenu();
         const label = STYLE_PRESETS[url] || styleNameFromUrl(url);
         try {
@@ -4186,7 +5083,7 @@
             swapStyle(obj, label, url);
         } catch (err) {
             console.warn("loadStyleFromUrl:", err);
-            if (elStyleStatus) elStyleStatus.textContent = "ошибка загрузки";
+            if (elStyleStatus) elStyleStatus.textContent = "load error";
         }
     }
 
@@ -4194,16 +5091,16 @@
         const file = elStyleFile.files && elStyleFile.files[0];
         elStyleFile.value = "";
         if (!file) return;
-        elStyleStatus.textContent = "загрузка…";
+        elStyleStatus.textContent = "loading…";
         const reader = new FileReader();
         reader.onload = () => {
             let obj;
             try { obj = JSON.parse(reader.result); }
-            catch (e) { elStyleStatus.textContent = "не JSON"; return; }
+            catch (e) { elStyleStatus.textContent = "not JSON"; return; }
             closeStyleMenu();
             swapStyle(obj, file.name, DEFAULT_SKY_STYLE_KEY);
         };
-        reader.onerror = () => { elStyleStatus.textContent = "ошибка чтения"; };
+        reader.onerror = () => { elStyleStatus.textContent = "read error"; };
         reader.readAsText(file);
     });
 
@@ -4217,23 +5114,76 @@
     async function goToCity(name) {
         name = (name || "").trim();
         if (!name) return;
-        elCityStatus.textContent = "ищу…";
+        elCityStatus.textContent = "searching…";
         try {
             const url = "https://photon.komoot.io/api/?limit=1&q=" + encodeURIComponent(name);
             const resp = await fetch(url);
             const data = await resp.json();
             const f = data.features && data.features[0];
-            if (!f) { elCityStatus.textContent = "не найдено"; return; }
+            if (!f) { elCityStatus.textContent = "not found"; return; }
             const [lng, lat] = f.geometry.coordinates;
             const p = f.properties || {};
-            elCityStatus.textContent = "→ " + (p.name || name) + (p.country ? ", " + p.country : "");
-            dismissOverlay();
-            showTeleportTransition();
-            scheduleTeleportMove(lng, lat);
+            teleportToCoordinates(lng, lat, (p.name || name) + (p.country ? ", " + p.country : ""));
         } catch (err) {
-            elCityStatus.textContent = "ошибка сети";
+            elCityStatus.textContent = "network error";
         }
     }
+
+    function teleportToCoordinates(lng, lat, label) {
+        elCityStatus.textContent = "→ " + label;
+        dismissOverlay();
+        showTeleportTransition();
+        scheduleTeleportMove(lng, lat);
+    }
+
+    const SEARCH_CHIP_PLACES = [
+        { label: "Dubai", lng: 55.2708, lat: 25.2048 },
+        { label: "Saint Petersburg", lng: 30.3609, lat: 59.9311 },
+        { label: "Tampa", lng: -82.4584, lat: 27.9506 },
+        { label: "San Francisco", lng: -122.4194, lat: 37.7749 },
+        { label: "Hong Kong", lng: 114.1694, lat: 22.3193 },
+        { label: "Tbilisi", lng: 44.8271, lat: 41.7151 },
+        { label: "Yerevan", lng: 44.5035, lat: 40.1776 },
+        { label: "Budva", lng: 18.8403, lat: 42.2864 },
+        { label: "Everest", lng: 86.9250, lat: 27.9881 }
+    ];
+
+    function setSearchChipsVisible(visible) {
+        if (!elSearchChips) return;
+        elSearchChips.classList.toggle("visible", visible);
+        elSearchChips.setAttribute("aria-hidden", visible ? "false" : "true");
+    }
+
+    if (elSearchChips) {
+        for (const place of SEARCH_CHIP_PLACES) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "search-chip";
+            const img = document.createElement("img");
+            img.src = "images/ico_portal.svg";
+            img.width = 14;
+            img.height = 14;
+            img.alt = "";
+            btn.appendChild(img);
+            btn.appendChild(document.createTextNode(place.label));
+            btn.addEventListener("mousedown", (e) => e.preventDefault());
+            btn.addEventListener("click", () => {
+                if (elCity) elCity.value = place.label;
+                setSearchChipsVisible(false);
+                if (elCity) elCity.blur();
+                teleportToCoordinates(place.lng, place.lat, place.label);
+            });
+            elSearchChips.appendChild(btn);
+        }
+    }
+
+    if (elCity) {
+        elCity.addEventListener("focus", () => setSearchChipsVisible(true));
+        elCity.addEventListener("blur", () => {
+            setTimeout(() => setSearchChipsVisible(false), 120);
+        });
+    }
+
     elCityGo.addEventListener("click", () => goToCity(elCity.value));
     elCity.addEventListener("keydown", (e) => { if (e.key === "Enter") goToCity(elCity.value); });
 
@@ -4470,8 +5420,7 @@
             lastFollowTerrainElev = null;
         } catch (err) { console.warn("DEM:", err); }
 
-        shadowLayer = null;
-        if (CONFIG.shadows) enableShadows();
+        if (window.GeowalkRtShadowsThree) GeowalkRtShadowsThree.onStyleReset();
 
         fixedElevation = null;
         lastFollowTerrainElev = null;
@@ -4489,6 +5438,10 @@
                 });
                 syncThreePerfFromConfig();
             } catch (err) { console.warn("Three layer:", err); }
+        }
+        if (window.GeowalkRtShadowsThree) {
+            GeowalkRtShadowsThree.hook();
+            syncRtShadowsFromConfig();
         }
         if (window.Geowalk3dSky) {
             try {
@@ -4546,23 +5499,197 @@
 
     // Замена стиля карты в рамках сессии (из выбранного JSON-файла)
     const elRealitySwap = document.getElementById("reality-swap");
-    let realitySwapAnim = null;
-    function playRealitySwap() {
-        if (!elRealitySwap) return;
-        if (realitySwapAnim) { try { realitySwapAnim.cancel(); } catch (e) {} }
-        elRealitySwap.style.display = "block";
-        // 1 c проявление, 3 c держим, 1 c уход в прозрачность (всего 5 c).
-        realitySwapAnim = elRealitySwap.animate([
-            { opacity: 0, offset: 0 },
-            { opacity: 1, offset: 0.2 },
-            { opacity: 1, offset: 0.8 },
-            { opacity: 0, offset: 1 }
-        ], { duration: 5000, easing: "linear" });
-        realitySwapAnim.onfinish = () => {
-            elRealitySwap.style.display = "none";
-            realitySwapAnim = null;
-        };
+    const elRealitySwapCanvas = document.getElementById("reality-swap-canvas");
+    const elRealitySwapCaption = document.getElementById("reality-swap-caption");
+    let realitySwapRaf = null;
+
+    const REALITY_SWAP_FILL_MS = 1000;
+    const REALITY_SWAP_HOLD_MS = 3000;
+    const REALITY_SWAP_FADE_MS = 1000;
+    const REALITY_SWAP_TOTAL_MS = REALITY_SWAP_FILL_MS + REALITY_SWAP_HOLD_MS + REALITY_SWAP_FADE_MS;
+    const REALITY_SWAP_SQUARE = 88;
+    const REALITY_SWAP_SQUARE_FADE_MS = 120;
+    const REALITY_SWAP_PAGE_INTRO_DELAY_MS = 1000;
+
+    function stopRealitySwapAnim() {
+        if (realitySwapRaf) {
+            cancelAnimationFrame(realitySwapRaf);
+            realitySwapRaf = null;
+        }
     }
+
+    function setRealitySwapCaptionVisible(visible) {
+        if (!elRealitySwapCaption) return;
+        elRealitySwapCaption.classList.toggle("visible", visible);
+    }
+
+    function resizeRealitySwapCanvas(canvas) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        canvas.width = Math.max(1, Math.round(w * dpr));
+        canvas.height = Math.max(1, Math.round(h * dpr));
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+        const ctx = canvas.getContext("2d");
+        if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { w, h, ctx };
+    }
+
+    function getRealitySquareGrid(w, h) {
+        const cell = REALITY_SWAP_SQUARE;
+        const cols = Math.ceil(w / cell);
+        const rows = Math.ceil(h / cell);
+        return { cell, cols, rows, maxDiag: rows + cols - 2 };
+    }
+
+    function realitySquareAlpha(diag, phaseElapsed, phaseMs, fadeOut, maxDiag) {
+        const fillWindow = Math.max(1, phaseMs - REALITY_SWAP_SQUARE_FADE_MS);
+        const startMs = maxDiag > 0 ? (diag / maxDiag) * fillWindow : 0;
+        const local = (phaseElapsed - startMs) / REALITY_SWAP_SQUARE_FADE_MS;
+        const t = Math.min(1, Math.max(0, local));
+        return fadeOut ? 1 - t : t;
+    }
+
+    function drawRealityDiagonalSquares(ctx, w, h, grid, phaseElapsed, phaseMs, fadeOut) {
+        const { cell, cols, rows, maxDiag } = grid;
+        ctx.clearRect(0, 0, w, h);
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const alpha = realitySquareAlpha(r + c, phaseElapsed, phaseMs, fadeOut, maxDiag);
+                if (alpha <= 0) continue;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = "#000";
+                ctx.fillRect(c * cell, r * cell, cell, cell);
+            }
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    function drawRealityFullBlack(ctx, w, h) {
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, w, h);
+    }
+
+    function showRealitySwapLayer(fullscreen) {
+        if (!elRealitySwap) return;
+        const overlayEl = document.getElementById("overlay");
+        if (fullscreen) {
+            elRealitySwap.classList.remove("page-intro");
+            elRealitySwap.classList.add("fullscreen");
+            if (elRealitySwap.parentElement !== document.body) {
+                document.body.appendChild(elRealitySwap);
+            }
+        } else {
+            elRealitySwap.classList.remove("fullscreen");
+            if (overlayEl && elRealitySwap.parentElement !== overlayEl) {
+                overlayEl.insertBefore(elRealitySwap, overlayEl.firstChild);
+            }
+        }
+        elRealitySwap.style.display = "block";
+        elRealitySwap.style.opacity = "1";
+        elRealitySwap.setAttribute("aria-hidden", "false");
+    }
+
+    function hideRealitySwapLayer(clearCanvas) {
+        if (!elRealitySwap) return;
+        if (clearCanvas && elRealitySwapCanvas) {
+            const ctx = elRealitySwapCanvas.getContext("2d");
+            if (ctx) ctx.clearRect(0, 0, elRealitySwapCanvas.width, elRealitySwapCanvas.height);
+        }
+        elRealitySwap.classList.remove("fullscreen", "page-intro");
+        const overlayEl = document.getElementById("overlay");
+        if (overlayEl && elRealitySwap.parentElement !== overlayEl) {
+            overlayEl.insertBefore(elRealitySwap, overlayEl.firstChild);
+        }
+        elRealitySwap.style.display = "none";
+        elRealitySwap.style.opacity = "0";
+        elRealitySwap.setAttribute("aria-hidden", "true");
+        setRealitySwapCaptionVisible(false);
+    }
+
+    function playRealitySquareExit(onFinish) {
+        if (!elRealitySwap || !elRealitySwapCanvas) return;
+        stopRealitySwapAnim();
+        const canvas = elRealitySwapCanvas;
+        const sized = resizeRealitySwapCanvas(canvas);
+        const ctx = sized.ctx;
+        if (!ctx) return;
+
+        const { w, h } = sized;
+        const grid = getRealitySquareGrid(w, h);
+        showRealitySwapLayer(false);
+        elRealitySwap.classList.remove("page-intro");
+        setRealitySwapCaptionVisible(false);
+
+        const start = performance.now();
+
+        function frame(now) {
+            const elapsed = now - start;
+            if (elapsed >= REALITY_SWAP_FADE_MS) {
+                hideRealitySwapLayer(true);
+                realitySwapRaf = null;
+                if (onFinish) onFinish();
+                return;
+            }
+            drawRealityDiagonalSquares(ctx, w, h, grid, elapsed, REALITY_SWAP_FADE_MS, true);
+            realitySwapRaf = requestAnimationFrame(frame);
+        }
+
+        drawRealityFullBlack(ctx, w, h);
+        realitySwapRaf = requestAnimationFrame(frame);
+    }
+
+    function playRealitySwap() {
+        if (!elRealitySwap || !elRealitySwapCanvas) return;
+        stopRealitySwapAnim();
+        const canvas = elRealitySwapCanvas;
+        const sized = resizeRealitySwapCanvas(canvas);
+        const ctx = sized.ctx;
+        if (!ctx) return;
+
+        const { w, h } = sized;
+        const grid = getRealitySquareGrid(w, h);
+
+        showRealitySwapLayer(true);
+        setRealitySwapCaptionVisible(false);
+
+        const start = performance.now();
+
+        function frame(now) {
+            const elapsed = now - start;
+            if (elapsed >= REALITY_SWAP_TOTAL_MS) {
+                hideRealitySwapLayer(true);
+                realitySwapRaf = null;
+                return;
+            }
+
+            if (elapsed < REALITY_SWAP_FILL_MS) {
+                drawRealityDiagonalSquares(ctx, w, h, grid, elapsed, REALITY_SWAP_FILL_MS, false);
+                setRealitySwapCaptionVisible(false);
+            } else if (elapsed < REALITY_SWAP_FILL_MS + REALITY_SWAP_HOLD_MS) {
+                drawRealityFullBlack(ctx, w, h);
+                setRealitySwapCaptionVisible(true);
+            } else {
+                const exitElapsed = elapsed - REALITY_SWAP_FILL_MS - REALITY_SWAP_HOLD_MS;
+                drawRealityDiagonalSquares(ctx, w, h, grid, exitElapsed, REALITY_SWAP_FADE_MS, true);
+                setRealitySwapCaptionVisible(false);
+            }
+
+            realitySwapRaf = requestAnimationFrame(frame);
+        }
+
+        ctx.clearRect(0, 0, w, h);
+        realitySwapRaf = requestAnimationFrame(frame);
+    }
+
+    function schedulePageIntroExit() {
+        const wait = Math.max(0, REALITY_SWAP_PAGE_INTRO_DELAY_MS - performance.now());
+        setTimeout(() => playRealitySquareExit(), wait);
+    }
+
+    schedulePageIntroExit();
 
     const REALITY_SWAP_DELAY_MS = 2000;
     function swapStyle(styleObj, label, styleSkyKey) {
@@ -4578,12 +5705,12 @@
                     if (window.GeowalkWoodTerrainExtrude) GeowalkWoodTerrainExtrude.bindMapEvents(map);
                     ready = true;
                     if (elDraw) elDraw.value = CONFIG.sky.fogGroundBlend;
-                    if (elStyleStatus) elStyleStatus.textContent = label ? ("стиль: " + label) : "стиль заменён";
+                    if (elStyleStatus) elStyleStatus.textContent = label ? ("style: " + label) : "style replaced";
                 });
             } catch (err) {
                 console.warn("swapStyle:", err);
                 ready = true;
-                if (elStyleStatus) elStyleStatus.textContent = "ошибка стиля";
+                if (elStyleStatus) elStyleStatus.textContent = "style error";
             }
         }, REALITY_SWAP_DELAY_MS);
     }
@@ -4999,10 +6126,10 @@
         const lat5 = player.lat.toFixed(5);
         const lng5 = player.lng.toFixed(5);
         const yawR = Math.round(player.yaw);
-        const look = (90 - player.pitch).toFixed(0) + "° вниз";
-        const alt = player.eye.toFixed(1) + " м";
-        const speed = player.speed.toFixed(1) + " м/с";
-        const collision = player.collision ? "упираемся" : "сквозь";
+        const look = (90 - player.pitch).toFixed(0) + "° down";
+        const alt = player.eye.toFixed(1) + " m";
+        const speed = player.speed.toFixed(1) + " m/s";
+        const collision = player.collision ? "blocked" : "through";
         if (lat5 !== hudSnap.lat || lng5 !== hudSnap.lng) {
             hudSnap.lat = lat5;
             hudSnap.lng = lng5;
@@ -5044,12 +6171,16 @@
         }
         const dt = Math.min(0.05, (now - lastSimT) / 1000);
         lastSimT = now;
+        updateOverlayIdleBearing(dt);
         update(dt);
         syncSpeedOverlay();
         const camChanged = applyCamera();
         let originShifted = false;
         if (window.GeowalkThree && ready) {
             originShifted = GeowalkThree.updateOrigin(player.lng, player.lat);
+        }
+        if (CONFIG.shadows && window.GeowalkRtShadowsThree) {
+            GeowalkRtShadowsThree.setPlayer(player.lng, player.lat);
         }
         const worldSimActive = player.speed > VEL_SNAP || Math.abs(velFwd) > VEL_SNAP ||
             Math.abs(velStrafe) > VEL_SNAP || Math.abs(carYawVel) > 0.05;
@@ -5079,7 +6210,10 @@
                 cosLat: player.cosLat,
                 speed: player.speed,
                 onWood: isCarWoodSurface(playerSurfaceLayers),
-                onWater: isCarWaterSurface(playerSurfaceLayers),
+                handbrake: !!keys["Space"],
+                driveInput: (keys["KeyW"] || keys["ArrowUp"] ? 1 : 0) - (keys["KeyS"] || keys["ArrowDown"] ? 1 : 0),
+                boost: !!(keys["ShiftLeft"] || keys["ShiftRight"]),
+                controlsActive: controlsActive(),
                 dt
             });
         }

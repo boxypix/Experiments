@@ -119,7 +119,16 @@
     function isAnchoredSceneObject(obj) {
         let p = obj;
         while (p) {
-            if (p.name === "geowalk-3dsky" || p.name === "geowalk-car-3d" || p.name === "geowalk-save-pin") return true;
+            if (p.name === "geowalk-3dsky" || p.name === "geowalk-car-3d" || p.name === "geowalk-save-pin" || p.name === "geowalk-car-3d-talk") return true;
+            p = p.parent;
+        }
+        return false;
+    }
+
+    function isShadowSceneObject(obj) {
+        let p = obj;
+        while (p) {
+            if (p.name === "geowalk-rt-shadows") return true;
             p = p.parent;
         }
         return false;
@@ -137,6 +146,7 @@
             const obj = scene.children[i];
             if (obj.isLight) continue;
             if (isAnchoredSceneObject(obj)) continue;
+            if (isShadowSceneObject(obj)) continue;
             obj.position.x += dx;
             obj.position.y += dy;
         }
@@ -253,6 +263,9 @@
                     antialias: true
                 });
                 renderer.autoClear = false;
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.BasicShadowMap;
+                renderer.shadowMap.autoUpdate = false;
                 renderer.toneMapping = THREE.NoToneMapping;
                 if (!projLocal.m) {
                     projLocal.m = new THREE.Matrix4();
