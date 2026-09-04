@@ -1297,9 +1297,43 @@
         <label>Ascend / descend <input id="fly" type="number" min="0" step="0.5" /></label>
         <label>FPS limit (0=off) <input id="fps-limit" type="number" min="0" step="1" /></label>
         <label>Sky enabled <input id="sky-enabled" type="checkbox" checked /></label>
-        <label>3dsky enabled <input id="sky3d-enabled" type="checkbox" checked /></label>
+        <label>3dsky enabled <input id="sky3d-enabled" type="checkbox" /></label>
         <label>3dsky animation <input id="sky3d-anim" type="checkbox" /></label>
         <label>3dsky height (m) <input id="sky3d-alt" type="number" min="0" step="50" /></label>
+        <div class="sep"></div>
+        <div class="title">Skybox</div>
+        <label>Cube skybox <input id="skybox-enabled" type="checkbox" checked /></label>
+        <label>Texture
+            <select id="skybox-texture">
+                <option value="skybox1">skybox1</option>
+                <option value="skybox2">skybox2</option>
+                <option value="skybox3">skybox3</option>
+                <option value="skybox4">skybox4</option>
+                <option value="skybox5">skybox5</option>
+                <option value="skybox6">skybox6</option>
+                <option value="skybox7">skybox7</option>
+            </select>
+        </label>
+        <label>Size (%) <input id="skybox-size-pct" type="number" min="10" max="500" step="5" /></label>
+        <label>Cutoff <input id="skybox-cutoff" type="checkbox" /></label>
+        <label>No sky gradient <input id="skybox-no-gradient" type="checkbox" /></label>
+        <label>Rotation X (deg) <input id="skybox-rot-x" type="number" step="1" /></label>
+        <label>Rotation Y (deg) <input id="skybox-rot-y" type="number" step="1" /></label>
+        <label>Rotation Z (deg) <input id="skybox-rot-z" type="number" step="1" /></label>
+        <div class="hint">Cubemap cross texture (4×3 or 3×4). One texture per cube face.</div>
+        <div class="sep"></div>
+        <div class="title">Procedural weather (Three.js)</div>
+        <label>Weather
+            <select id="weather-mode">
+                <option value="none">No precipitation</option>
+                <option value="rain">Rain (fast drops)</option>
+                <option value="snow">Snow (slow flakes)</option>
+            </select>
+        </label>
+        <label>Intensity (0–1) <input id="weather-intensity" type="number" min="0" max="1" step="0.05" /></label>
+        <label>Area (m) <input id="weather-area" type="number" min="50" max="800" step="10" /></label>
+        <label>Height (m) <input id="weather-height" type="number" min="20" max="400" step="10" /></label>
+        <div class="hint">Rain: gray volumetric fog. Snow: white volumetric haze. Fly-through from any direction.</div>
         <label>Car
             <select id="car-sprite">
                 <option value="1">car_1</option>
@@ -1348,9 +1382,11 @@
         <div class="sep"></div>
         <label>Three.js trees <input id="trees-threejs" type="checkbox" checked /></label>
         <label>Tree radius (m) <input id="trees-threejs-radius" type="number" min="50" max="3000" step="10" /></label>
+        <label>Tree area (m) <input id="trees-threejs-area" type="number" min="0.5" max="20" step="0.5" /></label>
+        <label>Tree density <input id="trees-threejs-density" type="number" min="0.2" max="4" step="0.1" /></label>
+        <label>Tree size spread <input id="trees-threejs-size-spread" type="number" min="0" max="1" step="0.05" /></label>
         <label>Spawn animation <input id="trees-threejs-spawn-anim" type="checkbox" checked /></label>
         <label>3D trees <input id="trees3d" type="checkbox" /></label>
-        <label>Tree density <input id="trees3d-density" type="number" min="0.2" max="2" step="0.1" /></label>
         <label>Ignore terrain <input id="noterrcol" type="checkbox" /></label>
         <label>Minimap <input id="minimap" type="checkbox" /></label>
         <label>Pin stats <input id="pin-stats" type="checkbox" /></label>
@@ -1387,7 +1423,18 @@
         <label>3D pixel ratio (× display) <input id="three-pixel-ratio" type="number" min="0.25" max="1" step="0.05" /></label>
         <div class="hint">Three origin / cache — faster over long distances. Lower 3D pixel ratio = less GPU load.</div>
         <div class="sep"></div>
+        <div class="title">3D post-processing</div>
+        <label>Tilt shift <input id="postfx-tilt-enabled" type="checkbox" /></label>
+        <label>Tilt blur (px) <input id="postfx-tilt-blur" type="number" min="0" max="40" step="1" /></label>
+        <label>Tilt band (0–1) <input id="postfx-tilt-band" type="number" min="0.05" max="0.45" step="0.01" /></label>
+        <label>Motion blur <input id="postfx-motion-enabled" type="checkbox" /></label>
+        <label>Motion blur mix (0–1) <input id="postfx-motion-amount" type="number" min="0.02" max="0.95" step="0.05" /></label>
+        <label>Edge sharpen <input id="postfx-sharpen-enabled" type="checkbox" /></label>
+        <label>Sharpen amount (0–1) <input id="postfx-sharpen-amount" type="number" min="0" max="1" step="0.05" /></label>
+        <div class="hint">Full viewport: MapLibre + Three.js. Motion blur uses frame accumulation.</div>
+        <div class="sep"></div>
         <div class="title">Walk parameters</div>
+        <label>Disable Walk inertia <input id="walk-inertia-off" type="checkbox" /></label>
         <label>Eye height (m) <input id="eye-height" type="number" min="0.5" step="0.1" /></label>
         <label>Ground level groundAlt (m) <input id="walk-ground-alt" type="number" step="0.1" /></label>
         <label>Fixed pitch pitchStart (°) <input id="walk-pitch-start" type="number" min="0" max="90" step="0.5" /></label>
@@ -1420,6 +1467,7 @@
             <div class="row"><span>Altitude</span><b id="hud-alt">—</b></div>
             <div class="row"><span>Speed</span><b id="hud-speed">—</b></div>
             <div class="row"><span>Walls</span><b id="hud-collision">—</b></div>
+            <div class="row"><span>Clime</span><b id="hud-clime">—</b></div>
         </div>
         </div>
     </div>
@@ -1740,11 +1788,15 @@
     <script src="modules/three-layer.js"></script>
     <script src="modules/rt-shadows-three.js"></script>
     <script src="modules/3dsky.js"></script>
+    <script src="modules/skybox-three.js"></script>
+    <script src="modules/weather-three.js"></script>
     <script src="modules/follow-terrain-hands.js"></script>
+    <script src="modules/clime-zones.js"></script>
     <script src="modules/car-drive.js"></script>
     <script src="modules/car-3d.js"></script>
     <script src="modules/save-pin.js"></script>
     <script src="modules/effects-overlay.js"></script>
+    <script src="modules/postfx-viewport.js"></script>
     <script src="modules/car-pins.js"></script>
     <script src="modules/giant-mob.js"></script>
     <script src="modules/wood-terrain-extrusion.js"></script>
@@ -1773,18 +1825,22 @@
         walkSpeed: 20,        // м/с
         runMultiplier: 50,    // ускорение по Shift (переопределяется settings.json)
         handsSprintDropPercent: 25, // опускание рук при Shift-ускорении, % высоты экрана
-        flySpeed: 20,         // м/с — подъём (Space) / спуск (X)
+        flySpeed: 120,        // м/с — подъём (Space) / спуск (X)
         fpsLimit: 35,         // лимит кадров/с (0 = без лимита)
         inertiaEnabled: true,   // инерция горизонтального движения (только settings.json)
-        inertia: 0.14,          // степень инертности, сек (больше — плавнее разгон/торможение)
+        inertia: 0.14,          // основной tau Drone/Walk, сек
+        walkEdgeInertia: 0.42,  // tau у нулевой скорости (мягкий старт/финиш)
+        walkEdgeSpeedM: 8,      // до этой скорости (м/с) действует walkEdgeInertia
+        walkInertiaDisabled: false, // Walk: мгновенный старт/стоп без инерции
         mouseYaw: 0.16,       // чувств. поворота, град/пиксель
         mousePitch: 0.10,     // чувств. наклона, град/пиксель
         // Наклон камеры (0 = вниз, 90 = горизонт). MapLibre у земли стабилен
         // только в этом диапазоне, иначе рендер мерцает/падает.
-        pitchMin: 85,         // смотрим вниз (≈5° ниже горизонта)
-        pitchMax: 85,         // фиксированный наклон
-        pitchStart: 85,       // фиксированный наклон
+        pitchMin: 83,         // смотрим вниз (≈5° ниже горизонта)
+        pitchMax: 83,         // фиксированный наклон
+        pitchStart: 83,       // фиксированный наклон
         maxSafeZoom: 20.5,    // выше — нестабильно у горизонта
+        climeZonesEnabled: true, // тест: небо по clime/clime1.geojson
         // Небо + туман (градиент и дальность прорисовки) — править в settings.json → sky
         sky: {
             color: "#001973",
@@ -1857,7 +1913,7 @@
         // Выкл — высота по рельефу под игроком, не под точкой прицела впереди.
         ignoreTerrainCollision: true,
         followTerrainEyeHeight: 3,   // высота глаз, м — галочка «игнорировать рельеф» выкл
-        ignoreTerrainEyeHeight: 25,    // целевая высота дрона, м
+        ignoreTerrainEyeHeight: 100,   // целевая высота дрона, м
         ignoreTerrainEyeHeightStart: 25, // стартовая высота при выборе дрона, м
         heightAnimSec: 2,              // длительность анимации смены высоты, сек
         followTerrainJumpHeight: 14,   // прыжок Space в режиме «следовать рельефу», м
@@ -1956,12 +2012,14 @@
         shadowMaxBuildings: 80,
         trees3dEnabled: false,
         treesThreeJsEnabled: true,
-        trees3dDensity: 2,
-        treeSpriteSrc: "images/t_teee.png",
+        trees3dDensity: 4,
+        treeSpriteSrc: "clime/t_teee6.png",
         treeSpriteAspect: 1,
         treeSpriteScale: 5,
-        treeSpriteRadiusM: 800,
+        treeSpriteRadiusM: 700,
         treeSpriteSpawnAnim: true,
+        treeAreaM: 8,
+        treeSpriteSizeSpread: 1,
         sprite1Enabled: false,
         minimapEnabled: false,
         pinStatsEnabled: false,
@@ -1977,14 +2035,35 @@
         // Cutoff 3D: уменьшает дальнюю плоскость отсечения (доля авто farZ, 0–1).
         clip3dEnabled: true,
         clip3dFactor: 0.4,
-        sky3dEnabled: true,
-        sky3dAnimEnabled: true,
+        sky3dEnabled: false,
+        sky3dAnimEnabled: false,
         sky3dSrc: "images/cloud.png",
         sky3dAltM: 1800,
         sky3dSizeM: 12000,
         sky3dRepeat: 3.5,
         sky3dOpacity: 0.92,
-        skyEnabled: true
+        skyEnabled: true,
+        skyboxEnabled: true,
+        skyboxId: "skybox1",
+        skyboxSrc: "skybox/skybox1.png",
+        skyboxSizeBaseM: 1000,
+        skyboxSizePct: 100,
+        skyboxCutoffEnabled: false,
+        skyboxNoGradient: false,
+        skyboxRotXDeg: 90,
+        skyboxRotYDeg: 0,
+        skyboxRotZDeg: 0,
+        weatherMode: "none",
+        weatherIntensity: 0.65,
+        weatherAreaM: 220,
+        weatherHeightM: 120,
+        postFxTiltShiftEnabled: false,
+        postFxTiltShiftBlurPx: 8,
+        postFxTiltShiftBand: 0.25,
+        postFxMotionBlurEnabled: false,
+        postFxMotionBlurAmount: 0.55,
+        postFxSharpenEnabled: false,
+        postFxSharpenAmount: 0.45
         };
 
         function merge(o, source) {
@@ -2032,6 +2111,19 @@
         CONFIG.movementMode = CONFIG.ignoreTerrainCollision ? "ignore" : "follow";
     }
     CONFIG.ignoreTerrainCollision = CONFIG.movementMode === "ignore";
+
+    if (!CONFIG.weatherMode) {
+        CONFIG.weatherMode = CONFIG.weatherRainEnabled ? "rain" : "none";
+    }
+    if (CONFIG.weatherIntensity == null && CONFIG.weatherRainIntensity != null) {
+        CONFIG.weatherIntensity = CONFIG.weatherRainIntensity;
+    }
+    if (CONFIG.weatherAreaM == null && CONFIG.weatherRainAreaM != null) {
+        CONFIG.weatherAreaM = CONFIG.weatherRainAreaM;
+    }
+    if (CONFIG.weatherHeightM == null && CONFIG.weatherRainHeightM != null) {
+        CONFIG.weatherHeightM = CONFIG.weatherRainHeightM;
+    }
 
     const CAR_SPRITE_IDS = [1, 2, 3, 4];
     const CAR_SPRITE_DEFAULT_ID = 1;
@@ -2109,9 +2201,82 @@
     }
 
     let activeStyleSkyKey = MAP1_STYLE_URL;
+    let activeClimeId = null;
+    let styleBackgroundColor = null;
+
+    function skyboxBlocksGradient() {
+        return CONFIG.skyboxEnabled !== false && CONFIG.skyboxNoGradient === true;
+    }
+
+    function skyboxSizeMetersFromConfig() {
+        const base = CONFIG.skyboxSizeBaseM != null ? CONFIG.skyboxSizeBaseM : 1000;
+        const pct = CONFIG.skyboxSizePct != null ? CONFIG.skyboxSizePct : 100;
+        return base * Math.max(1, pct) / 100;
+    }
+
+    function skyboxMinClip3dFactor() {
+        if (CONFIG.skyboxEnabled === false) return 0;
+        const sizeM = skyboxSizeMetersFromConfig();
+        return Math.min(0.98, 0.55 + sizeM / 6000);
+    }
+
+    function transparentSkyStyleSpec() {
+        return {
+            "sky-color": "rgba(0,0,0,0)",
+            "horizon-color": "rgba(0,0,0,0)",
+            "fog-color": "rgba(0,0,0,0)",
+            "sky-horizon-blend": 0,
+            "horizon-fog-blend": 0,
+            "fog-ground-blend": 0
+        };
+    }
+
+    function captureStyleBackground(style) {
+        if (!style || !Array.isArray(style.layers)) return;
+        const bg = style.layers.find(l => l.id === "background" && l.type === "background");
+        if (bg && bg.paint && bg.paint["background-color"] != null) {
+            styleBackgroundColor = bg.paint["background-color"];
+        }
+    }
+
+    function applySkyboxBackgroundState() {
+        if (!map || !map.getLayer("background")) return;
+        try {
+            if (skyboxBlocksGradient()) {
+                map.setPaintProperty("background", "background-color", "rgba(0,0,0,0)");
+            } else if (styleBackgroundColor != null) {
+                map.setPaintProperty("background", "background-color", styleBackgroundColor);
+            }
+        } catch (e) { /* ok */ }
+    }
+
+    function syncSkyGradientPanelState() {
+        const blocked = skyboxBlocksGradient();
+        if (elSkyEnabled) elSkyEnabled.disabled = blocked;
+        if (elDraw) elDraw.disabled = blocked || CONFIG.skyEnabled === false;
+    }
 
     function getActiveSky() {
+        if (CONFIG.climeZonesEnabled && window.GeowalkClimeZones && GeowalkClimeZones.ready()) {
+            const clime = activeClimeId != null ? activeClimeId : "default";
+            return cloneSkyParams(GeowalkClimeZones.getSkyForClime(clime));
+        }
         return getSkyForStyleKey(activeStyleSkyKey);
+    }
+
+    function syncClimeSkyFromPosition(force) {
+        if (!CONFIG.climeZonesEnabled || !window.GeowalkClimeZones || !GeowalkClimeZones.ready()) return;
+        if (!playerReady) return;
+        const clime = GeowalkClimeZones.getClimeAt(player.lng, player.lat);
+        if (!force && clime === activeClimeId) return;
+        activeClimeId = clime;
+        syncConfigSkyFromActiveStyle();
+        if (ready) applySky();
+        if (hudSnap.clime !== clime) {
+            hudSnap.clime = clime;
+            const el = document.getElementById("hud-clime");
+            if (el) el.textContent = clime;
+        }
     }
 
     function syncConfigSkyFromActiveStyle() {
@@ -2138,6 +2303,19 @@
     function isCarLikeMode() { return isCarMode() || is3dMoveMode(); }
     function isFollowMode() { return CONFIG.movementMode === "follow"; }
     function isIgnoreMode() { return CONFIG.movementMode === "ignore"; }
+
+    function useWalkInertia() {
+        return CONFIG.inertiaEnabled && isFollowMode() && !CONFIG.walkInertiaDisabled;
+    }
+
+    function useDroneWalkInertia() {
+        return CONFIG.inertiaEnabled && isIgnoreMode();
+    }
+
+    function useHorizontalInertia() {
+        if (isCarLikeMode()) return false;
+        return useWalkInertia() || useDroneWalkInertia();
+    }
 
     function styleNameFromUrl(url) {
         if (!url || typeof url !== "string") return "embedded";
@@ -2196,12 +2374,31 @@
     const elSky3dEnabled = document.getElementById("sky3d-enabled");
     const elSky3dAnim = document.getElementById("sky3d-anim");
     const elSky3dAlt = document.getElementById("sky3d-alt");
+    const elSkyboxEnabled = document.getElementById("skybox-enabled");
+    const elSkyboxTexture = document.getElementById("skybox-texture");
+    const elSkyboxSizePct = document.getElementById("skybox-size-pct");
+    const elSkyboxCutoff = document.getElementById("skybox-cutoff");
+    const elSkyboxNoGradient = document.getElementById("skybox-no-gradient");
+    const elSkyboxRotX = document.getElementById("skybox-rot-x");
+    const elSkyboxRotY = document.getElementById("skybox-rot-y");
+    const elSkyboxRotZ = document.getElementById("skybox-rot-z");
+    const elWeatherMode = document.getElementById("weather-mode");
+    const elWeatherIntensity = document.getElementById("weather-intensity");
+    const elWeatherArea = document.getElementById("weather-area");
+    const elWeatherHeight = document.getElementById("weather-height");
     const elClip3d = document.getElementById("clip3d");
     const elClip3dFactor = document.getElementById("clip3d-factor");
     const elNearClipDivisor = document.getElementById("near-clip-divisor");
     const elThreeOriginShift = document.getElementById("three-origin-shift");
     const elThreeTerrainCache = document.getElementById("three-terrain-cache");
     const elThreePixelRatio = document.getElementById("three-pixel-ratio");
+    const elPostFxTiltEnabled = document.getElementById("postfx-tilt-enabled");
+    const elPostFxTiltBlur = document.getElementById("postfx-tilt-blur");
+    const elPostFxTiltBand = document.getElementById("postfx-tilt-band");
+    const elPostFxMotionEnabled = document.getElementById("postfx-motion-enabled");
+    const elPostFxMotionAmount = document.getElementById("postfx-motion-amount");
+    const elPostFxSharpenEnabled = document.getElementById("postfx-sharpen-enabled");
+    const elPostFxSharpenAmount = document.getElementById("postfx-sharpen-amount");
     const elCarRoll = document.getElementById("car-roll");
     const elCarSprite = document.getElementById("car-sprite");
     const elCarRollMax = document.getElementById("car-roll-max");
@@ -2241,9 +2438,11 @@
     const elTerrainLod = document.getElementById("terrain-lod");
     const elTreesThreejs = document.getElementById("trees-threejs");
     const elTreesThreejsRadius = document.getElementById("trees-threejs-radius");
+    const elTreesThreejsArea = document.getElementById("trees-threejs-area");
+    const elTreesThreejsDensity = document.getElementById("trees-threejs-density");
+    const elTreesThreejsSizeSpread = document.getElementById("trees-threejs-size-spread");
     const elTreesThreejsSpawnAnim = document.getElementById("trees-threejs-spawn-anim");
     const elTrees3d = document.getElementById("trees3d");
-    const elTrees3dDensity = document.getElementById("trees3d-density");
     const elWalkGroundAlt = document.getElementById("walk-ground-alt");
     const elWalkPitchStart = document.getElementById("walk-pitch-start");
     const elWalkPitchMin = document.getElementById("walk-pitch-min");
@@ -2257,6 +2456,7 @@
     const elWalkMousePitch = document.getElementById("walk-mouse-pitch");
     const elWalkStartBearing = document.getElementById("walk-start-bearing");
     const elWalkTerrainSmoothSec = document.getElementById("walk-terrain-smooth-sec");
+    const elWalkInertiaOff = document.getElementById("walk-inertia-off");
     const elNoTerrCol = document.getElementById("noterrcol");
     const elMinimap = document.getElementById("minimap");
     const elPinStats = document.getElementById("pin-stats");
@@ -2315,7 +2515,7 @@
     let lastAppliedCamSig = "";
     let lastAppliedCamRoll = NaN;
     let miniMapCamSig = "";
-    const hudSnap = { lat: NaN, lng: NaN, yaw: NaN, look: NaN, alt: NaN, speed: NaN, collision: null };
+    const hudSnap = { lat: NaN, lng: NaN, yaw: NaN, look: NaN, alt: NaN, speed: NaN, collision: null, clime: null };
     let carYawVel = 0;
     let carTurnInput = 0;
     let lastCarTerrainElev = null;
@@ -2329,6 +2529,37 @@
     let carSkinPickerLift = 0;
     let carSkinPickerLiftAnim = null;
     let modeVisualsBase = null;
+
+    const SKYBOX_TEXTURE_IDS = ["skybox1", "skybox2", "skybox3", "skybox4", "skybox5", "skybox6", "skybox7"];
+    const SKYBOX_TEXTURES = {
+        skybox1: "skybox/skybox1.png",
+        skybox2: "skybox/skybox2.png",
+        skybox3: "skybox/skybox3.png",
+        skybox4: "skybox/skybox4.jpg",
+        skybox5: "skybox/skybox5.png",
+        skybox6: "skybox/skybox6.png",
+        skybox7: "skybox/skybox7.png"
+    };
+
+    function normalizeSkyboxId(id) {
+        const key = String(id || "skybox1").replace(/\.(png|jpg|jpeg)$/i, "");
+        if (SKYBOX_TEXTURE_IDS.indexOf(key) >= 0) return key;
+        return "skybox1";
+    }
+
+    function skyboxIdFromConfig() {
+        if (CONFIG.skyboxId) return normalizeSkyboxId(CONFIG.skyboxId);
+        if (CONFIG.skyboxSrc) {
+            const m = CONFIG.skyboxSrc.match(/skybox(\d+)\.(png|jpg|jpeg)$/i);
+            if (m) return normalizeSkyboxId("skybox" + m[1]);
+        }
+        return "skybox1";
+    }
+
+    function skyboxSrcFromConfig() {
+        const id = skyboxIdFromConfig();
+        return SKYBOX_TEXTURES[id] || SKYBOX_TEXTURES.skybox1;
+    }
 
     function applyConfigToUI() {
         elWalk.value = CONFIG.walkSpeed;
@@ -2353,6 +2584,19 @@
             elSky3dAlt.value = CONFIG.sky3dAltM != null ? CONFIG.sky3dAltM : 1800;
             elSky3dAlt.disabled = CONFIG.sky3dEnabled === false;
         }
+        if (elSkyboxEnabled) elSkyboxEnabled.checked = CONFIG.skyboxEnabled !== false;
+        if (elSkyboxTexture) elSkyboxTexture.value = skyboxIdFromConfig();
+        if (elSkyboxSizePct) elSkyboxSizePct.value = CONFIG.skyboxSizePct != null ? CONFIG.skyboxSizePct : 100;
+        if (elSkyboxCutoff) elSkyboxCutoff.checked = CONFIG.skyboxCutoffEnabled === true;
+        if (elSkyboxNoGradient) elSkyboxNoGradient.checked = CONFIG.skyboxNoGradient === true;
+        if (elSkyboxRotX) elSkyboxRotX.value = CONFIG.skyboxRotXDeg != null ? CONFIG.skyboxRotXDeg : 90;
+        if (elSkyboxRotY) elSkyboxRotY.value = CONFIG.skyboxRotYDeg != null ? CONFIG.skyboxRotYDeg : 0;
+        if (elSkyboxRotZ) elSkyboxRotZ.value = CONFIG.skyboxRotZDeg != null ? CONFIG.skyboxRotZDeg : 0;
+        syncSkyGradientPanelState();
+        if (elWeatherMode) elWeatherMode.value = CONFIG.weatherMode || "none";
+        if (elWeatherIntensity) elWeatherIntensity.value = CONFIG.weatherIntensity != null ? CONFIG.weatherIntensity : 0.65;
+        if (elWeatherArea) elWeatherArea.value = CONFIG.weatherAreaM != null ? CONFIG.weatherAreaM : 220;
+        if (elWeatherHeight) elWeatherHeight.value = CONFIG.weatherHeightM != null ? CONFIG.weatherHeightM : 120;
         if (elDraw) {
             elDraw.value = CONFIG.sky.fogGroundBlend;
             elDraw.disabled = CONFIG.skyEnabled === false;
@@ -2366,6 +2610,13 @@
         if (elThreePixelRatio) {
             elThreePixelRatio.value = CONFIG.threePixelRatioScale != null ? CONFIG.threePixelRatioScale : 0.6;
         }
+        if (elPostFxTiltEnabled) elPostFxTiltEnabled.checked = CONFIG.postFxTiltShiftEnabled === true;
+        if (elPostFxTiltBlur) elPostFxTiltBlur.value = CONFIG.postFxTiltShiftBlurPx != null ? CONFIG.postFxTiltShiftBlurPx : 8;
+        if (elPostFxTiltBand) elPostFxTiltBand.value = CONFIG.postFxTiltShiftBand != null ? CONFIG.postFxTiltShiftBand : 0.25;
+        if (elPostFxMotionEnabled) elPostFxMotionEnabled.checked = CONFIG.postFxMotionBlurEnabled === true;
+        if (elPostFxMotionAmount) elPostFxMotionAmount.value = CONFIG.postFxMotionBlurAmount != null ? CONFIG.postFxMotionBlurAmount : 0.55;
+        if (elPostFxSharpenEnabled) elPostFxSharpenEnabled.checked = CONFIG.postFxSharpenEnabled === true;
+        if (elPostFxSharpenAmount) elPostFxSharpenAmount.value = CONFIG.postFxSharpenAmount != null ? CONFIG.postFxSharpenAmount : 0.45;
         if (elCarSprite) elCarSprite.value = String(carSpriteIdFromConfig());
         if (elCarRoll) elCarRoll.checked = CONFIG.carCameraRollEnabled !== false;
         if (elCarRollMax) elCarRollMax.value = CONFIG.carCameraRollMax;
@@ -2464,13 +2715,21 @@
         elRelief.value = CONFIG.terrainExaggeration;
         if (elTreesThreejs) elTreesThreejs.checked = CONFIG.treesThreeJsEnabled !== false;
         if (elTreesThreejsRadius) {
-            elTreesThreejsRadius.value = CONFIG.treeSpriteRadiusM != null ? CONFIG.treeSpriteRadiusM : 800;
+            elTreesThreejsRadius.value = CONFIG.treeSpriteRadiusM != null ? CONFIG.treeSpriteRadiusM : 700;
+        }
+        if (elTreesThreejsArea) {
+            elTreesThreejsArea.value = CONFIG.treeAreaM != null ? CONFIG.treeAreaM : 8;
+        }
+        if (elTreesThreejsDensity) {
+            elTreesThreejsDensity.value = CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 4;
+        }
+        if (elTreesThreejsSizeSpread) {
+            elTreesThreejsSizeSpread.value = CONFIG.treeSpriteSizeSpread != null ? CONFIG.treeSpriteSizeSpread : 1;
         }
         if (elTreesThreejsSpawnAnim) {
             elTreesThreejsSpawnAnim.checked = CONFIG.treeSpriteSpawnAnim !== false;
         }
         if (elTrees3d) elTrees3d.checked = CONFIG.trees3dEnabled !== false;
-        if (elTrees3dDensity) elTrees3dDensity.value = CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 2;
         elNoTerrCol.checked = CONFIG.ignoreTerrainCollision;
         elShadows.checked = CONFIG.shadows;
         if (elShadowWallShade) elShadowWallShade.checked = !!CONFIG.shadowWallShade;
@@ -2535,6 +2794,7 @@
         if (elWalkTerrainSmoothSec) {
             elWalkTerrainSmoothSec.value = CONFIG.cameraTerrainSmoothSec != null ? CONFIG.cameraTerrainSmoothSec : 0.65;
         }
+        if (elWalkInertiaOff) elWalkInertiaOff.checked = !!CONFIG.walkInertiaDisabled;
         elStyleStatus.textContent = "style: " + styleNameFromUrl(CONFIG.styleUrl);
         elHelpShift.innerHTML = "<kbd>Shift</kbd> — sprint boost";
         elOverlayHint.textContent = "Non-commercial geo sandbox for travel. By Boxypix design & dev. 2026";
@@ -2587,6 +2847,123 @@
         Geowalk3dSky.sync(sky3dOptionsFromConfig());
     }
 
+    function applySkyboxTexture(id, syncSelect) {
+        const resolvedId = normalizeSkyboxId(id);
+        CONFIG.skyboxId = resolvedId;
+        CONFIG.skyboxSrc = SKYBOX_TEXTURES[resolvedId] || SKYBOX_TEXTURES.skybox1;
+        if (syncSelect !== false && elSkyboxTexture) elSkyboxTexture.value = resolvedId;
+        syncSkyboxModule();
+        if (map) map.triggerRepaint();
+    }
+
+    function skyboxOptionsFromConfig() {
+        return {
+            enabled: CONFIG.skyboxEnabled !== false,
+            src: skyboxSrcFromConfig(),
+            sizePct: CONFIG.skyboxSizePct != null ? CONFIG.skyboxSizePct : 100,
+            sizeBaseM: CONFIG.skyboxSizeBaseM != null ? CONFIG.skyboxSizeBaseM : 1000,
+            cutoffEnabled: CONFIG.skyboxCutoffEnabled === true,
+            rotXDeg: CONFIG.skyboxRotXDeg != null ? CONFIG.skyboxRotXDeg : 90,
+            rotYDeg: CONFIG.skyboxRotYDeg != null ? CONFIG.skyboxRotYDeg : 0,
+            rotZDeg: CONFIG.skyboxRotZDeg != null ? CONFIG.skyboxRotZDeg : 0,
+            playerLng: player.lng,
+            playerLat: player.lat,
+            cameraElevM: lastCameraAltM,
+            playerYaw: map && map.getBearing ? map.getBearing() : player.yaw,
+            cameraPitch: map && map.getPitch ? map.getPitch() : player.pitch
+        };
+    }
+
+    function syncSkyboxModule() {
+        if (!window.GeowalkSkyboxThree) return;
+        GeowalkSkyboxThree.sync(skyboxOptionsFromConfig());
+    }
+
+    function postFxOptionsFromConfig() {
+        return {
+            tiltShiftEnabled: CONFIG.postFxTiltShiftEnabled === true,
+            tiltShiftBlurPx: CONFIG.postFxTiltShiftBlurPx != null ? CONFIG.postFxTiltShiftBlurPx : 8,
+            tiltShiftBand: CONFIG.postFxTiltShiftBand != null ? CONFIG.postFxTiltShiftBand : 0.25,
+            motionBlurEnabled: CONFIG.postFxMotionBlurEnabled === true,
+            motionBlurAmount: CONFIG.postFxMotionBlurAmount != null ? CONFIG.postFxMotionBlurAmount : 0.55,
+            sharpenEnabled: CONFIG.postFxSharpenEnabled === true,
+            sharpenAmount: CONFIG.postFxSharpenAmount != null ? CONFIG.postFxSharpenAmount : 0.45
+        };
+    }
+
+    function syncPostFxModule() {
+        if (!window.GeowalkPostFx) return;
+        GeowalkPostFx.sync(postFxOptionsFromConfig());
+    }
+
+    function regenerateThreeJs() {
+        if (!map) return;
+        const lng = playerReady ? player.lng : CONFIG.start.lng;
+        const lat = playerReady ? player.lat : CONFIG.start.lat;
+
+        applySky();
+
+        if (window.GeowalkThree) {
+            try {
+                GeowalkThree.setup(map, {
+                    afterLayer: CONFIG.buildingsLayerId,
+                    originLng: lng,
+                    originLat: lat
+                });
+                syncThreePerfFromConfig();
+            } catch (err) { console.warn("Three layer:", err); }
+        }
+        if (window.GeowalkRtShadowsThree) {
+            GeowalkRtShadowsThree.hook();
+            syncRtShadowsFromConfig();
+        }
+        if (window.Geowalk3dSky) {
+            try { Geowalk3dSky.setup(map, sky3dOptionsFromConfig()); } catch (err) { console.warn("3dsky:", err); }
+        }
+        if (window.GeowalkSkyboxThree) {
+            try { GeowalkSkyboxThree.regenerate(map, skyboxOptionsFromConfig()); } catch (err) { console.warn("Skybox:", err); }
+        }
+        if (window.GeowalkWeatherThree) {
+            try { GeowalkWeatherThree.setup(map, weatherOptionsFromConfig()); } catch (err) { console.warn("Weather:", err); }
+        }
+        if (window.GeowalkWoodTerrainExtrude) {
+            try { GeowalkWoodTerrainExtrude.setup(map, woodTerrainOptionsFromConfig()); } catch (err) { console.warn("Wood:", err); }
+        }
+        if (window.GeowalkCarPins) {
+            try { GeowalkCarPins.setup(map); } catch (err) { console.warn("Car pins:", err); }
+        }
+        if (window.GeowalkGiantMob) {
+            try { GeowalkGiantMob.setup(map); } catch (err) { console.warn("Sprite1:", err); }
+        }
+
+        try { applyTerrain(CONFIG.terrainExaggeration); } catch (e) { /* ok */ }
+        reassertRenderHierarchy();
+        map.triggerRepaint();
+    }
+
+    function applySkyboxSkyState() {
+        applySky();
+        syncSkyGradientPanelState();
+        regenerateThreeJs();
+    }
+
+    function weatherOptionsFromConfig() {
+        return {
+            mode: CONFIG.weatherMode || "none",
+            intensity: CONFIG.weatherIntensity != null ? CONFIG.weatherIntensity : 0.65,
+            areaM: CONFIG.weatherAreaM != null ? CONFIG.weatherAreaM : 220,
+            heightM: CONFIG.weatherHeightM != null ? CONFIG.weatherHeightM : 120,
+            playerLng: playerReady ? player.lng : CONFIG.start.lng,
+            playerLat: playerReady ? player.lat : CONFIG.start.lat,
+            cameraElevM: lastCameraAltM
+        };
+    }
+
+    function syncWeatherModule() {
+        if (!window.GeowalkWeatherThree) return;
+        GeowalkWeatherThree.sync(weatherOptionsFromConfig());
+    }
+
     function recalcSky3dAtPlayer() {
         if (!window.Geowalk3dSky) return;
         Geowalk3dSky.recalcHeight({
@@ -2618,14 +2995,17 @@
             enabled: CONFIG.trees3dEnabled !== false,
             treeSpritesEnabled: CONFIG.treesThreeJsEnabled !== false,
             terrainOn: CONFIG.terrainExaggeration > 0,
-            density: CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 2,
+            density: CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 4,
             vectorSource: CONFIG.buildingsSourceId || "openmaptiles",
             fillLayerId: "landcover_wood",
             treeSpriteSrc: CONFIG.treeSpriteSrc,
             treeSpriteAspect: CONFIG.treeSpriteAspect,
             treeSpriteScale: CONFIG.treeSpriteScale,
-            treeSpriteRadiusM: CONFIG.treeSpriteRadiusM != null ? CONFIG.treeSpriteRadiusM : 800,
-            treeSpriteSpawnAnim: CONFIG.treeSpriteSpawnAnim !== false
+            treeSpriteRadiusM: CONFIG.treeSpriteRadiusM != null ? CONFIG.treeSpriteRadiusM : 700,
+            treeSpriteSpawnAnim: CONFIG.treeSpriteSpawnAnim !== false,
+            treeAreaM: CONFIG.treeAreaM != null ? CONFIG.treeAreaM : 8,
+            treeSpriteSizeSpread: CONFIG.treeSpriteSizeSpread != null ? CONFIG.treeSpriteSizeSpread : 1,
+            climeZonesEnabled: CONFIG.climeZonesEnabled !== false
         };
     }
 
@@ -2635,9 +3015,11 @@
             enabled: CONFIG.trees3dEnabled !== false,
             treeSpritesEnabled: CONFIG.treesThreeJsEnabled !== false,
             terrainOn: CONFIG.terrainExaggeration > 0,
-            density: CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 2,
-            treeSpriteRadiusM: CONFIG.treeSpriteRadiusM != null ? CONFIG.treeSpriteRadiusM : 800,
+            density: CONFIG.trees3dDensity != null ? CONFIG.trees3dDensity : 4,
+            treeSpriteRadiusM: CONFIG.treeSpriteRadiusM != null ? CONFIG.treeSpriteRadiusM : 700,
             treeSpriteSpawnAnim: CONFIG.treeSpriteSpawnAnim !== false,
+            treeAreaM: CONFIG.treeAreaM != null ? CONFIG.treeAreaM : 8,
+            treeSpriteSizeSpread: CONFIG.treeSpriteSizeSpread != null ? CONFIG.treeSpriteSizeSpread : 1,
             force: !!force
         });
     }
@@ -3011,10 +3393,11 @@
 
     function styleWithSkyFromConfig(style) {
         if (!style || typeof style !== "object") return style;
+        captureStyleBackground(style);
         const sky = getActiveSky();
         if (!sky) return style;
         const next = Object.assign({}, style);
-        next.sky = skyToStyleSpec(sky);
+        next.sky = skyboxBlocksGradient() ? transparentSkyStyleSpec() : skyToStyleSpec(sky);
         return next;
     }
 
@@ -3284,9 +3667,8 @@
             return;
         }
         if (mode === "ignore") {
-            const from = altOffsetForTotalEye(droneStartEyeHeightM());
             const to = altOffsetForTotalEye(droneTargetEyeHeightM());
-            player.altOffset = from;
+            const from = player.altOffset;
             fixedElevation = null;
             heightAnim = {
                 from,
@@ -3804,6 +4186,7 @@
         }
         if (ready) {
             recalcSky3dAtPlayer();
+            syncClimeSkyFromPosition(true);
             applyCamera();
         }
     }
@@ -3928,6 +4311,65 @@
             if (map) map.triggerRepaint();
         });
     }
+    if (elSkyboxEnabled) {
+        elSkyboxEnabled.addEventListener("change", () => {
+            CONFIG.skyboxEnabled = elSkyboxEnabled.checked;
+            applySkyboxSkyState();
+        });
+    }
+    if (elSkyboxTexture) {
+        elSkyboxTexture.addEventListener("change", () => {
+            applySkyboxTexture(elSkyboxTexture.value, true);
+        });
+    }
+    if (elSkyboxSizePct) {
+        bindNumber(elSkyboxSizePct, v => {
+            CONFIG.skyboxSizePct = Math.max(10, Math.min(500, v));
+            elSkyboxSizePct.value = CONFIG.skyboxSizePct;
+            syncSkyboxModule();
+            syncNearFarClip();
+            if (map) map.triggerRepaint();
+        });
+    }
+    if (elSkyboxCutoff) {
+        elSkyboxCutoff.addEventListener("change", () => {
+            CONFIG.skyboxCutoffEnabled = elSkyboxCutoff.checked;
+            syncSkyboxModule();
+            if (map) map.triggerRepaint();
+        });
+    }
+    if (elSkyboxNoGradient) {
+        elSkyboxNoGradient.addEventListener("change", () => {
+            CONFIG.skyboxNoGradient = elSkyboxNoGradient.checked;
+            applySky();
+            syncSkyGradientPanelState();
+            if (map) map.triggerRepaint();
+        });
+    }
+    if (elSkyboxRotX) {
+        bindNumber(elSkyboxRotX, v => {
+            CONFIG.skyboxRotXDeg = v;
+            elSkyboxRotX.value = CONFIG.skyboxRotXDeg;
+            syncSkyboxModule();
+            if (map) map.triggerRepaint();
+        });
+    }
+    if (elSkyboxRotY) {
+        bindNumber(elSkyboxRotY, v => {
+            CONFIG.skyboxRotYDeg = v;
+            elSkyboxRotY.value = CONFIG.skyboxRotYDeg;
+            syncSkyboxModule();
+            if (map) map.triggerRepaint();
+        });
+    }
+    if (elSkyboxRotZ) {
+        bindNumber(elSkyboxRotZ, v => {
+            CONFIG.skyboxRotZDeg = v;
+            elSkyboxRotZ.value = CONFIG.skyboxRotZDeg;
+            syncSkyboxModule();
+            if (map) map.triggerRepaint();
+        });
+    }
     if (elSky3dEnabled) {
         elSky3dEnabled.addEventListener("change", () => {
             CONFIG.sky3dEnabled = elSky3dEnabled.checked;
@@ -3950,6 +4392,33 @@
         syncSky3dModule();
         if (map) map.triggerRepaint();
     });
+    if (elWeatherMode) {
+        elWeatherMode.addEventListener("change", () => {
+            CONFIG.weatherMode = elWeatherMode.value || "none";
+            syncWeatherModule();
+        });
+    }
+    if (elWeatherIntensity) {
+        bindNumber(elWeatherIntensity, v => {
+            CONFIG.weatherIntensity = Math.max(0, Math.min(1, v));
+            elWeatherIntensity.value = CONFIG.weatherIntensity;
+            syncWeatherModule();
+        });
+    }
+    if (elWeatherArea) {
+        bindNumber(elWeatherArea, v => {
+            CONFIG.weatherAreaM = Math.max(50, Math.min(800, v));
+            elWeatherArea.value = CONFIG.weatherAreaM;
+            syncWeatherModule();
+        });
+    }
+    if (elWeatherHeight) {
+        bindNumber(elWeatherHeight, v => {
+            CONFIG.weatherHeightM = Math.max(20, Math.min(400, v));
+            elWeatherHeight.value = CONFIG.weatherHeightM;
+            syncWeatherModule();
+        });
+    }
     bindNumber(elDraw, v => {
         CONFIG.sky.fogGroundBlend = Math.max(0, Math.min(1, v));
         persistActiveSkyParams();
@@ -3957,7 +4426,7 @@
     });
 
     function applyWalkPitchFromConfig() {
-        const pitch = CONFIG.pitchStart != null ? CONFIG.pitchStart : 85;
+        const pitch = CONFIG.pitchStart != null ? CONFIG.pitchStart : 83;
         player.pitch = pitch;
         if (map && ready) {
             invalidateCameraCache();
@@ -4054,6 +4523,15 @@
             elWalkTerrainSmoothSec.value = CONFIG.cameraTerrainSmoothSec;
         });
     }
+    if (elWalkInertiaOff) {
+        elWalkInertiaOff.addEventListener("change", () => {
+            CONFIG.walkInertiaDisabled = elWalkInertiaOff.checked;
+            if (CONFIG.walkInertiaDisabled && isFollowMode()) {
+                velFwd = 0;
+                velStrafe = 0;
+            }
+        });
+    }
 
     function syncClipPanelUI() {
         if (elClip3dFactor) elClip3dFactor.disabled = !elClip3d || !elClip3d.checked;
@@ -4101,6 +4579,56 @@
             CONFIG.threePixelRatioScale = Math.max(0.25, Math.min(1, v));
             elThreePixelRatio.value = CONFIG.threePixelRatioScale;
             syncRenderPixelRatioFromConfig();
+        });
+    }
+    function syncPostFxFromPanel() {
+        syncPostFxModule();
+        if (map) map.triggerRepaint();
+    }
+    if (elPostFxTiltEnabled) {
+        elPostFxTiltEnabled.addEventListener("change", () => {
+            CONFIG.postFxTiltShiftEnabled = elPostFxTiltEnabled.checked;
+            syncPostFxFromPanel();
+        });
+    }
+    if (elPostFxTiltBlur) {
+        bindNumber(elPostFxTiltBlur, v => {
+            CONFIG.postFxTiltShiftBlurPx = Math.max(0, Math.min(40, v));
+            elPostFxTiltBlur.value = CONFIG.postFxTiltShiftBlurPx;
+            syncPostFxFromPanel();
+        });
+    }
+    if (elPostFxTiltBand) {
+        bindNumber(elPostFxTiltBand, v => {
+            CONFIG.postFxTiltShiftBand = Math.max(0.05, Math.min(0.45, v));
+            elPostFxTiltBand.value = CONFIG.postFxTiltShiftBand;
+            syncPostFxFromPanel();
+        });
+    }
+    if (elPostFxMotionEnabled) {
+        elPostFxMotionEnabled.addEventListener("change", () => {
+            CONFIG.postFxMotionBlurEnabled = elPostFxMotionEnabled.checked;
+            syncPostFxFromPanel();
+        });
+    }
+    if (elPostFxMotionAmount) {
+        bindNumber(elPostFxMotionAmount, v => {
+            CONFIG.postFxMotionBlurAmount = Math.max(0.02, Math.min(0.95, v));
+            elPostFxMotionAmount.value = CONFIG.postFxMotionBlurAmount;
+            syncPostFxFromPanel();
+        });
+    }
+    if (elPostFxSharpenEnabled) {
+        elPostFxSharpenEnabled.addEventListener("change", () => {
+            CONFIG.postFxSharpenEnabled = elPostFxSharpenEnabled.checked;
+            syncPostFxFromPanel();
+        });
+    }
+    if (elPostFxSharpenAmount) {
+        bindNumber(elPostFxSharpenAmount, v => {
+            CONFIG.postFxSharpenAmount = Math.max(0, Math.min(1, v));
+            elPostFxSharpenAmount.value = CONFIG.postFxSharpenAmount;
+            syncPostFxFromPanel();
         });
     }
     if (elCarRoll) {
@@ -4654,17 +5182,25 @@
 
     function applySky() {
         try {
+            if (!map) return;
+            if (skyboxBlocksGradient()) {
+                map.setSky(transparentSkyStyleSpec());
+                applySkyboxBackgroundState();
+                return;
+            }
             if (CONFIG.skyEnabled === false) {
                 map.setSky(undefined);
+                applySkyboxBackgroundState();
                 return;
             }
             const sky = getActiveSky();
             if (!sky) return;
             map.setSky(skyToStyleSpec(sky));
+            applySkyboxBackgroundState();
         } catch (err) { console.warn("Sky:", err); }
     }
 
-    // Sky-градиент (setSky) → карта/DEM → geowalk-three (3dsky + деревья/объекты).
+    // Sky-градиент (setSky) → geowalk-skybox (самый низ) → карта/DEM → geowalk-three.
     function reassertRenderHierarchy() {
         if (!map || !map.getStyle || !map.getStyle()) return;
         const layers = map.getStyle().layers;
@@ -4675,6 +5211,15 @@
                 try { map.removeLayer(id); } catch (e) { /* legacy custom layer */ }
             }
         });
+
+        if (window.GeowalkSkyboxThree && CONFIG.skyboxEnabled !== false) {
+            GeowalkSkyboxThree.reassertLayer(map);
+            const fresh = map.getStyle().layers;
+            const bottomBefore = fresh && fresh.find((l) => l.id !== "geowalk-skybox");
+            if (bottomBefore && map.getLayer("geowalk-skybox")) {
+                try { map.moveLayer("geowalk-skybox", bottomBefore.id); } catch (e) { /* ok */ }
+            }
+        }
 
         const threeId = "geowalk-three";
         const buildingId = CONFIG.buildingsLayerId || "building-3d";
@@ -4817,6 +5362,27 @@
             syncWoodTerrainFromConfig(true);
         });
     }
+    if (elTreesThreejsArea) {
+        bindNumber(elTreesThreejsArea, v => {
+            CONFIG.treeAreaM = Math.max(0.5, Math.min(20, v));
+            elTreesThreejsArea.value = CONFIG.treeAreaM;
+            syncWoodTerrainFromConfig(true);
+        });
+    }
+    if (elTreesThreejsDensity) {
+        bindNumber(elTreesThreejsDensity, v => {
+            CONFIG.trees3dDensity = Math.max(0.2, Math.min(4, v));
+            elTreesThreejsDensity.value = CONFIG.trees3dDensity;
+            syncWoodTerrainFromConfig(true);
+        });
+    }
+    if (elTreesThreejsSizeSpread) {
+        bindNumber(elTreesThreejsSizeSpread, v => {
+            CONFIG.treeSpriteSizeSpread = Math.max(0, Math.min(1, v));
+            elTreesThreejsSizeSpread.value = CONFIG.treeSpriteSizeSpread;
+            syncWoodTerrainFromConfig(true);
+        });
+    }
     if (elTreesThreejsSpawnAnim) {
         elTreesThreejsSpawnAnim.addEventListener("change", () => {
             CONFIG.treeSpriteSpawnAnim = elTreesThreejsSpawnAnim.checked;
@@ -4826,13 +5392,6 @@
     if (elTrees3d) {
         elTrees3d.addEventListener("change", () => {
             CONFIG.trees3dEnabled = elTrees3d.checked;
-            syncWoodTerrainFromConfig(true);
-        });
-    }
-    if (elTrees3dDensity) {
-        bindNumber(elTrees3dDensity, v => {
-            CONFIG.trees3dDensity = Math.max(0.2, Math.min(2, v));
-            elTrees3dDensity.value = CONFIG.trees3dDensity;
             syncWoodTerrainFromConfig(true);
         });
     }
@@ -5413,6 +5972,7 @@
         applyFov();
         stripIconLayers();
         applySky();
+        syncNearFarClip();
 
         try {
             ensureTerrainDemSource(true);
@@ -5448,7 +6008,19 @@
                 Geowalk3dSky.setup(map, sky3dOptionsFromConfig());
             } catch (err) { console.warn("3dsky:", err); }
         }
+        if (window.GeowalkSkyboxThree) {
+            try {
+                GeowalkSkyboxThree.setup(map, skyboxOptionsFromConfig());
+            } catch (err) { console.warn("Skybox:", err); }
+        }
+        syncSkyboxModule();
         syncSky3dModule();
+        if (window.GeowalkWeatherThree) {
+            try {
+                GeowalkWeatherThree.setup(map, weatherOptionsFromConfig());
+            } catch (err) { console.warn("Weather:", err); }
+        }
+        syncWeatherModule();
         reassertRenderHierarchy();
         if (window.GeowalkWoodTerrainExtrude) {
             try {
@@ -5475,6 +6047,7 @@
             if (CONFIG.clip3dEnabled && isFinite(farZ) && !carChase) {
                 let factor = Math.max(0.05, Math.min(1, CONFIG.clip3dFactor || 0.5));
                 if (CONFIG.sky3dEnabled !== false) factor = Math.max(factor, 0.72);
+                if (CONFIG.skyboxEnabled !== false) factor = Math.max(factor, skyboxMinClip3dFactor());
                 farZ = nearZ + (farZ - nearZ) * factor;
             }
             if (isFinite(farZ) && farZ > nearZ) tr.overrideNearFarZ(nearZ, farZ);
@@ -5487,12 +6060,25 @@
         map.triggerRepaint();
     }
 
+    if (window.GeowalkClimeZones && CONFIG.climeZonesEnabled) {
+        GeowalkClimeZones.init({ url: "clime/clime1.geojson" }).then(() => {
+            syncClimeSkyFromPosition(true);
+            if (window.GeowalkWoodTerrainExtrude && playerReady) {
+                GeowalkWoodTerrainExtrude.reset(player.lng, player.lat);
+            }
+        }).catch(() => { /* geojson optional for local file:// */ });
+    }
+
     map.on("load", () => {
         setupStyle();
         applyCarModeVisuals();
         if (window.GeowalkWoodTerrainExtrude) GeowalkWoodTerrainExtrude.bindMapEvents(map);
+        if (window.GeowalkPostFx) {
+            try { GeowalkPostFx.setup(map, postFxOptionsFromConfig()); } catch (err) { console.warn("PostFx:", err); }
+        }
         ready = true;
         if (isIgnoreMode()) startHeightAnimForMode("ignore");
+        syncClimeSkyFromPosition(true);
         applyCamera();
     });
     map.on("idle", () => { reassertRenderHierarchy(); });
@@ -5745,9 +6331,42 @@
         return 1 - Math.exp(-dt / Math.max(0.02, tau));
     }
 
-    function snapInertiaVelocity() {
-        if (Math.abs(velFwd) < VEL_SNAP) velFwd = 0;
-        if (Math.abs(velStrafe) < VEL_SNAP) velStrafe = 0;
+    function smoothstep01(t) {
+        const x = Math.max(0, Math.min(1, t));
+        return x * x * (3 - 2 * x);
+    }
+
+    function walkInertiaTau(curSpeed, targetSpeed, braking) {
+        const baseTau = CONFIG.inertia != null ? CONFIG.inertia : 0.14;
+        const edgeTau = CONFIG.walkEdgeInertia != null ? CONFIG.walkEdgeInertia : 0.42;
+        const edgeSpeed = CONFIG.walkEdgeSpeedM != null ? CONFIG.walkEdgeSpeedM : 8;
+        if (edgeSpeed <= 0 || edgeTau <= baseTau) return baseTau;
+
+        if (braking) {
+            if (curSpeed >= edgeSpeed) return baseTau;
+            return edgeTau + (baseTau - edgeTau) * smoothstep01(curSpeed / edgeSpeed);
+        }
+
+        const ref = Math.min(edgeSpeed, Math.max(targetSpeed, 0.01));
+        if (curSpeed >= ref) return baseTau;
+        return edgeTau + (baseTau - edgeTau) * smoothstep01(curSpeed / ref);
+    }
+
+    function applyWalkVelocity(dt, targetFwd, targetStrafe, maxSpeed, braking) {
+        const targetVx = targetFwd * maxSpeed;
+        const targetVy = targetStrafe * maxSpeed;
+        const curSpeed = Math.hypot(velFwd, velStrafe);
+        const targetSpeed = Math.hypot(targetVx, targetVy);
+        const blend = expBlend(dt, walkInertiaTau(curSpeed, targetSpeed, braking));
+        velFwd += (targetVx - velFwd) * blend;
+        velStrafe += (targetVy - velStrafe) * blend;
+    }
+
+    function settleWalkVelocity() {
+        if (Math.hypot(velFwd, velStrafe) < 0.006) {
+            velFwd = 0;
+            velStrafe = 0;
+        }
     }
 
     function updateCarYawVelocity(dt, turnInput) {
@@ -5860,20 +6479,16 @@
             targetFwd = fwd / len;
             targetStrafe = strafe / len;
             maxSpeed *= speedMul;
-            if (CONFIG.inertiaEnabled) {
-                const blend = expBlend(dt, CONFIG.inertia);
-                velFwd += (targetFwd * maxSpeed - velFwd) * blend;
-                velStrafe += (targetStrafe * maxSpeed - velStrafe) * blend;
+            if (useHorizontalInertia()) {
+                applyWalkVelocity(dt, targetFwd, targetStrafe, maxSpeed, false);
             } else {
                 velFwd = targetFwd * maxSpeed;
                 velStrafe = targetStrafe * maxSpeed;
             }
-        } else if (CONFIG.inertiaEnabled) {
+        } else if (useHorizontalInertia()) {
             carTurnInput = 0;
-            const blend = expBlend(dt, CONFIG.inertia);
-            velFwd += (0 - velFwd) * blend;
-            velStrafe += (0 - velStrafe) * blend;
-            snapInertiaVelocity();
+            applyWalkVelocity(dt, 0, 0, 0, true);
+            settleWalkVelocity();
         } else {
             velFwd = 0;
             velStrafe = 0;
@@ -5907,7 +6522,7 @@
             player.lng += dLng;
 
             // при ударе о стену гасим инерцию пропорционально фактическому сдвигу
-            if (CONFIG.inertiaEnabled && reqDist > 1e-6) {
+            if (useHorizontalInertia() && reqDist > 1e-6) {
                 const actDist = Math.hypot(dLat * M_PER_DEG_LAT, dLng * M_PER_DEG_LAT * cosLat);
                 if (actDist < reqDist * 0.99) {
                     const scale = actDist / reqDist;
@@ -6173,6 +6788,7 @@
         lastSimT = now;
         updateOverlayIdleBearing(dt);
         update(dt);
+        syncClimeSkyFromPosition(false);
         syncSpeedOverlay();
         const camChanged = applyCamera();
         let originShifted = false;
@@ -6186,6 +6802,7 @@
             Math.abs(velStrafe) > VEL_SNAP || Math.abs(carYawVel) > 0.05;
         const renderSimActive = camChanged || worldSimActive || !!heightAnim || !!jumpAnim;
         const sky3dActive = CONFIG.sky3dEnabled !== false && window.Geowalk3dSky;
+        const skyboxActive = CONFIG.skyboxEnabled !== false && window.GeowalkSkyboxThree;
         if (sky3dActive && ready) {
             Geowalk3dSky.tick({
                 dt,
@@ -6195,6 +6812,29 @@
                 originShifted,
                 cameraPitch: map.getPitch(),
                 cameraElevM: lastCameraAltM
+            });
+        }
+        let skyboxNeedsRepaint = false;
+        if (skyboxActive && ready) {
+            skyboxNeedsRepaint = !!GeowalkSkyboxThree.tick({
+                playerLng: player.lng,
+                playerLat: player.lat,
+                cameraElevM: lastCameraAltM,
+                playerYaw: map.getBearing(),
+                cameraPitch: map.getPitch()
+            });
+        }
+        let weatherNeedsRepaint = false;
+        const weatherActive = CONFIG.weatherMode && CONFIG.weatherMode !== "none" && window.GeowalkWeatherThree;
+        if (weatherActive && ready) {
+            weatherNeedsRepaint = !!GeowalkWeatherThree.tick({
+                dt,
+                playerLng: player.lng,
+                playerLat: player.lat,
+                cameraElevM: lastCameraAltM,
+                velFwd,
+                velStrafe,
+                playerYaw: player.yaw
             });
         }
         if (window.GeowalkCar3d && is3dMoveMode() && ready) {
@@ -6223,10 +6863,14 @@
                 lng: player.lng,
                 lat: player.lat,
                 ready: true,
-                dt
+                dt,
+                velFwd,
+                velStrafe,
+                playerYaw: player.yaw,
+                speed: player.speed
             });
         }
-        if (ready && (camChanged || originShifted || isCarLikeMode() || renderSimActive || sky3dActive || woodNeedsRepaint)) {
+        if (ready && (camChanged || originShifted || isCarLikeMode() || renderSimActive || sky3dActive || skyboxActive || skyboxNeedsRepaint || weatherActive || woodNeedsRepaint || weatherNeedsRepaint)) {
             map.triggerRepaint();
         }
         let carMapRect = null;

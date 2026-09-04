@@ -11,7 +11,7 @@
         enabled: false,
         treeSpritesEnabled: true,
         terrainOn: true,
-        density: 2,
+        density: 4,
         extrusionBaseM: 1,
         fillLayerId: "landcover_wood",
         vectorSource: "openmaptiles",
@@ -29,12 +29,21 @@
         positionJitter: 0.9,
         rotationStepDeg: 15,
         maxCount: 850,
-        treeSpriteSrc: "images/t_teee.png",
+        treeSpriteSrc: "clime/t_teee6.png",
         treeSpriteAspect: 1,
         treeSpriteScale: 5,
-        treeSpriteRadiusM: 800,
+        treeSpriteSizeSpread: 1,
+        treeSpriteRadiusM: 700,
         treeSpriteSpawnAnim: true,
         treeSpriteSpawnAnimSec: 1.5,
+        treeShakeEnabled: true,
+        treeAreaM: 8,
+        treeShakeMinSpeed: 0.6,
+        treeShakeImpulse: 0.28,
+        treeShakeSpring: 42,
+        treeShakeDamping: 5.5,
+        treeShakeMaxAngle: 0.38,
+        climeZonesEnabled: true,
         cellsPerPass: 28,
         woodQueryMoveM: 180,
         flushMinIntervalMs: 180,
@@ -62,9 +71,8 @@
     /** @type {{ bbox: number[], wood: object[], lng: number, lat: number }|null} */
     let woodSnapshot = null;
     let treeSpriteByKey = new Map();
-    let treeSpriteMat = null;
+    let treeSpriteMatBySrc = new Map();
     let treePlaneGeom = null;
-    let treeTex = null;
     let originShiftHandler = null;
 
     function repositionTreeSpritesOnOrigin() {
@@ -98,37 +106,43 @@
 
     function resetTreeSpriteCache() {
         clearAllTreeSprites();
-        treeSpriteMat = null;
+        for (const mat of treeSpriteMatBySrc.values()) {
+            if (mat.map) mat.map.dispose();
+            mat.dispose();
+        }
+        treeSpriteMatBySrc.clear();
         if (treePlaneGeom) {
             treePlaneGeom.dispose();
             treePlaneGeom = null;
         }
-        if (treeTex) {
-            treeTex.dispose();
-            treeTex = null;
+    }
+
+    function resolveTreeSpriteSrc(lng, lat) {
+        if (cfg && cfg.climeZonesEnabled !== false &&
+            window.GeowalkClimeZones &&
+            typeof GeowalkClimeZones.getTreeSpriteAt === "function" &&
+            GeowalkClimeZones.ready()) {
+            return GeowalkClimeZones.getTreeSpriteAt(lng, lat);
         }
+        return (cfg && cfg.treeSpriteSrc) || "clime/t_teee6.png";
     }
 
-    function randomYawForLngLat(lng, lat) {
-        const ix = Math.floor(lng * 1e5);
-        const iy = Math.floor(lat * 1e5);
-        return hash01(ix, iy, 9) * Math.PI * 2;
-    }
-
-    function getTreeSpriteMaterial(t3) {
-        if (treeSpriteMat) return treeSpriteMat;
-        const src = (cfg && cfg.treeSpriteSrc) || "images/t_teee.png";
-        treeTex = new t3.TextureLoader().load(src);
-        if (t3.SRGBColorSpace) treeTex.colorSpace = t3.SRGBColorSpace;
-        treeSpriteMat = new t3.MeshBasicMaterial({
-            map: treeTex,
+    function getTreeSpriteMaterial(t3, lng, lat) {
+        const src = resolveTreeSpriteSrc(lng, lat);
+        let mat = treeSpriteMatBySrc.get(src);
+        if (mat) return mat;
+        const tex = new t3.TextureLoader().load(src);
+        if (t3.SRGBColorSpace) tex.colorSpace = t3.SRGBColorSpace;
+        mat = new t3.MeshBasicMaterial({
+            map: tex,
             transparent: true,
             alphaTest: 0.35,
             side: t3.DoubleSide,
             depthTest: true,
             depthWrite: false
         });
-        return treeSpriteMat;
+        treeSpriteMatBySrc.set(src, mat);
+        return mat;
     }
 
     function extrusionRadiusM() {
@@ -178,7 +192,14 @@
         mat.alphaTest = o >= 1 ? 0.35 : 0;
     }
 
-    function createTreeBillboard(t3, T, mat, lng, lat, sizeM, base) {
+    function randomYawForLngLat(lng, lat) {
+        const ix = Math.floor(lng * 1e5);
+        const iy = Math.floor(lat * 1e5);
+        return hash01(ix, iy, 9) * Math.PI * 2;
+    }
+
+    function createTreeBillboard(t3, T, lng, lat, sizeM, base) {
+        const mat = getTreeSpriteMaterial(t3, lng, lat);
         const p = T.geoToLocal(lng, lat, base);
         if (!treePlaneGeom) {
             treePlaneGeom = new t3.PlaneGeometry(1, 1);
@@ -188,7 +209,12 @@
         const meshMat = mat.clone();
         const mesh = new t3.Mesh(treePlaneGeom, meshMat);
         mesh.userData.side = sizeM;
-        mesh.rotation.x = Math.PI / 2;
+        mesh.userData.baseRotX = Math.PI / 2;
+        mesh.userData.shakeX = 0;
+        mesh.userData.shakeY = 0;
+        mesh.userData.shakeVelX = 0;
+        mesh.userData.shakeVelY = 0;
+        mesh.rotation.x = mesh.userData.baseRotX;
         applyTreeSpriteScale(mesh, 1);
         applyTreeSpriteOpacity(mesh, cfg && cfg.treeSpriteSpawnAnim !== false ? 0 : 1);
         const group = new t3.Group();
@@ -237,7 +263,6 @@
             }
         }
 
-        const mat = getTreeSpriteMaterial(t3);
         const scaleMul = cfg.treeSpriteScale != null ? cfg.treeSpriteScale : 5;
         const animOn = cfg.treeSpriteSpawnAnim !== false;
 
@@ -251,8 +276,11 @@
             flng /= ring.length; flat /= ring.length;
             const h = (f.properties && f.properties.h) || 4;
             const base = cfg.extrusionBaseM || 1;
-            const sizeM = Math.max(2.5, h) * scaleMul;
-            const group = createTreeBillboard(t3, T, mat, flng, flat, sizeM, base);
+            const keyParts = entry.key.split(",");
+            const ix = parseInt(keyParts[0], 10) || 0;
+            const iy = parseInt(keyParts[1], 10) || 0;
+            const sizeM = Math.max(2.5, h) * scaleMul * treeSpriteSizeFactor(ix, iy);
+            const group = createTreeBillboard(t3, T, flng, flat, sizeM, base);
             group.userData.cellKey = entry.key;
             const mesh = group.children[0];
             if (animOn) {
@@ -271,6 +299,118 @@
             if (rec.mesh && rec.mesh.userData.spawnAnim) return true;
         }
         return false;
+    }
+
+    function hasActiveTreeShake() {
+        if (!cfg || cfg.treeShakeEnabled === false) return false;
+        for (const rec of treeSpriteByKey.values()) {
+            const ud = rec.mesh && rec.mesh.userData;
+            if (!ud) continue;
+            if (Math.abs(ud.shakeX) > 0.001 || Math.abs(ud.shakeY) > 0.001 ||
+                Math.abs(ud.shakeVelX) > 0.001 || Math.abs(ud.shakeVelY) > 0.001) return true;
+        }
+        return false;
+    }
+
+    function initTreeShake(mesh) {
+        if (!mesh || !mesh.userData) return;
+        mesh.userData.shakeX = 0;
+        mesh.userData.shakeY = 0;
+        mesh.userData.shakeVelX = 0;
+        mesh.userData.shakeVelY = 0;
+        if (mesh.userData.baseRotX == null) mesh.userData.baseRotX = Math.PI / 2;
+        mesh.rotation.x = mesh.userData.baseRotX;
+        mesh.rotation.y = 0;
+        mesh.rotation.z = 0;
+    }
+
+    function applyTreeShakeImpulse(group, mesh, playerLng, playerLat, impactEast, impactNorth, moveSpeed) {
+        const tLng = group.userData.geoLng;
+        const tLat = group.userData.geoLat;
+        if (tLng == null || tLat == null) return;
+
+        const cosLat = Math.cos(((playerLat + tLat) * 0.5) * DEG);
+        const toTreeEast = (tLng - playerLng) * M_PER_DEG_LAT * cosLat;
+        const toTreeNorth = (tLat - playerLat) * M_PER_DEG_LAT;
+        const toLen = Math.hypot(toTreeEast, toTreeNorth);
+        if (toLen < 1e-4) return;
+
+        const toward = (impactEast * toTreeEast + impactNorth * toTreeNorth) / toLen;
+        if (toward <= 0) return;
+
+        const ud = mesh.userData;
+        const impulseScale = cfg.treeShakeImpulse != null ? cfg.treeShakeImpulse : 0.28;
+        const impulse = impulseScale * toward * Math.min(1, moveSpeed / 7);
+        const worldSwayEast = -toTreeEast / toLen;
+        const worldSwayNorth = -toTreeNorth / toLen;
+        const localYaw = group.rotation.z;
+        const sinY = Math.sin(localYaw);
+        const cosY = Math.cos(localYaw);
+        ud.shakeVelX += (worldSwayEast * cosY + worldSwayNorth * sinY) * impulse;
+        ud.shakeVelY += (-worldSwayEast * sinY + worldSwayNorth * cosY) * impulse;
+    }
+
+    function checkTreeCollisions(state) {
+        if (!cfg || cfg.treeShakeEnabled === false || !state) return;
+        const speed = state.speed != null ? state.speed : 0;
+        const minSpeed = cfg.treeShakeMinSpeed != null ? cfg.treeShakeMinSpeed : 0.6;
+        if (speed < minSpeed) return;
+
+        const lng = state.lng;
+        const lat = state.lat;
+        if (lng == null || lat == null) return;
+
+        const yaw = (state.playerYaw != null ? state.playerYaw : 0) * DEG;
+        const sinB = Math.sin(yaw);
+        const cosB = Math.cos(yaw);
+        const velFwd = state.velFwd != null ? state.velFwd : 0;
+        const velStrafe = state.velStrafe != null ? state.velStrafe : 0;
+        const impactEast = velFwd * sinB + velStrafe * cosB;
+        const impactNorth = velFwd * cosB - velStrafe * sinB;
+        const moveSpeed = Math.hypot(impactEast, impactNorth);
+        if (moveSpeed < minSpeed * 0.5) return;
+
+        const areaM = cfg.treeAreaM != null ? cfg.treeAreaM : 8;
+
+        for (const rec of treeSpriteByKey.values()) {
+            const group = rec.group;
+            const mesh = rec.mesh;
+            if (!group || !mesh) continue;
+            if (!playerInTreeArea(lng, lat, group.userData.geoLng, group.userData.geoLat, areaM)) continue;
+            applyTreeShakeImpulse(group, mesh, lng, lat, impactEast, impactNorth, moveSpeed);
+        }
+    }
+
+    function tickTreeShake(dt) {
+        if (!hasActiveTreeShake()) return false;
+        const spring = cfg.treeShakeSpring != null ? cfg.treeShakeSpring : 42;
+        const damp = cfg.treeShakeDamping != null ? cfg.treeShakeDamping : 5.5;
+        const maxA = cfg.treeShakeMaxAngle != null ? cfg.treeShakeMaxAngle : 0.38;
+        let needsRepaint = false;
+
+        for (const rec of treeSpriteByKey.values()) {
+            const mesh = rec.mesh;
+            if (!mesh) continue;
+            const ud = mesh.userData;
+            ud.shakeVelX += (-spring * ud.shakeX - damp * ud.shakeVelX) * dt;
+            ud.shakeVelY += (-spring * ud.shakeY - damp * ud.shakeVelY) * dt;
+            ud.shakeX += ud.shakeVelX * dt;
+            ud.shakeY += ud.shakeVelY * dt;
+            ud.shakeX = Math.max(-maxA, Math.min(maxA, ud.shakeX));
+            ud.shakeY = Math.max(-maxA, Math.min(maxA, ud.shakeY));
+
+            if (Math.abs(ud.shakeX) < 0.0004 && Math.abs(ud.shakeY) < 0.0004 &&
+                Math.abs(ud.shakeVelX) < 0.0004 && Math.abs(ud.shakeVelY) < 0.0004) {
+                initTreeShake(mesh);
+                continue;
+            }
+
+            mesh.rotation.x = ud.baseRotX != null ? ud.baseRotX : Math.PI / 2;
+            mesh.rotation.y = ud.shakeY;
+            mesh.rotation.z = ud.shakeX;
+            needsRepaint = true;
+        }
+        return needsRepaint;
     }
 
     function tickTreeSpriteAnim(dt) {
@@ -316,6 +456,14 @@
         return north * north + east * east;
     }
 
+    function playerInTreeArea(playerLng, playerLat, treeLng, treeLat, sideM) {
+        const half = Math.max(0.2, sideM) * 0.5;
+        const cosLat = Math.cos(((playerLat + treeLat) * 0.5) * DEG);
+        const dEast = (playerLng - treeLng) * M_PER_DEG_LAT * cosLat;
+        const dNorth = (playerLat - treeLat) * M_PER_DEG_LAT;
+        return Math.abs(dEast) <= half && Math.abs(dNorth) <= half;
+    }
+
     function hashU32(ix, iy, salt) {
         let h = (ix | 0) * 374761393 + (iy | 0) * 668265263 + (salt | 0) * 1442695041;
         h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
@@ -328,7 +476,13 @@
     }
 
     function clampDensity(d) {
-        return Math.max(0.2, Math.min(2, d || 1));
+        return Math.max(0.2, Math.min(4, d || 1));
+    }
+
+    function effectiveGridCellM() {
+        const d = clampDensity(cfg.density);
+        const base = cfg.gridCellM != null ? cfg.gridCellM : 52;
+        return Math.max(24, base * Math.sqrt(2 / d));
     }
 
     function effectiveSpawnChance() {
@@ -336,7 +490,18 @@
     }
 
     function effectiveMaxCount() {
-        return Math.round(cfg.maxCount * Math.min(1.6, clampDensity(cfg.density)));
+        const d = clampDensity(cfg.density);
+        return Math.round(cfg.maxCount * Math.min(2.5, 0.25 + d * 0.5625));
+    }
+
+    function treeSpriteSizeFactor(ix, iy) {
+        const spread = cfg.treeSpriteSizeSpread != null ? cfg.treeSpriteSizeSpread : 1;
+        const s = Math.max(0, Math.min(1, spread));
+        if (s <= 0) return 1;
+        const t = hash01(ix, iy, 11);
+        const minMul = 1 - s;
+        const maxMul = 1 + s;
+        return minMul + t * (maxMul - minMul);
     }
 
     function zoomBucket(z) {
@@ -734,7 +899,7 @@
 
         const lng = playerLng != null ? playerLng : mapRef.getCenter().lng;
         const lat = playerLat != null ? playerLat : mapRef.getCenter().lat;
-        const cellM = cfg.gridCellM;
+        const cellM = effectiveGridCellM();
         const stepLat = metersToDegLat(cellM);
         const stepLng = metersToDegLng(cellM, lat);
         const bbox = bboxAround(lng, lat, genRadiusM());
@@ -851,6 +1016,13 @@
             cfg.density = clampDensity(options.density);
             changed = true;
         }
+        if (options.treeSpriteSizeSpread != null) {
+            const s = Math.max(0, Math.min(1, +options.treeSpriteSizeSpread || 0));
+            if (s !== cfg.treeSpriteSizeSpread) {
+                cfg.treeSpriteSizeSpread = s;
+                changed = true;
+            }
+        }
         if (options.enabled != null) cfg.enabled = options.enabled !== false;
         if (options.treeSpritesEnabled != null) {
             const next = options.treeSpritesEnabled !== false;
@@ -870,6 +1042,20 @@
             const next = options.treeSpriteSpawnAnim !== false;
             if (next !== cfg.treeSpriteSpawnAnim) {
                 cfg.treeSpriteSpawnAnim = next;
+                changed = true;
+            }
+        }
+        if (options.treeAreaM != null) {
+            const a = Math.max(0.5, Math.min(20, +options.treeAreaM || 0));
+            if (a !== cfg.treeAreaM) {
+                cfg.treeAreaM = a;
+                changed = true;
+            }
+        }
+        if (options.climeZonesEnabled != null) {
+            const next = options.climeZonesEnabled !== false;
+            if (next !== cfg.climeZonesEnabled) {
+                cfg.climeZonesEnabled = next;
                 changed = true;
             }
         }
@@ -933,6 +1119,7 @@
         if (!spritesOn) clearAllTreeSprites();
 
         if (optsChanged) {
+            resetTreeSpriteCache();
             clearCache();
             dirty = true;
             scheduleRebuild(0);
@@ -954,9 +1141,13 @@
             tickTreeSpriteAnim(dt);
             needsRepaint = true;
         }
+        if (cfg.treeShakeEnabled !== false) {
+            checkTreeCollisions(state);
+            if (tickTreeShake(dt)) needsRepaint = true;
+        }
 
-        const stepLat = metersToDegLat(cfg.gridCellM);
-        const stepLng = metersToDegLng(cfg.gridCellM, playerLat);
+        const stepLat = metersToDegLat(effectiveGridCellM());
+        const stepLng = metersToDegLng(effectiveGridCellM(), playerLat);
         const ix = Math.floor(playerLng / stepLng);
         const iy = Math.floor(playerLat / stepLat);
         if (lastCellIx === ix && lastCellIy === iy) return needsRepaint;

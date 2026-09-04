@@ -119,7 +119,7 @@
     function isAnchoredSceneObject(obj) {
         let p = obj;
         while (p) {
-            if (p.name === "geowalk-3dsky" || p.name === "geowalk-car-3d" || p.name === "geowalk-save-pin" || p.name === "geowalk-car-3d-talk") return true;
+            if (p.name === "geowalk-3dsky" || p.name === "geowalk-weather" || p.name === "geowalk-car-3d" || p.name === "geowalk-save-pin" || p.name === "geowalk-car-3d-talk") return true;
             p = p.parent;
         }
         return false;
