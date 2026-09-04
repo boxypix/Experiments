@@ -1316,7 +1316,12 @@
         </label>
         <label>Size (%) <input id="skybox-size-pct" type="number" min="10" max="500" step="5" /></label>
         <label>Cutoff <input id="skybox-cutoff" type="checkbox" /></label>
-        <label>No sky gradient <input id="skybox-no-gradient" type="checkbox" /></label>
+        <label>No sky gradient <input id="skybox-no-gradient" type="checkbox" checked /></label>
+        <label>Distant haze <input id="distant-haze-enabled" type="checkbox" /></label>
+        <label>Haze color <input id="distant-haze-color" type="text" placeholder="auto (sky)" /></label>
+        <label>Ground haze (0–1) <input id="distant-haze-ground" type="number" min="0" max="1" step="0.05" /></label>
+        <label>Horizon haze (0–1) <input id="distant-haze-horizon" type="number" min="0" max="1" step="0.05" /></label>
+        <div class="hint">MapLibre fog on distant terrain. Empty color = sky color. Works with No sky gradient.</div>
         <label>Rotation X (deg) <input id="skybox-rot-x" type="number" step="1" /></label>
         <label>Rotation Y (deg) <input id="skybox-rot-y" type="number" step="1" /></label>
         <label>Rotation Z (deg) <input id="skybox-rot-z" type="number" step="1" /></label>
@@ -2049,7 +2054,11 @@
         skyboxSizeBaseM: 1000,
         skyboxSizePct: 100,
         skyboxCutoffEnabled: false,
-        skyboxNoGradient: false,
+        skyboxNoGradient: true,
+        distantHazeEnabled: false,
+        distantHazeColor: "",
+        distantHazeGroundBlend: 0.65,
+        distantHazeHorizonBlend: 0.15,
         skyboxRotXDeg: 90,
         skyboxRotYDeg: 0,
         skyboxRotZDeg: 0,
@@ -2202,7 +2211,6 @@
 
     let activeStyleSkyKey = MAP1_STYLE_URL;
     let activeClimeId = null;
-    let styleBackgroundColor = null;
 
     function skyboxBlocksGradient() {
         return CONFIG.skyboxEnabled !== false && CONFIG.skyboxNoGradient === true;
@@ -2220,40 +2228,70 @@
         return Math.min(0.98, 0.55 + sizeM / 6000);
     }
 
-    function transparentSkyStyleSpec() {
+    // Только небо/горизонт прозрачные; дымка вдали — MapLibre fog в цвет неба.
+    function distantHazeActive() {
+        return skyboxBlocksGradient() && CONFIG.distantHazeEnabled !== false;
+    }
+
+    function distantHazeColorResolved() {
+        const raw = CONFIG.distantHazeColor;
+        if (raw && typeof raw === "string") {
+            const t = raw.trim();
+            if (/^#[0-9a-fA-F]{6}$/.test(t)) return t;
+            if (/^[0-9a-fA-F]{6}$/.test(t)) return "#" + t;
+        }
+        const sky = getActiveSky();
+        if (sky && sky.color) return sky.color;
+        if (sky && sky.horizonColor) return sky.horizonColor;
+        return "#79AEDA";
+    }
+
+    function distantHazeGroundBlend() {
+        const v = CONFIG.distantHazeGroundBlend;
+        return v != null ? Math.max(0, Math.min(1, v)) : 0.65;
+    }
+
+    function distantHazeHorizonBlend() {
+        const v = CONFIG.distantHazeHorizonBlend;
+        return v != null ? Math.max(0, Math.min(1, v)) : 0.15;
+    }
+
+    function noGradientSkyStyleSpec() {
+        if (!distantHazeActive()) {
+            return {
+                "sky-color": "rgba(0,0,0,0)",
+                "horizon-color": "rgba(0,0,0,0)",
+                "fog-color": "rgba(0,0,0,0)",
+                "sky-horizon-blend": 0,
+                "horizon-fog-blend": 0,
+                "fog-ground-blend": 0
+            };
+        }
         return {
             "sky-color": "rgba(0,0,0,0)",
             "horizon-color": "rgba(0,0,0,0)",
-            "fog-color": "rgba(0,0,0,0)",
+            "fog-color": distantHazeColorResolved(),
             "sky-horizon-blend": 0,
-            "horizon-fog-blend": 0,
-            "fog-ground-blend": 0
+            "horizon-fog-blend": distantHazeHorizonBlend(),
+            "fog-ground-blend": distantHazeGroundBlend()
         };
     }
 
-    function captureStyleBackground(style) {
-        if (!style || !Array.isArray(style.layers)) return;
-        const bg = style.layers.find(l => l.id === "background" && l.type === "background");
-        if (bg && bg.paint && bg.paint["background-color"] != null) {
-            styleBackgroundColor = bg.paint["background-color"];
-        }
-    }
-
-    function applySkyboxBackgroundState() {
-        if (!map || !map.getLayer("background")) return;
-        try {
-            if (skyboxBlocksGradient()) {
-                map.setPaintProperty("background", "background-color", "rgba(0,0,0,0)");
-            } else if (styleBackgroundColor != null) {
-                map.setPaintProperty("background", "background-color", styleBackgroundColor);
-            }
-        } catch (e) { /* ok */ }
+    function syncDistantHazePanelState() {
+        const applicable = skyboxBlocksGradient();
+        const hazeOn = CONFIG.distantHazeEnabled !== false;
+        if (elDistantHazeEnabled) elDistantHazeEnabled.disabled = !applicable;
+        const subDisabled = !applicable || !hazeOn;
+        if (elDistantHazeColor) elDistantHazeColor.disabled = subDisabled;
+        if (elDistantHazeGround) elDistantHazeGround.disabled = subDisabled;
+        if (elDistantHazeHorizon) elDistantHazeHorizon.disabled = subDisabled;
     }
 
     function syncSkyGradientPanelState() {
         const blocked = skyboxBlocksGradient();
         if (elSkyEnabled) elSkyEnabled.disabled = blocked;
         if (elDraw) elDraw.disabled = blocked || CONFIG.skyEnabled === false;
+        syncDistantHazePanelState();
     }
 
     function getActiveSky() {
@@ -2379,6 +2417,10 @@
     const elSkyboxSizePct = document.getElementById("skybox-size-pct");
     const elSkyboxCutoff = document.getElementById("skybox-cutoff");
     const elSkyboxNoGradient = document.getElementById("skybox-no-gradient");
+    const elDistantHazeEnabled = document.getElementById("distant-haze-enabled");
+    const elDistantHazeColor = document.getElementById("distant-haze-color");
+    const elDistantHazeGround = document.getElementById("distant-haze-ground");
+    const elDistantHazeHorizon = document.getElementById("distant-haze-horizon");
     const elSkyboxRotX = document.getElementById("skybox-rot-x");
     const elSkyboxRotY = document.getElementById("skybox-rot-y");
     const elSkyboxRotZ = document.getElementById("skybox-rot-z");
@@ -2589,6 +2631,10 @@
         if (elSkyboxSizePct) elSkyboxSizePct.value = CONFIG.skyboxSizePct != null ? CONFIG.skyboxSizePct : 100;
         if (elSkyboxCutoff) elSkyboxCutoff.checked = CONFIG.skyboxCutoffEnabled === true;
         if (elSkyboxNoGradient) elSkyboxNoGradient.checked = CONFIG.skyboxNoGradient === true;
+        if (elDistantHazeEnabled) elDistantHazeEnabled.checked = CONFIG.distantHazeEnabled !== false;
+        if (elDistantHazeColor) elDistantHazeColor.value = CONFIG.distantHazeColor || "";
+        if (elDistantHazeGround) elDistantHazeGround.value = distantHazeGroundBlend();
+        if (elDistantHazeHorizon) elDistantHazeHorizon.value = distantHazeHorizonBlend();
         if (elSkyboxRotX) elSkyboxRotX.value = CONFIG.skyboxRotXDeg != null ? CONFIG.skyboxRotXDeg : 90;
         if (elSkyboxRotY) elSkyboxRotY.value = CONFIG.skyboxRotYDeg != null ? CONFIG.skyboxRotYDeg : 0;
         if (elSkyboxRotZ) elSkyboxRotZ.value = CONFIG.skyboxRotZDeg != null ? CONFIG.skyboxRotZDeg : 0;
@@ -3393,11 +3439,11 @@
 
     function styleWithSkyFromConfig(style) {
         if (!style || typeof style !== "object") return style;
-        captureStyleBackground(style);
+        if (skyboxBlocksGradient()) return style;
         const sky = getActiveSky();
         if (!sky) return style;
         const next = Object.assign({}, style);
-        next.sky = skyboxBlocksGradient() ? transparentSkyStyleSpec() : skyToStyleSpec(sky);
+        next.sky = skyToStyleSpec(sky);
         return next;
     }
 
@@ -4346,6 +4392,42 @@
             if (map) map.triggerRepaint();
         });
     }
+    if (elDistantHazeEnabled) {
+        elDistantHazeEnabled.addEventListener("change", () => {
+            CONFIG.distantHazeEnabled = elDistantHazeEnabled.checked;
+            applySky();
+            syncDistantHazePanelState();
+            if (map) map.triggerRepaint();
+        });
+    }
+    if (elDistantHazeColor) {
+        elDistantHazeColor.addEventListener("change", () => {
+            CONFIG.distantHazeColor = elDistantHazeColor.value.trim();
+            applySky();
+            if (map) map.triggerRepaint();
+        });
+        elDistantHazeColor.addEventListener("input", () => {
+            CONFIG.distantHazeColor = elDistantHazeColor.value.trim();
+            applySky();
+            if (map) map.triggerRepaint();
+        });
+    }
+    if (elDistantHazeGround) {
+        bindNumber(elDistantHazeGround, v => {
+            CONFIG.distantHazeGroundBlend = Math.max(0, Math.min(1, v));
+            elDistantHazeGround.value = CONFIG.distantHazeGroundBlend;
+            applySky();
+            if (map) map.triggerRepaint();
+        });
+    }
+    if (elDistantHazeHorizon) {
+        bindNumber(elDistantHazeHorizon, v => {
+            CONFIG.distantHazeHorizonBlend = Math.max(0, Math.min(1, v));
+            elDistantHazeHorizon.value = CONFIG.distantHazeHorizonBlend;
+            applySky();
+            if (map) map.triggerRepaint();
+        });
+    }
     if (elSkyboxRotX) {
         bindNumber(elSkyboxRotX, v => {
             CONFIG.skyboxRotXDeg = v;
@@ -5184,19 +5266,16 @@
         try {
             if (!map) return;
             if (skyboxBlocksGradient()) {
-                map.setSky(transparentSkyStyleSpec());
-                applySkyboxBackgroundState();
+                map.setSky(noGradientSkyStyleSpec());
                 return;
             }
             if (CONFIG.skyEnabled === false) {
                 map.setSky(undefined);
-                applySkyboxBackgroundState();
                 return;
             }
             const sky = getActiveSky();
             if (!sky) return;
             map.setSky(skyToStyleSpec(sky));
-            applySkyboxBackgroundState();
         } catch (err) { console.warn("Sky:", err); }
     }
 
