@@ -321,6 +321,19 @@
         else m.addLayer(layerObj);
     }
 
+    function reassertLayer(m, afterLayerId) {
+        if (!m || !hasTHREE()) return;
+        if (afterLayerId) layerAfterId = afterLayerId;
+        if (!m.getLayer("geowalk-three")) {
+            ensureLayer(m);
+            return;
+        }
+        const before = layerInsertBefore(m, layerAfterId);
+        if (before) {
+            try { m.moveLayer("geowalk-three", before); } catch (e) { /* уже на месте */ }
+        }
+    }
+
     window.GeowalkThree = {
         setup(m, options) {
             map = m;
@@ -331,8 +344,9 @@
             } else if (origin.lng != null) {
                 setOrigin(origin.lng, origin.lat);
             }
-            ensureLayer(m);
+            reassertLayer(m, layerAfterId);
         },
+        reassertLayer,
         configure(options) {
             const o = options || {};
             let cacheChanged = false;

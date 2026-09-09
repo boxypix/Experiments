@@ -135,11 +135,11 @@
         if (t3.SRGBColorSpace) tex.colorSpace = t3.SRGBColorSpace;
         mat = new t3.MeshBasicMaterial({
             map: tex,
-            transparent: true,
-            alphaTest: 0.35,
-            side: t3.DoubleSide,
+            transparent: false,
+            alphaTest: 0.42,
+            side: t3.FrontSide,
             depthTest: true,
-            depthWrite: false
+            depthWrite: true
         });
         treeSpriteMatBySrc.set(src, mat);
         return mat;
@@ -188,8 +188,11 @@
         const mat = mesh.material;
         if (!mat) return;
         const o = opacity != null ? opacity : 1;
+        const solid = o >= 0.99;
         mat.opacity = o;
-        mat.alphaTest = o >= 1 ? 0.35 : 0;
+        mat.transparent = !solid;
+        mat.depthWrite = solid;
+        mat.alphaTest = solid ? 0.42 : Math.max(0.25, 0.42 * o);
     }
 
     function randomYawForLngLat(lng, lat) {

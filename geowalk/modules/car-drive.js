@@ -531,6 +531,13 @@
         sprite.style.setProperty("--car-frame", String(frame));
         sprite.style.setProperty("--car-flip", turnSpeed < 0 ? "-1" : "1");
         applyCarRoll(motion);
+        if (!dropAnim.active) {
+            if (motion && motion.buildingOccluded) {
+                root.style.opacity = "0.2";
+            } else {
+                root.style.opacity = "";
+            }
+        }
     }
 
     window.GeowalkCarDrive = {

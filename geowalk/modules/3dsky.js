@@ -11,7 +11,9 @@
         opacity: 0.92,
         driftSpeed: 0.012,
         animEnabled: true,
-        topDownHidePitchDeg: 50
+        topDownHidePitchDeg: 50,
+        fadeOutStartM: 1500,
+        fadeOutEndM: 1800
     };
 
     let cfg = null;
@@ -92,6 +94,33 @@
         if (s.cameraElevM != null && isFinite(s.cameraElevM)) cameraElevM = s.cameraElevM;
     }
 
+    function skyFadeFactor() {
+        if (cameraElevM == null || !cfg) return 1;
+        const start = cfg.fadeOutStartM != null ? cfg.fadeOutStartM : 1500;
+        const end = cfg.fadeOutEndM != null ? cfg.fadeOutEndM : 1800;
+        if (end <= start) return cameraElevM >= start ? 0 : 1;
+        if (cameraElevM <= start) return 1;
+        if (cameraElevM >= end) return 0;
+        return 1 - (cameraElevM - start) / (end - start);
+    }
+
+    function updateSkyPlaneOpacity() {
+        if (!skyPlane || !skyPlane.material || !cfg) return;
+        const base = cfg.opacity != null ? cfg.opacity : 0.92;
+        const factor = skyFadeFactor();
+        skyPlane.material.opacity = base * factor;
+    }
+
+    function applyMovementDrift(dx, dy) {
+        if (!cfg) return;
+        if (Math.abs(dx) <= 1e-4 && Math.abs(dy) <= 1e-4) return;
+        const sizeM = cfg.sizeM > 0 ? cfg.sizeM : 12000;
+        const rep = cfg.repeat > 0 ? cfg.repeat : 3.5;
+        const uvPerM = rep / sizeM;
+        driftU += dx * uvPerM;
+        driftV += dy * uvPerM;
+        updatePlaneTextureOffset();
+    }
     function updateSkyPlaneVisibility(GT) {
         if (!skyPlane) return;
         const hidePitch = cfg && cfg.topDownHidePitchDeg != null ? cfg.topDownHidePitchDeg : 50;
@@ -100,6 +129,8 @@
             const skyZ = resolveSkyAbsZM(GT) + playerLiftM;
             hide = cameraElevM > skyZ + 20 && cameraPitch < hidePitch + 20;
         }
+        updateSkyPlaneOpacity();
+        if (skyFadeFactor() <= 0.001) hide = true;
         skyPlane.visible = !hide;
     }
 
@@ -138,15 +169,8 @@
             skyPlane.position.set(0, 0, resolveSkyAbsZM(GT) + playerLiftM);
         }
 
-        if (!o.skipDrift && cfg.animEnabled !== false && lastPlayerLocalX != null && lastPlayerLocalY != null) {
-            const dx = local.x - lastPlayerLocalX;
-            const dy = local.y - lastPlayerLocalY;
-            if (Math.abs(dx) > 1e-4 || Math.abs(dy) > 1e-4) {
-                const sizeM = cfg.sizeM > 0 ? cfg.sizeM : 12000;
-                driftU += dx / sizeM;
-                driftV += dy / sizeM;
-                updatePlaneTextureOffset();
-            }
+        if (!o.skipDrift && lastPlayerLocalX != null && lastPlayerLocalY != null) {
+            applyMovementDrift(local.x - lastPlayerLocalX, local.y - lastPlayerLocalY);
         }
 
         lastPlayerLocalX = local.x;
@@ -295,6 +319,8 @@
             if (s.opacity != null) cfg.opacity = s.opacity;
             if (s.driftSpeed != null) cfg.driftSpeed = s.driftSpeed;
             if (s.animEnabled != null) cfg.animEnabled = s.animEnabled !== false;
+            if (s.fadeOutStartM != null) cfg.fadeOutStartM = s.fadeOutStartM;
+            if (s.fadeOutEndM != null) cfg.fadeOutEndM = s.fadeOutEndM;
             applyPlayerState(s);
             if (s.altM != null) resetSkyHeight();
             cfg.enabled = want;

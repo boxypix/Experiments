@@ -1298,8 +1298,8 @@
         <label>FPS limit (0=off) <input id="fps-limit" type="number" min="0" step="1" /></label>
         <label>Sky enabled <input id="sky-enabled" type="checkbox" checked /></label>
         <label>3dsky enabled <input id="sky3d-enabled" type="checkbox" /></label>
-        <label>3dsky animation <input id="sky3d-anim" type="checkbox" /></label>
-        <label>3dsky height (m) <input id="sky3d-alt" type="number" min="0" step="50" /></label>
+        <label>3dsky animation <input id="sky3d-anim" type="checkbox" checked /></label>
+        <label>3dsky height (m) <input id="sky3d-alt" type="number" min="-50000" step="50" /></label>
         <div class="sep"></div>
         <div class="title">Skybox</div>
         <label>Cube skybox <input id="skybox-enabled" type="checkbox" checked /></label>
@@ -1317,7 +1317,7 @@
         <label>Size (%) <input id="skybox-size-pct" type="number" min="10" max="500" step="5" /></label>
         <label>Cutoff <input id="skybox-cutoff" type="checkbox" /></label>
         <label>No sky gradient <input id="skybox-no-gradient" type="checkbox" checked /></label>
-        <label>Distant haze <input id="distant-haze-enabled" type="checkbox" /></label>
+        <label>Distant haze <input id="distant-haze-enabled" type="checkbox" checked /></label>
         <label>Haze color <input id="distant-haze-color" type="text" placeholder="auto (sky)" /></label>
         <label>Ground haze (0–1) <input id="distant-haze-ground" type="number" min="0" max="1" step="0.05" /></label>
         <label>Horizon haze (0–1) <input id="distant-haze-horizon" type="number" min="0" max="1" step="0.05" /></label>
@@ -1427,6 +1427,15 @@
         <label>Three terrain cache <input id="three-terrain-cache" type="number" min="64" max="4096" step="64" /></label>
         <label>3D pixel ratio (× display) <input id="three-pixel-ratio" type="number" min="0.25" max="1" step="0.05" /></label>
         <div class="hint">Three origin / cache — faster over long distances. Lower 3D pixel ratio = less GPU load.</div>
+        <div class="sep"></div>
+        <div class="title">Buildings</div>
+        <label>Building palette colors <input id="building-palette-enabled" type="checkbox" checked /></label>
+        <label>Color seed <input id="building-palette-seed" type="number" min="0" max="9999" step="1" /></label>
+        <label>Cluster radius (m) <input id="building-palette-cluster-m" type="number" min="0" max="200" step="1" /></label>
+        <label>Random offset per building <input id="building-palette-random-offset-enabled" type="checkbox" checked /></label>
+        <label>Random offset max (m) <input id="building-palette-random-offset-m" type="number" min="0.05" max="5" step="0.05" /></label>
+        <label>Offset XY (m) <input id="building-palette-offset-xy" type="number" min="-5" max="5" step="0.01" /></label>
+        <div class="hint">5 tones on building-3d. Random offset shifts each footprint in GeoJSON (MapLibre translate is layer-wide only).</div>
         <div class="sep"></div>
         <div class="title">3D post-processing</div>
         <label>Tilt shift <input id="postfx-tilt-enabled" type="checkbox" /></label>
@@ -1909,7 +1918,7 @@
         // 3D рельеф (DEM от AWS, terrarium). 0 = выключен.
         terrainExaggeration: 1,
         // Макс. zoom DEM-тайлов (0–15): ниже — грубее рельеф, быстрее.
-        terrainDemMaxZoom: 11,
+        terrainDemMaxZoom: 14,
         threeOriginShiftM: 3000,
         threeTerrainCacheMax: 1024,
         threeTerrainCacheCell: 0.00004,
@@ -2041,12 +2050,14 @@
         clip3dEnabled: true,
         clip3dFactor: 0.4,
         sky3dEnabled: false,
-        sky3dAnimEnabled: false,
+        sky3dAnimEnabled: true,
         sky3dSrc: "images/cloud.png",
         sky3dAltM: 1800,
         sky3dSizeM: 12000,
         sky3dRepeat: 3.5,
         sky3dOpacity: 0.92,
+        sky3dFadeOutStartM: 1500,
+        sky3dFadeOutEndM: 1800,
         skyEnabled: true,
         skyboxEnabled: true,
         skyboxId: "skybox1",
@@ -2055,10 +2066,10 @@
         skyboxSizePct: 100,
         skyboxCutoffEnabled: false,
         skyboxNoGradient: true,
-        distantHazeEnabled: false,
+        distantHazeEnabled: true,
         distantHazeColor: "",
-        distantHazeGroundBlend: 0.65,
-        distantHazeHorizonBlend: 0.15,
+        distantHazeGroundBlend: 0.98,
+        distantHazeHorizonBlend: 0.93,
         skyboxRotXDeg: 90,
         skyboxRotYDeg: 0,
         skyboxRotZDeg: 0,
@@ -2072,7 +2083,13 @@
         postFxMotionBlurEnabled: false,
         postFxMotionBlurAmount: 0.55,
         postFxSharpenEnabled: false,
-        postFxSharpenAmount: 0.45
+        postFxSharpenAmount: 0.45,
+        buildingPaletteEnabled: true,
+        buildingPaletteSeed: 1,
+        buildingPaletteClusterM: 40,
+        buildingPaletteRandomOffsetEnabled: true,
+        buildingPaletteRandomOffsetM: 1.2,
+        buildingPaletteOffsetXY: 0
         };
 
         function merge(o, source) {
@@ -2133,6 +2150,40 @@
     if (CONFIG.weatherHeightM == null && CONFIG.weatherRainHeightM != null) {
         CONFIG.weatherHeightM = CONFIG.weatherRainHeightM;
     }
+
+    function buildingPaletteIsEnabled() {
+        return CONFIG.buildingPaletteEnabled !== false;
+    }
+
+    function buildingPaletteRandomOffsetEnabled() {
+        return buildingPaletteIsEnabled() && CONFIG.buildingPaletteRandomOffsetEnabled === true;
+    }
+
+    function normalizeBuildingPaletteConfig() {
+        if (buildingPaletteIsEnabled()) CONFIG.buildingPaletteEnabled = true;
+        if (CONFIG.buildingPaletteSeed == null || !isFinite(+CONFIG.buildingPaletteSeed)) {
+            CONFIG.buildingPaletteSeed = 1;
+        } else {
+            CONFIG.buildingPaletteSeed = Math.max(0, Math.min(9999, CONFIG.buildingPaletteSeed | 0));
+        }
+        if (CONFIG.buildingPaletteOffsetXY == null || !isFinite(+CONFIG.buildingPaletteOffsetXY)) {
+            CONFIG.buildingPaletteOffsetXY = 0;
+        } else {
+            CONFIG.buildingPaletteOffsetXY = Math.max(-5, Math.min(5, +CONFIG.buildingPaletteOffsetXY));
+        }
+        if (CONFIG.buildingPaletteClusterM == null || !isFinite(+CONFIG.buildingPaletteClusterM)) {
+            CONFIG.buildingPaletteClusterM = 40;
+        } else {
+            CONFIG.buildingPaletteClusterM = Math.max(0, Math.min(200, +CONFIG.buildingPaletteClusterM));
+        }
+        CONFIG.buildingPaletteRandomOffsetEnabled = CONFIG.buildingPaletteRandomOffsetEnabled === true;
+        if (CONFIG.buildingPaletteRandomOffsetM == null || !isFinite(+CONFIG.buildingPaletteRandomOffsetM)) {
+            CONFIG.buildingPaletteRandomOffsetM = 1.2;
+        } else {
+            CONFIG.buildingPaletteRandomOffsetM = Math.max(0.05, Math.min(5, +CONFIG.buildingPaletteRandomOffsetM));
+        }
+    }
+    normalizeBuildingPaletteConfig();
 
     const CAR_SPRITE_IDS = [1, 2, 3, 4];
     const CAR_SPRITE_DEFAULT_ID = 1;
@@ -2248,12 +2299,12 @@
 
     function distantHazeGroundBlend() {
         const v = CONFIG.distantHazeGroundBlend;
-        return v != null ? Math.max(0, Math.min(1, v)) : 0.65;
+        return v != null ? Math.max(0, Math.min(1, v)) : 0.98;
     }
 
     function distantHazeHorizonBlend() {
         const v = CONFIG.distantHazeHorizonBlend;
-        return v != null ? Math.max(0, Math.min(1, v)) : 0.15;
+        return v != null ? Math.max(0, Math.min(1, v)) : 0.93;
     }
 
     function noGradientSkyStyleSpec() {
@@ -2434,6 +2485,12 @@
     const elThreeOriginShift = document.getElementById("three-origin-shift");
     const elThreeTerrainCache = document.getElementById("three-terrain-cache");
     const elThreePixelRatio = document.getElementById("three-pixel-ratio");
+    const elBuildingPaletteEnabled = document.getElementById("building-palette-enabled");
+    const elBuildingPaletteSeed = document.getElementById("building-palette-seed");
+    const elBuildingPaletteClusterM = document.getElementById("building-palette-cluster-m");
+    const elBuildingPaletteRandomOffsetEnabled = document.getElementById("building-palette-random-offset-enabled");
+    const elBuildingPaletteRandomOffsetM = document.getElementById("building-palette-random-offset-m");
+    const elBuildingPaletteOffsetXY = document.getElementById("building-palette-offset-xy");
     const elPostFxTiltEnabled = document.getElementById("postfx-tilt-enabled");
     const elPostFxTiltBlur = document.getElementById("postfx-tilt-blur");
     const elPostFxTiltBand = document.getElementById("postfx-tilt-band");
@@ -2619,7 +2676,7 @@
         if (elSkyEnabled) elSkyEnabled.checked = CONFIG.skyEnabled !== false;
         if (elSky3dEnabled) elSky3dEnabled.checked = CONFIG.sky3dEnabled !== false;
         if (elSky3dAnim) {
-            elSky3dAnim.checked = CONFIG.sky3dAnimEnabled === true;
+            elSky3dAnim.checked = CONFIG.sky3dAnimEnabled !== false;
             elSky3dAnim.disabled = CONFIG.sky3dEnabled === false;
         }
         if (elSky3dAlt) {
@@ -2655,6 +2712,27 @@
         if (elThreeTerrainCache) elThreeTerrainCache.value = CONFIG.threeTerrainCacheMax != null ? CONFIG.threeTerrainCacheMax : 1024;
         if (elThreePixelRatio) {
             elThreePixelRatio.value = CONFIG.threePixelRatioScale != null ? CONFIG.threePixelRatioScale : 0.6;
+        }
+        if (elBuildingPaletteEnabled) elBuildingPaletteEnabled.checked = buildingPaletteIsEnabled();
+        if (elBuildingPaletteSeed) {
+            elBuildingPaletteSeed.value = CONFIG.buildingPaletteSeed != null ? CONFIG.buildingPaletteSeed : 1;
+            elBuildingPaletteSeed.disabled = !buildingPaletteIsEnabled();
+        }
+        if (elBuildingPaletteClusterM) {
+            elBuildingPaletteClusterM.value = CONFIG.buildingPaletteClusterM != null ? CONFIG.buildingPaletteClusterM : 40;
+            elBuildingPaletteClusterM.disabled = !buildingPaletteIsEnabled();
+        }
+        if (elBuildingPaletteRandomOffsetEnabled) {
+            elBuildingPaletteRandomOffsetEnabled.checked = CONFIG.buildingPaletteRandomOffsetEnabled === true;
+            elBuildingPaletteRandomOffsetEnabled.disabled = !buildingPaletteIsEnabled();
+        }
+        if (elBuildingPaletteRandomOffsetM) {
+            elBuildingPaletteRandomOffsetM.value = CONFIG.buildingPaletteRandomOffsetM != null ? CONFIG.buildingPaletteRandomOffsetM : 1.2;
+            elBuildingPaletteRandomOffsetM.disabled = !buildingPaletteIsEnabled() || !buildingPaletteRandomOffsetEnabled();
+        }
+        if (elBuildingPaletteOffsetXY) {
+            elBuildingPaletteOffsetXY.value = CONFIG.buildingPaletteOffsetXY != null ? CONFIG.buildingPaletteOffsetXY : 0;
+            elBuildingPaletteOffsetXY.disabled = !buildingPaletteIsEnabled() || buildingPaletteRandomOffsetEnabled();
         }
         if (elPostFxTiltEnabled) elPostFxTiltEnabled.checked = CONFIG.postFxTiltShiftEnabled === true;
         if (elPostFxTiltBlur) elPostFxTiltBlur.value = CONFIG.postFxTiltShiftBlurPx != null ? CONFIG.postFxTiltShiftBlurPx : 8;
@@ -2882,7 +2960,9 @@
             sizeM: CONFIG.sky3dSizeM != null ? CONFIG.sky3dSizeM : 12000,
             repeat: CONFIG.sky3dRepeat != null ? CONFIG.sky3dRepeat : 3.5,
             opacity: CONFIG.sky3dOpacity != null ? CONFIG.sky3dOpacity : 0.92,
-            animEnabled: CONFIG.sky3dAnimEnabled === true,
+            fadeOutStartM: CONFIG.sky3dFadeOutStartM != null ? CONFIG.sky3dFadeOutStartM : 1500,
+            fadeOutEndM: CONFIG.sky3dFadeOutEndM != null ? CONFIG.sky3dFadeOutEndM : 1800,
+            animEnabled: CONFIG.sky3dAnimEnabled !== false,
             playerLng: player.lng,
             playerLat: player.lat
         };
@@ -2952,7 +3032,7 @@
         if (window.GeowalkThree) {
             try {
                 GeowalkThree.setup(map, {
-                    afterLayer: CONFIG.buildingsLayerId,
+                    afterLayer: topBuildingExtrusionLayerId(),
                     originLng: lng,
                     originLat: lat
                 });
@@ -3612,6 +3692,616 @@
         }
     }
 
+    let buildingPaletteOrig = null;
+    let buildingPaletteActive = false;
+    let buildingPaletteBootRetries = 0;
+    const BUILDING_PALETTE_BOOT_MAX = 12;
+
+    function resetBuildingPaletteOrig() {
+        buildingPaletteOrig = null;
+    }
+
+    function syncBuildingPalettePanelUI() {
+        const on = buildingPaletteIsEnabled();
+        if (elBuildingPaletteEnabled) elBuildingPaletteEnabled.checked = on;
+        if (elBuildingPaletteSeed) elBuildingPaletteSeed.disabled = !on;
+        if (elBuildingPaletteClusterM) elBuildingPaletteClusterM.disabled = !on;
+        if (elBuildingPaletteRandomOffsetEnabled) {
+            elBuildingPaletteRandomOffsetEnabled.disabled = !on;
+        }
+        if (elBuildingPaletteRandomOffsetM) {
+            elBuildingPaletteRandomOffsetM.disabled = !on || !buildingPaletteRandomOffsetEnabled();
+        }
+        if (elBuildingPaletteOffsetXY) {
+            elBuildingPaletteOffsetXY.disabled = !on || buildingPaletteRandomOffsetEnabled();
+        }
+    }
+
+    function buildingExtrusionLayerId() {
+        return CONFIG.buildingsLayerId || "building-3d";
+    }
+
+    function buildingFootprintLayerId() {
+        return "building";
+    }
+
+    function isBuildingExtrusionLayer(layerId) {
+        if (!map || !layerId) return false;
+        try {
+            const layer = map.getLayer(layerId);
+            return !!layer && layer.type === "fill-extrusion";
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function ensureBuildingPaletteOrig() {
+        if (buildingPaletteOrig || !map) return;
+        let style;
+        try { style = map.getStyle(); } catch (e) { return; }
+        if (!style || !style.layers) return;
+        const extrusionId = buildingExtrusionLayerId();
+        const footprintId = buildingFootprintLayerId();
+        const orig = {
+            extrusionId,
+            footprintId,
+            extrusion: null,
+            verticalGradient: null,
+            translate: null,
+            translateAnchor: null,
+            filter: null,
+            extrusionVisibility: null,
+            footprintVisibility: null
+        };
+        for (const layer of style.layers) {
+            if (layer.id === extrusionId && layer.type === "fill-extrusion") {
+                orig.filter = layer.filter != null ? layer.filter : null;
+                orig.extrusionVisibility = (layer.layout && layer.layout.visibility) || "visible";
+            }
+            if (layer.id === extrusionId && layer.type === "fill-extrusion" && layer.paint) {
+                orig.extrusion = layer.paint["fill-extrusion-color"];
+                if (layer.paint["fill-extrusion-vertical-gradient"] != null) {
+                    orig.verticalGradient = layer.paint["fill-extrusion-vertical-gradient"];
+                }
+                if (layer.paint["fill-extrusion-translate"] != null) {
+                    orig.translate = layer.paint["fill-extrusion-translate"];
+                }
+                if (layer.paint["fill-extrusion-translate-anchor"] != null) {
+                    orig.translateAnchor = layer.paint["fill-extrusion-translate-anchor"];
+                }
+            }
+            if (layer.id === footprintId && layer.type === "fill") {
+                orig.footprintVisibility = (layer.layout && layer.layout.visibility) || "visible";
+            }
+        }
+        buildingPaletteOrig = orig;
+    }
+
+    const BUILDING_PALETTE = [
+        "#1a1a1a",
+        "#b3b3b3",
+        "#f8f8f8",
+        "#e4d4b8",
+        "#c9dce8"
+    ];
+
+    function buildingVectorSourceId() {
+        return CONFIG.buildingsSourceId || "openmaptiles";
+    }
+
+    function buildingVectorSourceLayer() {
+        return CONFIG.buildingsSourceLayer || "building";
+    }
+
+    function paletteBucketForClusterKey(key, seed) {
+        const sid = Math.max(0, Math.min(9999, seed | 0));
+        let n = Number(key);
+        if (!isFinite(n)) n = 0;
+        n = Math.abs(Math.imul(n | 0, 17) + sid);
+        return n % BUILDING_PALETTE.length;
+    }
+
+    function paletteBucketForFeatureId(id, seed) {
+        return paletteBucketForClusterKey(id, seed);
+    }
+
+    function buildingPaletteClusterM() {
+        const v = CONFIG.buildingPaletteClusterM != null ? +CONFIG.buildingPaletteClusterM : 40;
+        return isFinite(v) ? Math.max(0, Math.min(200, v)) : 40;
+    }
+
+    function buildingFeatureCentroid(f) {
+        const g = f.geometry;
+        if (!g) return null;
+        const polys = g.type === "Polygon" ? [g.coordinates]
+            : g.type === "MultiPolygon" ? g.coordinates : null;
+        if (!polys || !polys.length) return null;
+        const ring = polys[0][0];
+        if (!ring || ring.length < 3) return null;
+        let sx = 0;
+        let sy = 0;
+        let c = 0;
+        const limit = ring.length - 1;
+        for (let i = 0; i < limit; i++) {
+            sx += ring[i][0];
+            sy += ring[i][1];
+            c++;
+        }
+        if (!c) return null;
+        return { lng: sx / c, lat: sy / c };
+    }
+
+    function buildingDistMetersSq(lng1, lat1, lng2, lat2) {
+        const north = (lat2 - lat1) * M_PER_DEG_LAT;
+        const east = (lng2 - lng1) * M_PER_DEG_LAT * Math.cos(((lat1 + lat2) * 0.5) * DEG);
+        return north * north + east * east;
+    }
+
+    function buildingPaletteBucketsByCluster(feats, seed) {
+        const bucketsById = new Map();
+        const clusterM = buildingPaletteClusterM();
+        const entries = [];
+        for (const f of feats) {
+            if (f.id == null || !isBuildingBaseFootprintFeature(f.properties)) continue;
+            const c = buildingFeatureCentroid(f);
+            if (!c) continue;
+            entries.push({ id: f.id, lng: c.lng, lat: c.lat });
+        }
+        if (!entries.length) return bucketsById;
+
+        if (clusterM <= 0) {
+            for (const e of entries) bucketsById.set(e.id, paletteBucketForFeatureId(e.id, seed));
+            return bucketsById;
+        }
+
+        const clusterRSq = clusterM * clusterM;
+        const n = entries.length;
+        const parent = new Array(n);
+        for (let i = 0; i < n; i++) parent[i] = i;
+
+        function find(i) {
+            while (parent[i] !== i) {
+                parent[i] = parent[parent[i]];
+                i = parent[i];
+            }
+            return i;
+        }
+        function unite(a, b) {
+            const ra = find(a);
+            const rb = find(b);
+            if (ra !== rb) parent[rb] = ra;
+        }
+
+        const grid = new Map();
+        function gridKey(lng, lat) {
+            const cosLat = Math.cos(lat * DEG);
+            const cx = Math.floor((lng * M_PER_DEG_LAT * cosLat) / clusterM);
+            const cy = Math.floor((lat * M_PER_DEG_LAT) / clusterM);
+            return cx + "," + cy;
+        }
+
+        for (let i = 0; i < n; i++) {
+            const key = gridKey(entries[i].lng, entries[i].lat);
+            if (!grid.has(key)) grid.set(key, []);
+            grid.get(key).push(i);
+        }
+
+        for (let i = 0; i < n; i++) {
+            const ei = entries[i];
+            const cosLat = Math.cos(ei.lat * DEG);
+            const cx = Math.floor((ei.lng * M_PER_DEG_LAT * cosLat) / clusterM);
+            const cy = Math.floor((ei.lat * M_PER_DEG_LAT) / clusterM);
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    const cell = grid.get((cx + dx) + "," + (cy + dy));
+                    if (!cell) continue;
+                    for (const j of cell) {
+                        if (j <= i) continue;
+                        const ej = entries[j];
+                        if (buildingDistMetersSq(ei.lng, ei.lat, ej.lng, ej.lat) <= clusterRSq) unite(i, j);
+                    }
+                }
+            }
+        }
+
+        const clusterKey = new Map();
+        for (let i = 0; i < n; i++) {
+            const root = find(i);
+            const id = Number(entries[i].id);
+            const prev = clusterKey.get(root);
+            if (prev == null || id < prev) clusterKey.set(root, id);
+        }
+        for (let i = 0; i < n; i++) {
+            const root = find(i);
+            const key = clusterKey.get(root);
+            bucketsById.set(entries[i].id, paletteBucketForClusterKey(key, seed));
+        }
+        return bucketsById;
+    }
+
+    function isBuildingBaseFootprintFeature(props) {
+        if (!props) return true;
+        const minH = props.render_min_height != null ? +props.render_min_height : 0;
+        return !isFinite(minH) || minH <= 0;
+    }
+
+    function buildingExtrusionBaseFootprintFilter(originalFilter) {
+        const skipParts = ["any",
+            ["!", ["has", "render_min_height"]],
+            ["==", ["to-number", ["get", "render_min_height"]], 0]
+        ];
+        if (!originalFilter || (originalFilter[0] === "all" && originalFilter.length === 1)) {
+            return ["all", skipParts];
+        }
+        if (originalFilter[0] === "all") {
+            return ["all"].concat(originalFilter.slice(1), [skipParts]);
+        }
+        return ["all", originalFilter, skipParts];
+    }
+
+    function buildingPaletteKeyExpression(seed) {
+        const sid = Math.max(0, Math.min(9999, seed | 0));
+        const idNum = ["to-number", ["coalesce", ["id"], 0]];
+        const height = ["to-number", ["coalesce", ["get", "render_height"], 0]];
+        return [
+            "case",
+            [">", idNum, 0],
+            ["floor", ["abs", ["+", ["*", idNum, 17], sid]]],
+            ["floor", ["abs", ["+", ["*", height, 17], sid]]]
+        ];
+    }
+
+    function buildingPaletteColorExpression(seed) {
+        const bucket = ["%", buildingPaletteKeyExpression(seed), BUILDING_PALETTE.length];
+        const expr = ["match", bucket];
+        for (let i = 0; i < BUILDING_PALETTE.length; i++) {
+            expr.push(i, BUILDING_PALETTE[i]);
+        }
+        expr.push(BUILDING_PALETTE[1]);
+        return expr;
+    }
+
+    function buildingPaletteColorExpressionWithFeatureState(seed) {
+        const expr = ["match", ["coalesce", ["feature-state", "palette"], -1]];
+        for (let i = 0; i < BUILDING_PALETTE.length; i++) {
+            expr.push(i, BUILDING_PALETTE[i]);
+        }
+        expr.push(buildingPaletteColorExpression(seed));
+        return expr;
+    }
+
+    let buildingPaletteFeatureStateTime = 0;
+
+    function clearBuildingPaletteFeatureState() {
+        if (!map) return;
+        let feats;
+        try {
+            feats = map.querySourceFeatures(buildingVectorSourceId(), { sourceLayer: buildingVectorSourceLayer() });
+        } catch (e) { return; }
+        const source = buildingVectorSourceId();
+        const sourceLayer = buildingVectorSourceLayer();
+        for (const f of feats) {
+            if (f.id == null) continue;
+            try { map.removeFeatureState({ source, sourceLayer, id: f.id }); } catch (e) { /* ok */ }
+        }
+    }
+
+    function buildingPaletteGeoSourceId() {
+        return "geowalk-building-palette-geo";
+    }
+
+    function buildingPaletteGeoLayerId() {
+        return "geowalk-building-palette-3d";
+    }
+
+    function hideBuildingPaletteGeoLayer() {
+        if (!map) return;
+        const layerId = buildingPaletteGeoLayerId();
+        if (map.getLayer(layerId)) {
+            try { map.setLayoutProperty(layerId, "visibility", "none"); } catch (e) { /* ok */ }
+        }
+    }
+
+    function ensureBuildingPaletteGeoLayer() {
+        if (!map) return false;
+        const sourceId = buildingPaletteGeoSourceId();
+        const layerId = buildingPaletteGeoLayerId();
+        try {
+            if (!map.getSource(sourceId)) {
+                map.addSource(sourceId, {
+                    type: "geojson",
+                    data: { type: "FeatureCollection", features: [] }
+                });
+            }
+            if (!map.getLayer(layerId)) {
+                const extrusionId = buildingExtrusionLayerId();
+                const layers = map.getStyle().layers;
+                let beforeId;
+                const bIdx = layers.findIndex(l => l.id === extrusionId);
+                if (bIdx >= 0 && bIdx < layers.length - 1) beforeId = layers[bIdx + 1].id;
+                map.addLayer({
+                    id: layerId,
+                    type: "fill-extrusion",
+                    source: sourceId,
+                    paint: {
+                        "fill-extrusion-color": ["get", "color"],
+                        "fill-extrusion-height": ["to-number", ["coalesce", ["get", "render_height"], 12]],
+                        "fill-extrusion-base": ["to-number", ["coalesce", ["get", "render_min_height"], 0]],
+                        "fill-extrusion-opacity": 1,
+                        "fill-extrusion-vertical-gradient": false,
+                        "fill-extrusion-translate-anchor": "map",
+                        "fill-extrusion-translate": [0, 0]
+                    }
+                }, beforeId);
+                reassertRenderHierarchy();
+            }
+            map.setLayoutProperty(layerId, "visibility", "visible");
+            return true;
+        } catch (err) {
+            console.warn("Building palette geo layer:", err);
+            return false;
+        }
+    }
+
+    function buildingRingsFromFeature(f) {
+        const g = f.geometry;
+        if (!g) return [];
+        if (g.type === "Polygon") return g.coordinates[0] ? [g.coordinates[0]] : [];
+        if (g.type === "MultiPolygon") return g.coordinates.map(p => p[0]).filter(Boolean);
+        return [];
+    }
+
+    function offsetBuildingRing(ring, eastM, northM, refLat) {
+        if (!ring || ring.length < 3) return null;
+        const cosLat = Math.cos(refLat * DEG);
+        const dLng = eastM / (M_PER_DEG_LAT * cosLat);
+        const dLat = northM / M_PER_DEG_LAT;
+        return ring.map(p => [p[0] + dLng, p[1] + dLat]);
+    }
+
+    function buildBuildingPaletteGeoJson(feats, seed) {
+        const bucketsById = buildingPaletteBucketsByCluster(feats, seed);
+        const randomOff = buildingPaletteRandomOffsetEnabled();
+        const uniformOff = buildingPaletteOffsetM();
+        const features = [];
+        for (const f of feats) {
+            if (f.id == null || !isBuildingBaseFootprintFeature(f.properties)) continue;
+            const bucket = bucketsById.get(f.id);
+            if (bucket == null) continue;
+            const rings = buildingRingsFromFeature(f);
+            if (!rings.length) continue;
+            const centroid = buildingFeatureCentroid(f);
+            const refLat = centroid ? centroid.lat : 0;
+            const offEast = randomOff ? buildingRandomOffsetM(f.id, seed, 0) : uniformOff;
+            const offNorth = randomOff ? buildingRandomOffsetM(f.id, seed, 1) : uniformOff;
+            const props = f.properties || {};
+            const rawH = props.render_height != null ? +props.render_height : 12;
+            const height = isFinite(rawH) ? rawH : 12;
+            const shiftedPolys = [];
+            for (const ring of rings) {
+                const shifted = offsetBuildingRing(ring, offEast, offNorth, refLat);
+                if (shifted && shifted.length >= 4) shiftedPolys.push(shifted);
+            }
+            if (!shiftedPolys.length) continue;
+            const geometry = shiftedPolys.length === 1
+                ? { type: "Polygon", coordinates: [shiftedPolys[0]] }
+                : { type: "MultiPolygon", coordinates: shiftedPolys.map(r => [r]) };
+            features.push({
+                type: "Feature",
+                id: f.id,
+                properties: {
+                    color: BUILDING_PALETTE[bucket],
+                    render_height: height,
+                    render_min_height: 0
+                },
+                geometry: geometry
+            });
+        }
+        return { type: "FeatureCollection", features: features };
+    }
+
+    function refreshBuildingPaletteGeoSource(force) {
+        if (!map || !buildingPaletteIsEnabled() || !buildingPaletteActive || !buildingPaletteRandomOffsetEnabled()) return;
+        const now = performance.now();
+        if (!force && now - buildingPaletteFeatureStateTime < 250) return;
+        buildingPaletteFeatureStateTime = now;
+        let feats;
+        try {
+            feats = map.querySourceFeatures(buildingVectorSourceId(), { sourceLayer: buildingVectorSourceLayer() });
+        } catch (e) { return; }
+        if (!ensureBuildingPaletteGeoLayer()) return;
+        const seed = CONFIG.buildingPaletteSeed;
+        try {
+            map.getSource(buildingPaletteGeoSourceId()).setData(buildBuildingPaletteGeoJson(feats, seed));
+        } catch (err) { console.warn("Building palette geo:", err); }
+        map.triggerRepaint();
+    }
+
+    function refreshBuildingPaletteVisuals(force) {
+        if (buildingPaletteRandomOffsetEnabled()) refreshBuildingPaletteGeoSource(force);
+        else refreshBuildingPaletteFeatureState(force);
+    }
+
+    function buildingPaletteRandomOffsetMaxM() {
+        const v = CONFIG.buildingPaletteRandomOffsetM != null ? +CONFIG.buildingPaletteRandomOffsetM : 1.2;
+        return isFinite(v) ? Math.max(0.05, Math.min(5, v)) : 1.2;
+    }
+
+    function buildingRandomOffsetM(id, seed, axis) {
+        const maxM = buildingPaletteRandomOffsetMaxM();
+        const sid = Math.max(0, Math.min(9999, seed | 0));
+        let n = Number(id);
+        if (!isFinite(n)) n = 0;
+        const h = Math.abs(Math.imul(n | 0, axis === 0 ? 31 : 73) + Math.imul(sid, axis === 0 ? 11 : 29));
+        return ((h % 2001) / 1000 - 1) * maxM;
+    }
+
+    function refreshBuildingPaletteFeatureState(force) {
+        if (!map || !buildingPaletteIsEnabled() || !buildingPaletteActive) return;
+        const now = performance.now();
+        if (!force && now - buildingPaletteFeatureStateTime < 250) return;
+        buildingPaletteFeatureStateTime = now;
+        let feats;
+        try {
+            feats = map.querySourceFeatures(buildingVectorSourceId(), { sourceLayer: buildingVectorSourceLayer() });
+        } catch (e) { return; }
+        const source = buildingVectorSourceId();
+        const sourceLayer = buildingVectorSourceLayer();
+        const seed = CONFIG.buildingPaletteSeed;
+        const bucketsById = buildingPaletteBucketsByCluster(feats, seed);
+        for (const [id, bucket] of bucketsById) {
+            try {
+                map.setFeatureState({ source, sourceLayer, id: id }, { palette: bucket });
+            } catch (e) { /* ok */ }
+        }
+        map.triggerRepaint();
+    }
+
+    function buildingPaletteOffsetM() {
+        const v = CONFIG.buildingPaletteOffsetXY != null ? +CONFIG.buildingPaletteOffsetXY : 0;
+        return isFinite(v) ? Math.max(-5, Math.min(5, v)) : 0;
+    }
+
+    function restoreBuildingPaletteStyle() {
+        const extrusionId = buildingExtrusionLayerId();
+        if (!map || !buildingPaletteOrig || !isBuildingExtrusionLayer(extrusionId)) return;
+        try {
+            if (buildingPaletteOrig.extrusion != null) {
+                map.setPaintProperty(extrusionId, "fill-extrusion-color", buildingPaletteOrig.extrusion);
+            }
+            if (buildingPaletteOrig.verticalGradient != null) {
+                map.setPaintProperty(extrusionId, "fill-extrusion-vertical-gradient", buildingPaletteOrig.verticalGradient);
+            }
+            if (buildingPaletteOrig.translate != null) {
+                map.setPaintProperty(extrusionId, "fill-extrusion-translate", buildingPaletteOrig.translate);
+            } else {
+                map.setPaintProperty(extrusionId, "fill-extrusion-translate", [0, 0]);
+            }
+            if (buildingPaletteOrig.translateAnchor != null) {
+                map.setPaintProperty(extrusionId, "fill-extrusion-translate-anchor", buildingPaletteOrig.translateAnchor);
+            }
+            if (buildingPaletteOrig.filter != null) {
+                map.setFilter(extrusionId, buildingPaletteOrig.filter);
+            } else {
+                map.setFilter(extrusionId, null);
+            }
+            const vis = buildingPaletteOrig.extrusionVisibility || "visible";
+            try { map.setLayoutProperty(extrusionId, "visibility", vis); } catch (e) { /* ok */ }
+        } catch (err) { console.warn("Building palette restore:", err); }
+        hideBuildingPaletteGeoLayer();
+        const footprintId = buildingFootprintLayerId();
+        if (map.getLayer(footprintId)) {
+            const vis = buildingPaletteOrig.footprintVisibility || "visible";
+            try { map.setLayoutProperty(footprintId, "visibility", vis); } catch (e) { /* ok */ }
+        }
+    }
+
+    function applyBuildingPalette(retryOnIdle) {
+        if (!map) return;
+        try {
+            if (map.isStyleLoaded && !map.isStyleLoaded()) return;
+        } catch (e) { return; }
+
+        const extrusionId = buildingExtrusionLayerId();
+        const enabled = buildingPaletteIsEnabled();
+
+        if (!isBuildingExtrusionLayer(extrusionId)) {
+            if (retryOnIdle !== false) {
+                try { map.once("idle", () => applyBuildingPalette()); } catch (e) { /* ok */ }
+            }
+            syncBuildingPalettePanelUI();
+            return;
+        }
+
+        if (!enabled) {
+            if (buildingPaletteActive) {
+                clearBuildingPaletteFeatureState();
+                restoreBuildingPaletteStyle();
+            }
+            buildingPaletteActive = false;
+            syncBuildingPalettePanelUI();
+            map.triggerRepaint();
+            return;
+        }
+
+        ensureBuildingPaletteOrig();
+        const randomOff = buildingPaletteRandomOffsetEnabled();
+        try {
+            map.setFilter(extrusionId, buildingExtrusionBaseFootprintFilter(buildingPaletteOrig.filter));
+            const footprintId = buildingFootprintLayerId();
+            if (map.getLayer(footprintId)) {
+                map.setLayoutProperty(footprintId, "visibility", "none");
+            }
+            if (randomOff) {
+                map.setLayoutProperty(extrusionId, "visibility", "none");
+                buildingPaletteActive = true;
+                refreshBuildingPaletteGeoSource(true);
+            } else {
+                hideBuildingPaletteGeoLayer();
+                map.setLayoutProperty(extrusionId, "visibility", buildingPaletteOrig.extrusionVisibility || "visible");
+                map.setPaintProperty(extrusionId, "fill-extrusion-color", buildingPaletteColorExpressionWithFeatureState(CONFIG.buildingPaletteSeed));
+                map.setPaintProperty(extrusionId, "fill-extrusion-vertical-gradient", false);
+                map.setPaintProperty(extrusionId, "fill-extrusion-translate-anchor", "map");
+                const o = buildingPaletteOffsetM();
+                map.setPaintProperty(extrusionId, "fill-extrusion-translate", [o, o]);
+                buildingPaletteActive = true;
+                refreshBuildingPaletteFeatureState(true);
+            }
+        } catch (err) { console.warn("Building palette:", err); }
+        syncBuildingPalettePanelUI();
+        map.triggerRepaint();
+    }
+
+    function syncBuildingPaletteFromPanel() {
+        applyBuildingPalette();
+    }
+
+    function bootBuildingPalette() {
+        normalizeBuildingPaletteConfig();
+        syncBuildingPalettePanelUI();
+        if (!buildingPaletteIsEnabled() || !map) return;
+        buildingPaletteBootRetries = 0;
+        applyBuildingPalette();
+        try { requestAnimationFrame(() => applyBuildingPalette()); } catch (e) { /* ok */ }
+        scheduleBuildingPaletteBootRetry();
+    }
+
+    function scheduleBuildingPaletteBootRetry() {
+        if (!map || !buildingPaletteIsEnabled() || buildingPaletteActive) return;
+        if (buildingPaletteBootRetries >= BUILDING_PALETTE_BOOT_MAX) return;
+        buildingPaletteBootRetries++;
+        try { map.once("idle", () => {
+            applyBuildingPalette();
+            scheduleBuildingPaletteBootRetry();
+        }); } catch (e) { /* ok */ }
+    }
+
+    let buildingPaletteStyleHook = null;
+    let buildingPaletteSourceHook = null;
+
+    function bindBuildingPaletteStyleHook() {
+        if (!map || buildingPaletteStyleHook) return;
+        buildingPaletteStyleHook = function (e) {
+            if (e && e.dataType && e.dataType !== "style") return;
+            resetBuildingPaletteOrig();
+            buildingPaletteActive = false;
+            applyBuildingPalette();
+        };
+        map.on("styledata", buildingPaletteStyleHook);
+    }
+
+    function bindBuildingPaletteSourceHook() {
+        if (!map || buildingPaletteSourceHook) return;
+        buildingPaletteSourceHook = function (e) {
+            if (!buildingPaletteIsEnabled() || !buildingPaletteActive) return;
+            if (e && e.sourceId && e.sourceId !== buildingVectorSourceId()) return;
+            if (e && e.isSourceLoaded === false) return;
+            refreshBuildingPaletteVisuals();
+        };
+        map.on("sourcedata", buildingPaletteSourceHook);
+        map.on("moveend", () => refreshBuildingPaletteVisuals());
+    }
+
     // ----------------------------------------------------------------------
     // Состояние игрока
     // ----------------------------------------------------------------------
@@ -3638,11 +4328,64 @@
     let sky3dLiftBaseline = player.altOffset;
 
     function sky3dPlayerLiftM() {
+        if (sky3dAutoHighAltActive) return 0;
         return Math.max(0, player.altOffset - sky3dLiftBaseline);
     }
 
     function resetSky3dLiftBaseline() {
         sky3dLiftBaseline = player.altOffset;
+    }
+
+    const SKY3D_AUTO_ALT_TRIGGER_M = 1000;
+    let wasAboveSky3dAutoAlt = false;
+    let sky3dAutoHighAltActive = false;
+
+    function playerGroundElevM() {
+        const te = queryPlayerTerrainElevation();
+        if (te != null) return te;
+        if (player.eye != null && isFinite(lastCameraAltM)) {
+            return lastCameraAltM - player.eye - (player.altOffset || 0);
+        }
+        return CONFIG.groundAlt != null ? CONFIG.groundAlt : 0;
+    }
+
+    function sky3dFrozenAltMAtTrigger() {
+        const riseAboveTriggerM = Math.max(0, lastCameraAltM - SKY3D_AUTO_ALT_TRIGGER_M);
+        return SKY3D_AUTO_ALT_TRIGGER_M + riseAboveTriggerM - playerGroundElevM();
+    }
+
+    function syncSky3dPanelFromConfig() {
+        if (elSky3dEnabled) elSky3dEnabled.checked = CONFIG.sky3dEnabled !== false;
+        if (elSky3dAnim) {
+            elSky3dAnim.checked = CONFIG.sky3dAnimEnabled !== false;
+            elSky3dAnim.disabled = CONFIG.sky3dEnabled === false;
+        }
+        if (elSky3dAlt) {
+            elSky3dAlt.value = CONFIG.sky3dAltM != null ? CONFIG.sky3dAltM : 1800;
+            elSky3dAlt.disabled = CONFIG.sky3dEnabled === false;
+        }
+    }
+
+    function updateSky3dForHighAltitude() {
+        if (!ready) return;
+        const above = lastCameraAltM >= SKY3D_AUTO_ALT_TRIGGER_M;
+        if (above && !wasAboveSky3dAutoAlt) {
+            sky3dAutoHighAltActive = true;
+            CONFIG.sky3dEnabled = true;
+            CONFIG.sky3dAltM = sky3dFrozenAltMAtTrigger();
+            resetSky3dLiftBaseline();
+            syncSky3dPanelFromConfig();
+            syncSky3dModule();
+            recalcSky3dAtPlayer();
+            if (map && map.transform) applyNearFarClip(map.transform);
+        } else if (!above && wasAboveSky3dAutoAlt) {
+            sky3dAutoHighAltActive = false;
+            CONFIG.sky3dEnabled = false;
+            syncSky3dPanelFromConfig();
+            syncSky3dModule();
+            if (map && map.transform) applyNearFarClip(map.transform);
+        }
+        wasAboveSky3dAutoAlt = above;
     }
 
     const CAR_MODE_FOG = 1;
@@ -4218,6 +4961,8 @@
         player.lat = lat;
         player.altOffset = altOffsetForTotalEye(totalEyeHeightForMode(CONFIG.movementMode));
         resetSky3dLiftBaseline();
+        sky3dAutoHighAltActive = false;
+        wasAboveSky3dAutoAlt = false;
         heightAnim = null;
         jumpAnim = null;
         velFwd = 0;
@@ -4470,7 +5215,8 @@
         });
     }
     bindNumber(elSky3dAlt, v => {
-        CONFIG.sky3dAltM = Math.max(0, v);
+        CONFIG.sky3dAltM = Math.max(-50000, Math.min(50000, v));
+        elSky3dAlt.value = CONFIG.sky3dAltM;
         syncSky3dModule();
         if (map) map.triggerRepaint();
     });
@@ -4666,6 +5412,52 @@
     function syncPostFxFromPanel() {
         syncPostFxModule();
         if (map) map.triggerRepaint();
+    }
+    if (elBuildingPaletteEnabled) {
+        elBuildingPaletteEnabled.addEventListener("change", () => {
+            CONFIG.buildingPaletteEnabled = elBuildingPaletteEnabled.checked;
+            syncBuildingPalettePanelUI();
+            syncBuildingPaletteFromPanel();
+        });
+    }
+    if (elBuildingPaletteSeed) {
+        bindNumber(elBuildingPaletteSeed, v => {
+            if (!buildingPaletteIsEnabled()) return;
+            CONFIG.buildingPaletteSeed = Math.max(0, Math.min(9999, v | 0));
+            elBuildingPaletteSeed.value = CONFIG.buildingPaletteSeed;
+            syncBuildingPaletteFromPanel();
+        });
+    }
+    if (elBuildingPaletteClusterM) {
+        bindNumber(elBuildingPaletteClusterM, v => {
+            if (!buildingPaletteIsEnabled()) return;
+            CONFIG.buildingPaletteClusterM = Math.max(0, Math.min(200, v));
+            elBuildingPaletteClusterM.value = CONFIG.buildingPaletteClusterM;
+            syncBuildingPaletteFromPanel();
+        });
+    }
+    if (elBuildingPaletteRandomOffsetEnabled) {
+        elBuildingPaletteRandomOffsetEnabled.addEventListener("change", () => {
+            CONFIG.buildingPaletteRandomOffsetEnabled = elBuildingPaletteRandomOffsetEnabled.checked;
+            syncBuildingPalettePanelUI();
+            syncBuildingPaletteFromPanel();
+        });
+    }
+    if (elBuildingPaletteRandomOffsetM) {
+        bindNumber(elBuildingPaletteRandomOffsetM, v => {
+            if (!buildingPaletteRandomOffsetEnabled()) return;
+            CONFIG.buildingPaletteRandomOffsetM = Math.max(0.05, Math.min(5, v));
+            elBuildingPaletteRandomOffsetM.value = CONFIG.buildingPaletteRandomOffsetM;
+            syncBuildingPaletteFromPanel();
+        });
+    }
+    if (elBuildingPaletteOffsetXY) {
+        bindNumber(elBuildingPaletteOffsetXY, v => {
+            if (!buildingPaletteIsEnabled()) return;
+            CONFIG.buildingPaletteOffsetXY = Math.max(-5, Math.min(5, v));
+            elBuildingPaletteOffsetXY.value = CONFIG.buildingPaletteOffsetXY;
+            syncBuildingPaletteFromPanel();
+        });
     }
     if (elPostFxTiltEnabled) {
         elPostFxTiltEnabled.addEventListener("change", () => {
@@ -5279,7 +6071,25 @@
         } catch (err) { console.warn("Sky:", err); }
     }
 
-    // Sky-градиент (setSky) → geowalk-skybox (самый низ) → карта/DEM → geowalk-three.
+    function topBuildingExtrusionLayerId() {
+        if (!map || !map.getStyle || !map.getStyle()) {
+            return CONFIG.buildingsLayerId || "building-3d";
+        }
+        const layers = map.getStyle().layers;
+        const ids = [buildingPaletteGeoLayerId(), CONFIG.buildingsLayerId || "building-3d"];
+        let bestIdx = -1;
+        let bestId = ids[1];
+        for (let i = 0; i < ids.length; i++) {
+            const idx = layers.findIndex((l) => l.id === ids[i]);
+            if (idx > bestIdx) {
+                bestIdx = idx;
+                bestId = ids[i];
+            }
+        }
+        return bestId;
+    }
+
+    // Sky-градиент (setSky) → geowalk-skybox (самый низ) → карта/DEM → здания → geowalk-three.
     function reassertRenderHierarchy() {
         if (!map || !map.getStyle || !map.getStyle()) return;
         const layers = map.getStyle().layers;
@@ -5300,23 +6110,13 @@
             }
         }
 
-        const threeId = "geowalk-three";
-        const buildingId = CONFIG.buildingsLayerId || "building-3d";
-
-        if (map.getLayer(threeId) && map.getLayer(buildingId)) {
-            const fresh = map.getStyle().layers;
-            const bIdx = fresh.findIndex((l) => l.id === buildingId);
-            if (bIdx >= 0 && bIdx < fresh.length - 1) {
-                const anchor = fresh[bIdx + 1].id;
-                if (anchor !== threeId) {
-                    try { map.moveLayer(threeId, anchor); } catch (e) { /* уже на месте */ }
-                }
-            }
+        if (window.GeowalkThree) {
+            try { GeowalkThree.reassertLayer(map, topBuildingExtrusionLayerId()); } catch (e) { /* ok */ }
         }
     }
 
     function terrainDemMaxZoomFromConfig() {
-        const z = CONFIG.terrainDemMaxZoom != null ? (CONFIG.terrainDemMaxZoom | 0) : 11;
+        const z = CONFIG.terrainDemMaxZoom != null ? (CONFIG.terrainDemMaxZoom | 0) : 14;
         return Math.max(0, Math.min(15, z));
     }
 
@@ -5931,6 +6731,35 @@
         return false;
     }
 
+    function geoOffsetFromYaw(lng, lat, yawDeg, forwardM, strafeM) {
+        const b = yawDeg * DEG;
+        const sinB = Math.sin(b);
+        const cosB = Math.cos(b);
+        const cosLat = Math.cos(lat * DEG);
+        const north = forwardM * cosB - strafeM * sinB;
+        const east = forwardM * sinB + strafeM * cosB;
+        return {
+            lng: lng + east / (M_PER_DEG_LAT * cosLat),
+            lat: lat + north / M_PER_DEG_LAT
+        };
+    }
+
+    /** Здание в footprint-слое в пределах maxDistM позади игрока (за прицелом в chase-камере). */
+    function isBuildingBehindPlayer(lng, lat, yawDeg, maxDistM) {
+        if (!buildingCache.length) return false;
+        const samples = [
+            [0, 0],
+            [-2, 0], [-4, 0], [-6, 0], [-8, 0], [-maxDistM, 0],
+            [-3, 2], [-3, -2], [-6, 3], [-6, -3],
+            [-maxDistM, 1.5], [-maxDistM, -1.5]
+        ];
+        for (const [fwd, side] of samples) {
+            const p = geoOffsetFromYaw(lng, lat, yawDeg, fwd, side);
+            if (isInsideBuilding(p.lng, p.lat)) return true;
+        }
+        return false;
+    }
+
     function ringsFromFeature(f) {
         const g = f.geometry;
         if (!g) return [];
@@ -6049,6 +6878,7 @@
     // Применяет все наши настройки поверх (свеже)загруженного стиля карты.
     function setupStyle() {
         applyFov();
+        resetBuildingPaletteOrig();
         stripIconLayers();
         applySky();
         syncNearFarClip();
@@ -6071,7 +6901,7 @@
         if (window.GeowalkThree) {
             try {
                 GeowalkThree.setup(map, {
-                    afterLayer: CONFIG.buildingsLayerId,
+                    afterLayer: topBuildingExtrusionLayerId(),
                     originLng: CONFIG.start.lng,
                     originLat: CONFIG.start.lat
                 });
@@ -6113,6 +6943,7 @@
             try { GeowalkGiantMob.setup(map); } catch (err) { console.warn("Sprite1:", err); }
         }
         reassertRenderHierarchy();
+        applyBuildingPalette();
     }
 
     function applyNearFarClip(tr) {
@@ -6149,7 +6980,10 @@
     }
 
     map.on("load", () => {
+        bindBuildingPaletteStyleHook();
+        bindBuildingPaletteSourceHook();
         setupStyle();
+        bootBuildingPalette();
         applyCarModeVisuals();
         if (window.GeowalkWoodTerrainExtrude) GeowalkWoodTerrainExtrude.bindMapEvents(map);
         if (window.GeowalkPostFx) {
@@ -6159,8 +6993,13 @@
         if (isIgnoreMode()) startHeightAnimForMode("ignore");
         syncClimeSkyFromPosition(true);
         applyCamera();
+        bootBuildingPalette();
     });
-    map.on("idle", () => { reassertRenderHierarchy(); });
+    map.on("idle", () => {
+        reassertRenderHierarchy();
+        if (buildingPaletteIsEnabled() && !buildingPaletteActive) applyBuildingPalette();
+        else if (buildingPaletteActive) refreshBuildingPaletteVisuals();
+    });
 
     // Замена стиля карты в рамках сессии (из выбранного JSON-файла)
     const elRealitySwap = document.getElementById("reality-swap");
@@ -6518,7 +7357,8 @@
         const heightAboveGround = CONFIG.eyeHeight + player.altOffset;
         const collisionActive = heightAboveGround <= CONFIG.collisionHeight;
         player.collision = collisionActive;
-        if (collisionActive && performance.now() - cacheTime > 350) {
+        const carBuildingFadeActive = isCarMode() && carCameraView !== "topdown";
+        if ((collisionActive || carBuildingFadeActive) && performance.now() - cacheTime > 350) {
             refreshBuildingCache();
             cacheTime = performance.now();
         }
@@ -6870,6 +7710,7 @@
         syncClimeSkyFromPosition(false);
         syncSpeedOverlay();
         const camChanged = applyCamera();
+        updateSky3dForHighAltitude();
         let originShifted = false;
         if (window.GeowalkThree && ready) {
             originShifted = GeowalkThree.updateOrigin(player.lng, player.lat);
@@ -6979,12 +7820,15 @@
         }
         if (window.GeowalkCarDrive && isCarMode()) {
             const rect = carMapRect || map.getCanvas().getBoundingClientRect();
+            const buildingBehindCar = isCarMode() && carCameraView !== "topdown" && ready
+                && isBuildingBehindPlayer(player.lng, player.lat, player.yaw, 10);
             GeowalkCarDrive.tick({
                 speed: player.speed,
                 dt,
                 turnSpeedDeg: carYawVel,
                 viewMode: carCameraView,
                 cameraRollDeg: (carCameraView === "topdown" || CONFIG.carCameraRollEnabled === false) ? 0 : carCameraRoll,
+                buildingOccluded: buildingBehindCar,
                 yaw: player.yaw,
                 lng: player.lng,
                 lat: player.lat,
