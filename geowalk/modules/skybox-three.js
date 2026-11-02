@@ -224,15 +224,40 @@
         if (mapRef) try { mapRef.triggerRepaint(); } catch (e) { /* ok */ }
     }
 
+    // Центр куба = позиция камеры в локальных метрах проекции (тот же origin и mercator).
+    // Не через geoToLocal: тот добавляет высоту рельефа и уезжает на больших дистанциях.
     function eyeLocalPosition() {
-        if (playerLng == null || playerLat == null) return null;
         const GT = window.GeowalkThree;
-        if (GT && GT.isReady && GT.isReady()) {
-            const ground = GT.terrainAt(playerLng, playerLat);
-            const eyeAlt = cameraElevM != null ? Math.max(0, cameraElevM - ground) : 0;
-            return GT.geoToLocal(playerLng, playerLat, eyeAlt);
+        const origin = GT && GT.getOrigin && GT.getOrigin();
+        const tr = mapRef && mapRef.transform;
+        if (origin && origin.merc && origin.scale && tr &&
+            typeof tr.getCameraLngLat === "function" &&
+            typeof tr.getCameraAltitude === "function" &&
+            window.maplibregl) {
+            try {
+                const ll = tr.getCameraLngLat();
+                const alt = tr.getCameraAltitude();
+                if (ll && isFinite(ll.lng) && isFinite(ll.lat) && isFinite(alt)) {
+                    const mc = window.maplibregl.MercatorCoordinate.fromLngLat([ll.lng, ll.lat], alt);
+                    const s = origin.scale;
+                    return {
+                        x: (mc.x - origin.merc.x) / s,
+                        y: (origin.merc.y - mc.y) / s,
+                        z: ((mc.z || 0) - (origin.merc.z || 0)) / s
+                    };
+                }
+            } catch (e) { /* запасной путь ниже */ }
         }
-        return { x: 0, y: 0, z: cameraElevM != null ? cameraElevM : 0 };
+        if (!origin || origin.lng == null || playerLng == null || playerLat == null) {
+            return { x: 0, y: 0, z: cameraElevM != null ? cameraElevM : 0 };
+        }
+        const cosLat = origin.cosLat || Math.cos(playerLat * Math.PI / 180) || 1e-6;
+        const M = 111320;
+        return {
+            x: (playerLng - origin.lng) * M * cosLat,
+            y: (playerLat - origin.lat) * M,
+            z: cameraElevM != null ? cameraElevM : 0
+        };
     }
 
     function applyMeshSize() {

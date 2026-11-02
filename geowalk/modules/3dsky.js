@@ -3,7 +3,7 @@
     "use strict";
 
     const DEFAULTS = {
-        enabled: true,
+        enabled: false,
         src: "images/cloud.png",
         altM: 1800,
         sizeM: 12000,
@@ -33,6 +33,7 @@
     let skyAbsZM = null;
     let skyAbsAltM = null;
     let readyHook = null;
+    let beforeRenderHook = null;
     let ready = false;
 
     function t3() { return window.THREE; }
@@ -154,27 +155,43 @@
         return skyAbsZM;
     }
 
+    function cameraLngLat() {
+        const tr = map && map.transform;
+        if (tr && typeof tr.getCameraLngLat === "function") {
+            try {
+                const ll = tr.getCameraLngLat();
+                if (ll && isFinite(ll.lng) && isFinite(ll.lat)) return { lng: ll.lng, lat: ll.lat };
+            } catch (e) { /* запасной путь ниже */ }
+        }
+        if (playerLng == null || playerLat == null) return null;
+        return { lng: playerLng, lat: playerLat };
+    }
+
     function applySkyPlacement(s, opts) {
         applyPlayerState(s);
         const GT = three();
-        if (!GT || !skyRoot || playerLng == null || playerLat == null) return;
+        if (!GT || !skyRoot || !GT.mercatorToLocal) return;
 
         const o = opts || {};
         if (o.recalcHeight) resetSkyHeight();
         if ((s && s.originShifted) || o.resetFollow) resetPlayerFollow();
 
-        const local = GT.geoToLocal(playerLng, playerLat, 0);
-        skyRoot.position.set(local.x, local.y, 0);
+        const cam = cameraLngLat();
+        if (!cam) return;
+        const xy = GT.mercatorToLocal(cam.lng, cam.lat, 0);
+        skyRoot.position.set(xy.x, xy.y, 0);
         if (skyPlane) {
-            skyPlane.position.set(0, 0, resolveSkyAbsZM(GT) + playerLiftM);
+            const absZ = resolveSkyAbsZM(GT) + playerLiftM;
+            skyPlane.position.set(0, 0, GT.mercatorToLocal(cam.lng, cam.lat, absZ).z);
         }
 
-        if (!o.skipDrift && lastPlayerLocalX != null && lastPlayerLocalY != null) {
-            applyMovementDrift(local.x - lastPlayerLocalX, local.y - lastPlayerLocalY);
+        if (!o.skipDrift) {
+            if (lastPlayerLocalX != null && lastPlayerLocalY != null) {
+                applyMovementDrift(xy.x - lastPlayerLocalX, xy.y - lastPlayerLocalY);
+            }
+            lastPlayerLocalX = xy.x;
+            lastPlayerLocalY = xy.y;
         }
-
-        lastPlayerLocalX = local.x;
-        lastPlayerLocalY = local.y;
         updateSkyPlaneVisibility(GT);
     }
 
@@ -286,10 +303,20 @@
             };
             GT.onReady(readyHook);
         }
+        if (!beforeRenderHook && GT.onBeforeRender) {
+            beforeRenderHook = function () {
+                if (!cfg || !cfg.enabled || !skyRoot) return;
+                applySkyPlacement(null, { skipDrift: true });
+            };
+            GT.onBeforeRender(beforeRenderHook);
+        }
         if (GT.isReady() && cfg && cfg.enabled) buildSceneContent();
     }
 
     function unbindHooks() {
+        const GT = three();
+        if (GT && beforeRenderHook && GT.offBeforeRender) GT.offBeforeRender(beforeRenderHook);
+        beforeRenderHook = null;
         readyHook = null;
     }
 

@@ -109,17 +109,13 @@
     function geoToLocal(lng, lat, alt) {
         if (origin.lng == null) return { x: 0, y: 0, z: alt || 0 };
         const ground = terrainAt(lng, lat);
-        return {
-            x: (lng - origin.lng) * M_PER_DEG_LAT * origin.cosLat,
-            y: (lat - origin.lat) * M_PER_DEG_LAT,
-            z: ground + (alt || 0)
-        };
+        return mercatorToLocal(lng, lat, ground + (alt || 0));
     }
 
     function isAnchoredSceneObject(obj) {
         let p = obj;
         while (p) {
-            if (p.name === "geowalk-3dsky" || p.name === "geowalk-weather" || p.name === "geowalk-car-3d" || p.name === "geowalk-save-pin" || p.name === "geowalk-car-3d-talk") return true;
+            if (p.name === "geowalk-3dsky" || p.name === "geowalk-weather" || p.name === "geowalk-car-3d" || p.name === "geowalk-save-pin" || p.name === "geowalk-car-3d-talk" || p.name === "geowalk-car-dust") return true;
             p = p.parent;
         }
         return false;
@@ -140,37 +136,66 @@
         }
     }
 
-    function shiftScene(dx, dy) {
-        if (!scene || (!dx && !dy)) return;
+    function shiftScene(dx, dy, dz, k) {
+        const scale = k != null && isFinite(k) ? k : 1;
+        if (!scene) return;
+        if (!dx && !dy && !dz && scale === 1) return;
         for (let i = 0; i < scene.children.length; i++) {
             const obj = scene.children[i];
             if (obj.isLight) continue;
             if (isAnchoredSceneObject(obj)) continue;
             if (isShadowSceneObject(obj)) continue;
-            obj.position.x += dx;
-            obj.position.y += dy;
+            obj.position.x = dx + obj.position.x * scale;
+            obj.position.y = dy + obj.position.y * scale;
+            obj.position.z = dz + obj.position.z * scale;
         }
+    }
+
+    // Абсолютная высота в метрах → локальные метры той же проекции, что рисует слой.
+    function mercatorToLocal(lng, lat, altM) {
+        const alt = altM || 0;
+        if (origin.merc && origin.scale && window.maplibregl && lng != null && lat != null) {
+            const mc = window.maplibregl.MercatorCoordinate.fromLngLat([lng, lat], alt);
+            const s = origin.scale;
+            return {
+                x: (mc.x - origin.merc.x) / s,
+                y: (origin.merc.y - mc.y) / s,
+                z: ((mc.z || 0) - (origin.merc.z || 0)) / s
+            };
+        }
+        if (origin.lng == null || lng == null || lat == null) return { x: 0, y: 0, z: alt };
+        const cosLat = origin.cosLat || Math.cos(lat * DEG) || 1e-6;
+        return {
+            x: (lng - origin.lng) * M_PER_DEG_LAT * cosLat,
+            y: (lat - origin.lat) * M_PER_DEG_LAT,
+            z: alt
+        };
     }
 
     function setOrigin(lng, lat) {
         if (!hasTHREE()) return;
-        let dx = 0;
-        let dy = 0;
-        if (origin.lng != null && scene) {
-            const cosLat = Math.cos(lat * DEG) || 1e-6;
-            dx = (origin.lng - lng) * M_PER_DEG_LAT * cosLat;
-            dy = (origin.lat - lat) * M_PER_DEG_LAT;
-            shiftScene(dx, dy);
-        }
+        const prevMerc = origin.merc;
+        const prevScale = origin.scale;
         origin.lng = lng;
         origin.lat = lat;
         origin.cosLat = Math.cos(lat * DEG) || 1e-6;
-        clearTerrainCache();
         if (window.maplibregl) {
-            origin.merc = maplibregl.MercatorCoordinate.fromLngLat([lng, lat], 0);
+            origin.merc = window.maplibregl.MercatorCoordinate.fromLngLat([lng, lat], 0);
             origin.scale = origin.merc.meterInMercatorCoordinateUnits();
         }
-        if (dx !== 0 || dy !== 0) fireOriginShift(dx, dy, lng, lat);
+        let dx = 0;
+        let dy = 0;
+        let dz = 0;
+        if (prevMerc && origin.merc && prevScale && origin.scale && scene) {
+            const s = origin.scale;
+            const k = prevScale / s;
+            dx = (prevMerc.x - origin.merc.x) / s;
+            dy = (origin.merc.y - prevMerc.y) / s;
+            dz = ((prevMerc.z || 0) - (origin.merc.z || 0)) / s;
+            shiftScene(dx, dy, dz, k);
+        }
+        clearTerrainCache();
+        if (dx !== 0 || dy !== 0 || dz !== 0) fireOriginShift(dx, dy, lng, lat);
     }
 
     function updateOrigin(lng, lat) {
@@ -397,6 +422,7 @@
         setOrigin,
         updateOrigin,
         geoToLocal,
+        mercatorToLocal,
         terrainAt,
         setFrameGround,
         clearTerrainCache,

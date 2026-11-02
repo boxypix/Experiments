@@ -195,10 +195,54 @@
         mat.alphaTest = solid ? 0.42 : Math.max(0.25, 0.42 * o);
     }
 
-    function randomYawForLngLat(lng, lat) {
-        const ix = Math.floor(lng * 1e5);
-        const iy = Math.floor(lat * 1e5);
-        return hash01(ix, iy, 9) * Math.PI * 2;
+    // Плоскость после rotation.x = PI/2 смотрит в -Y. group.rotation.z крутит её вокруг вертикали к камере.
+    function cameraLocalXY() {
+        const T = window.GeowalkThree;
+        if (!T || !T.geoToLocal) return null;
+        let lng = playerLng;
+        let lat = playerLat;
+        const readLngLat = (ll) => ll && isFinite(ll.lng) && isFinite(ll.lat);
+        if (mapRef && mapRef.transform && typeof mapRef.transform.getCameraLngLat === "function") {
+            try {
+                const ll = mapRef.transform.getCameraLngLat();
+                if (readLngLat(ll)) {
+                    lng = ll.lng;
+                    lat = ll.lat;
+                }
+            } catch (e) { /* оставляем позицию игрока */ }
+        } else if (mapRef && typeof mapRef.getFreeCameraOptions === "function") {
+            try {
+                const cam = mapRef.getFreeCameraOptions();
+                const ll = cam && cam.position && typeof cam.position.toLngLat === "function"
+                    ? cam.position.toLngLat() : null;
+                if (readLngLat(ll)) {
+                    lng = ll.lng;
+                    lat = ll.lat;
+                }
+            } catch (e) { /* оставляем позицию игрока */ }
+        }
+        if (lng == null || lat == null) return null;
+        return T.geoToLocal(lng, lat, 0);
+    }
+
+    function faceTreesToCamera() {
+        if (!treeSpriteByKey.size) return false;
+        const cam = cameraLocalXY();
+        if (!cam) return false;
+        let changed = false;
+        for (const rec of treeSpriteByKey.values()) {
+            const group = rec.group;
+            if (!group) continue;
+            const dx = cam.x - group.position.x;
+            const dy = cam.y - group.position.y;
+            if (dx * dx + dy * dy < 0.04) continue;
+            const yaw = Math.atan2(dx, -dy);
+            if (Math.abs(yaw - group.rotation.z) > 0.001) {
+                group.rotation.z = yaw;
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     function createTreeBillboard(t3, T, lng, lat, sizeM, base) {
@@ -223,7 +267,7 @@
         const group = new t3.Group();
         group.add(mesh);
         group.position.set(p.x, p.y, p.z);
-        group.rotation.z = randomYawForLngLat(lng, lat);
+        group.rotation.z = 0;
         group.userData.cellKey = null;
         group.userData.geoLng = lng;
         group.userData.geoLat = lat;
@@ -294,6 +338,7 @@
             T.add(group);
             treeSpriteByKey.set(entry.key, { group, mesh });
         }
+        faceTreesToCamera();
     }
 
     function hasActiveTreeSpawnAnim() {
@@ -1144,6 +1189,7 @@
             tickTreeSpriteAnim(dt);
             needsRepaint = true;
         }
+        if (cfg.treeSpritesEnabled !== false && faceTreesToCamera()) needsRepaint = true;
         if (cfg.treeShakeEnabled !== false) {
             checkTreeCollisions(state);
             if (tickTreeShake(dt)) needsRepaint = true;

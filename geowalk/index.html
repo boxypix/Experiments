@@ -26,6 +26,29 @@
         html, body { -webkit-tap-highlight-color: transparent; }
         #map { position: absolute; inset: 0; }
         #map canvas { outline: none; }
+        body.walk-water #map { transform: translateY(-5%); }
+        #walk-water {
+            display: none;
+            position: absolute; inset: 0; z-index: 4; pointer-events: none;
+        }
+        body.walk-water #walk-water { display: block; }
+        #walk-water svg { width: 100%; height: 100%; display: block; }
+        #walk-water-in {
+            display: none;
+            position: absolute; left: 0; right: 0; bottom: 0;
+            width: 100%; height: auto; z-index: 12;
+            pointer-events: none;
+            transform: translateY(108%);
+        }
+        #walk-water-in.play {
+            display: block;
+            animation: walk-water-splash 1.05s linear forwards;
+        }
+        @keyframes walk-water-splash {
+            0% { transform: translateY(105%); animation-timing-function: cubic-bezier(.16, .84, .28, 1); }
+            38% { transform: translateY(5px); animation-timing-function: cubic-bezier(.45, 0, .75, 1); }
+            100% { transform: translateY(108%); }
+        }
 
         /* Прицел */
         #crosshair {
@@ -1282,6 +1305,13 @@
 </head>
 <body class="overlay-open">
     <div id="map"></div>
+    <div id="walk-water" aria-hidden="true">
+        <svg viewBox="0 0 1200 1000" preserveAspectRatio="none">
+            <path id="walk-water-fill" fill="#071e36" />
+            <path id="walk-water-edge" fill="none" stroke="#0c3358" stroke-width="3.5" stroke-linecap="round" />
+        </svg>
+    </div>
+    <img id="walk-water-in" src="images/fx_waterin.png" alt="" />
     <div id="crosshair"></div>
 
     <div id="panel">
@@ -1351,6 +1381,19 @@
         <label>Roll angle (°) <input id="car-roll-max" type="number" min="0" max="45" step="1" /></label>
         <label>Roll duration (s) <input id="car-roll-sec" type="number" min="0.05" step="0.05" /></label>
         <label>Wake count <input id="car-wake-max" type="number" min="1" max="30" step="1" /></label>
+        <div class="sep"></div>
+        <div class="title">2D car dust</div>
+        <label>Dust trail <input id="car-dust-enabled" type="checkbox" checked /></label>
+        <label>Life (s) <input id="car-dust-life" type="number" min="0.2" max="20" step="0.1" /></label>
+        <label>Step (m) <input id="car-dust-step" type="number" min="0.3" max="20" step="0.1" /></label>
+        <label>Points <input id="car-dust-points" type="number" min="0" max="8" step="1" /></label>
+        <label>Point size (m) <input id="car-dust-point-size" type="number" min="0.04" max="2" step="0.02" /></label>
+        <label>Point color <input id="car-dust-point-color" type="color" /></label>
+        <label>Dust size (m) <input id="car-dust-size" type="number" min="0.1" max="4" step="0.05" /></label>
+        <label>Dust color <input id="car-dust-color" type="color" /></label>
+        <label>Back (m) <input id="car-dust-back" type="number" min="0" max="12" step="0.1" /></label>
+        <label>Spread (m) <input id="car-dust-spread" type="number" min="0" max="8" step="0.1" /></label>
+        <div class="hint">Dust stays behind the car. Points only on a hard turn, while the brake is held, and while pulling away from a stop.</div>
         <div class="sep"></div>
         <div class="title">3D model</div>
         <label>Model offset from pitch axis X (m) <input id="car3d-pitch-pivot-x" type="number" step="0.1" /></label>
@@ -1428,15 +1471,6 @@
         <label>3D pixel ratio (× display) <input id="three-pixel-ratio" type="number" min="0.25" max="1" step="0.05" /></label>
         <div class="hint">Three origin / cache — faster over long distances. Lower 3D pixel ratio = less GPU load.</div>
         <div class="sep"></div>
-        <div class="title">Buildings</div>
-        <label>Building palette colors <input id="building-palette-enabled" type="checkbox" checked /></label>
-        <label>Color seed <input id="building-palette-seed" type="number" min="0" max="9999" step="1" /></label>
-        <label>Cluster radius (m) <input id="building-palette-cluster-m" type="number" min="0" max="200" step="1" /></label>
-        <label>Random offset per building <input id="building-palette-random-offset-enabled" type="checkbox" checked /></label>
-        <label>Random offset max (m) <input id="building-palette-random-offset-m" type="number" min="0.05" max="5" step="0.05" /></label>
-        <label>Offset XY (m) <input id="building-palette-offset-xy" type="number" min="-5" max="5" step="0.01" /></label>
-        <div class="hint">5 tones on building-3d. Random offset shifts each footprint in GeoJSON (MapLibre translate is layer-wide only).</div>
-        <div class="sep"></div>
         <div class="title">3D post-processing</div>
         <label>Tilt shift <input id="postfx-tilt-enabled" type="checkbox" /></label>
         <label>Tilt blur (px) <input id="postfx-tilt-blur" type="number" min="0" max="40" step="1" /></label>
@@ -1469,6 +1503,9 @@
         <label>mousePitch (°/px) <input id="walk-mouse-pitch" type="number" min="0.01" max="2" step="0.01" /></label>
         <label>Start bearing (°) <input id="walk-start-bearing" type="number" min="0" max="359" step="1" /></label>
         <label>Terrain smoothing (s) <input id="walk-terrain-smooth-sec" type="number" min="0.05" max="3" step="0.05" /></label>
+        <label>Fast uphill camera <input id="camera-uphill-fast" type="checkbox" /></label>
+        <label>Water camera <input id="walk-water-fx" type="checkbox" checked /></label>
+        <div class="hint">Walk only. On the water layer the view lifts 5%, the camera rolls left and right, and a dark blue waterline crosses the screen.</div>
         <label>3D relief (×, 0=off) <input id="relief" type="number" min="0" step="0.5" /></label>
         <label>LOD DEM (0–15) <input id="terrain-lod" type="number" min="0" max="15" step="1" /></label>
         <label>Fog (0–1) <input id="draw" type="number" min="0" max="1" step="0.05" /></label>
@@ -1807,6 +1844,7 @@
     <script src="modules/follow-terrain-hands.js"></script>
     <script src="modules/clime-zones.js"></script>
     <script src="modules/car-drive.js"></script>
+    <script src="modules/car-dust.js"></script>
     <script src="modules/car-3d.js"></script>
     <script src="modules/save-pin.js"></script>
     <script src="modules/effects-overlay.js"></script>
@@ -1933,6 +1971,8 @@
         followTerrainJumpHeight: 14,   // прыжок Space в режиме «следовать рельефу», м
         followTerrainJumpSec: 1.4,     // длительность прыжка вверх-вниз, сек
         cameraTerrainSmoothSec: 0.65,  // сглаживание высоты рельефа walk-камеры, сек
+        cameraUphillFast: false,       // на крутом подъёме камера догоняет склон быстрее
+        walkWaterFxEnabled: true,      // Walk на слое water: подъём вида, покачивание, кромка воды
         movementMode: "ignore",        // ignore | follow | car | 3dmove
         // car* — править только в settings.json (ниже — запас для offline)
         carEyeHeight: 2.2,
@@ -1960,6 +2000,16 @@
         carCameraRollSpeedMin: 30,
         carCameraRollSec: 0.8,
         carWakeMaxCount: 5,
+        carDustEnabled: true,
+        carDustLifeSec: 4,
+        carDustStepM: 1.6,
+        carDustPoints: 2,
+        carDustPointSizeM: 0.16,
+        carDustPointColor: "#b5b5b5",
+        carDustSizeM: 0.75,
+        carDustColor: "#8e8e8e",
+        carDustBackM: 2.4,
+        carDustSpreadM: 1.15,
         car3dModelUrl: "models/car1.glb",
         car3dScale: 5.88,
         car3dYawOffsetDeg: 90,
@@ -2083,13 +2133,7 @@
         postFxMotionBlurEnabled: false,
         postFxMotionBlurAmount: 0.55,
         postFxSharpenEnabled: false,
-        postFxSharpenAmount: 0.45,
-        buildingPaletteEnabled: true,
-        buildingPaletteSeed: 1,
-        buildingPaletteClusterM: 40,
-        buildingPaletteRandomOffsetEnabled: true,
-        buildingPaletteRandomOffsetM: 1.2,
-        buildingPaletteOffsetXY: 0
+        postFxSharpenAmount: 0.45
         };
 
         function merge(o, source) {
@@ -2150,40 +2194,6 @@
     if (CONFIG.weatherHeightM == null && CONFIG.weatherRainHeightM != null) {
         CONFIG.weatherHeightM = CONFIG.weatherRainHeightM;
     }
-
-    function buildingPaletteIsEnabled() {
-        return CONFIG.buildingPaletteEnabled !== false;
-    }
-
-    function buildingPaletteRandomOffsetEnabled() {
-        return buildingPaletteIsEnabled() && CONFIG.buildingPaletteRandomOffsetEnabled === true;
-    }
-
-    function normalizeBuildingPaletteConfig() {
-        if (buildingPaletteIsEnabled()) CONFIG.buildingPaletteEnabled = true;
-        if (CONFIG.buildingPaletteSeed == null || !isFinite(+CONFIG.buildingPaletteSeed)) {
-            CONFIG.buildingPaletteSeed = 1;
-        } else {
-            CONFIG.buildingPaletteSeed = Math.max(0, Math.min(9999, CONFIG.buildingPaletteSeed | 0));
-        }
-        if (CONFIG.buildingPaletteOffsetXY == null || !isFinite(+CONFIG.buildingPaletteOffsetXY)) {
-            CONFIG.buildingPaletteOffsetXY = 0;
-        } else {
-            CONFIG.buildingPaletteOffsetXY = Math.max(-5, Math.min(5, +CONFIG.buildingPaletteOffsetXY));
-        }
-        if (CONFIG.buildingPaletteClusterM == null || !isFinite(+CONFIG.buildingPaletteClusterM)) {
-            CONFIG.buildingPaletteClusterM = 40;
-        } else {
-            CONFIG.buildingPaletteClusterM = Math.max(0, Math.min(200, +CONFIG.buildingPaletteClusterM));
-        }
-        CONFIG.buildingPaletteRandomOffsetEnabled = CONFIG.buildingPaletteRandomOffsetEnabled === true;
-        if (CONFIG.buildingPaletteRandomOffsetM == null || !isFinite(+CONFIG.buildingPaletteRandomOffsetM)) {
-            CONFIG.buildingPaletteRandomOffsetM = 1.2;
-        } else {
-            CONFIG.buildingPaletteRandomOffsetM = Math.max(0.05, Math.min(5, +CONFIG.buildingPaletteRandomOffsetM));
-        }
-    }
-    normalizeBuildingPaletteConfig();
 
     const CAR_SPRITE_IDS = [1, 2, 3, 4];
     const CAR_SPRITE_DEFAULT_ID = 1;
@@ -2485,12 +2495,6 @@
     const elThreeOriginShift = document.getElementById("three-origin-shift");
     const elThreeTerrainCache = document.getElementById("three-terrain-cache");
     const elThreePixelRatio = document.getElementById("three-pixel-ratio");
-    const elBuildingPaletteEnabled = document.getElementById("building-palette-enabled");
-    const elBuildingPaletteSeed = document.getElementById("building-palette-seed");
-    const elBuildingPaletteClusterM = document.getElementById("building-palette-cluster-m");
-    const elBuildingPaletteRandomOffsetEnabled = document.getElementById("building-palette-random-offset-enabled");
-    const elBuildingPaletteRandomOffsetM = document.getElementById("building-palette-random-offset-m");
-    const elBuildingPaletteOffsetXY = document.getElementById("building-palette-offset-xy");
     const elPostFxTiltEnabled = document.getElementById("postfx-tilt-enabled");
     const elPostFxTiltBlur = document.getElementById("postfx-tilt-blur");
     const elPostFxTiltBand = document.getElementById("postfx-tilt-band");
@@ -2503,6 +2507,16 @@
     const elCarRollMax = document.getElementById("car-roll-max");
     const elCarRollSec = document.getElementById("car-roll-sec");
     const elCarWakeMax = document.getElementById("car-wake-max");
+    const elCarDustEnabled = document.getElementById("car-dust-enabled");
+    const elCarDustLife = document.getElementById("car-dust-life");
+    const elCarDustStep = document.getElementById("car-dust-step");
+    const elCarDustPoints = document.getElementById("car-dust-points");
+    const elCarDustPointSize = document.getElementById("car-dust-point-size");
+    const elCarDustPointColor = document.getElementById("car-dust-point-color");
+    const elCarDustSize = document.getElementById("car-dust-size");
+    const elCarDustColor = document.getElementById("car-dust-color");
+    const elCarDustBack = document.getElementById("car-dust-back");
+    const elCarDustSpread = document.getElementById("car-dust-spread");
     const elCar3dFollowTerrain = document.getElementById("car3d-follow-terrain");
     const elCar3dPitchPivotX = document.getElementById("car3d-pitch-pivot-x");
     const elCar3dPitchPivotY = document.getElementById("car3d-pitch-pivot-y");
@@ -2555,6 +2569,8 @@
     const elWalkMousePitch = document.getElementById("walk-mouse-pitch");
     const elWalkStartBearing = document.getElementById("walk-start-bearing");
     const elWalkTerrainSmoothSec = document.getElementById("walk-terrain-smooth-sec");
+    const elCameraUphillFast = document.getElementById("camera-uphill-fast");
+    const elWalkWaterFx = document.getElementById("walk-water-fx");
     const elWalkInertiaOff = document.getElementById("walk-inertia-off");
     const elNoTerrCol = document.getElementById("noterrcol");
     const elMinimap = document.getElementById("minimap");
@@ -2674,7 +2690,7 @@
         elFly.value = CONFIG.flySpeed;
         if (elFpsLimit) elFpsLimit.value = CONFIG.fpsLimit;
         if (elSkyEnabled) elSkyEnabled.checked = CONFIG.skyEnabled !== false;
-        if (elSky3dEnabled) elSky3dEnabled.checked = CONFIG.sky3dEnabled !== false;
+        if (elSky3dEnabled) elSky3dEnabled.checked = CONFIG.sky3dEnabled === true;
         if (elSky3dAnim) {
             elSky3dAnim.checked = CONFIG.sky3dAnimEnabled !== false;
             elSky3dAnim.disabled = CONFIG.sky3dEnabled === false;
@@ -2713,27 +2729,6 @@
         if (elThreePixelRatio) {
             elThreePixelRatio.value = CONFIG.threePixelRatioScale != null ? CONFIG.threePixelRatioScale : 0.6;
         }
-        if (elBuildingPaletteEnabled) elBuildingPaletteEnabled.checked = buildingPaletteIsEnabled();
-        if (elBuildingPaletteSeed) {
-            elBuildingPaletteSeed.value = CONFIG.buildingPaletteSeed != null ? CONFIG.buildingPaletteSeed : 1;
-            elBuildingPaletteSeed.disabled = !buildingPaletteIsEnabled();
-        }
-        if (elBuildingPaletteClusterM) {
-            elBuildingPaletteClusterM.value = CONFIG.buildingPaletteClusterM != null ? CONFIG.buildingPaletteClusterM : 40;
-            elBuildingPaletteClusterM.disabled = !buildingPaletteIsEnabled();
-        }
-        if (elBuildingPaletteRandomOffsetEnabled) {
-            elBuildingPaletteRandomOffsetEnabled.checked = CONFIG.buildingPaletteRandomOffsetEnabled === true;
-            elBuildingPaletteRandomOffsetEnabled.disabled = !buildingPaletteIsEnabled();
-        }
-        if (elBuildingPaletteRandomOffsetM) {
-            elBuildingPaletteRandomOffsetM.value = CONFIG.buildingPaletteRandomOffsetM != null ? CONFIG.buildingPaletteRandomOffsetM : 1.2;
-            elBuildingPaletteRandomOffsetM.disabled = !buildingPaletteIsEnabled() || !buildingPaletteRandomOffsetEnabled();
-        }
-        if (elBuildingPaletteOffsetXY) {
-            elBuildingPaletteOffsetXY.value = CONFIG.buildingPaletteOffsetXY != null ? CONFIG.buildingPaletteOffsetXY : 0;
-            elBuildingPaletteOffsetXY.disabled = !buildingPaletteIsEnabled() || buildingPaletteRandomOffsetEnabled();
-        }
         if (elPostFxTiltEnabled) elPostFxTiltEnabled.checked = CONFIG.postFxTiltShiftEnabled === true;
         if (elPostFxTiltBlur) elPostFxTiltBlur.value = CONFIG.postFxTiltShiftBlurPx != null ? CONFIG.postFxTiltShiftBlurPx : 8;
         if (elPostFxTiltBand) elPostFxTiltBand.value = CONFIG.postFxTiltShiftBand != null ? CONFIG.postFxTiltShiftBand : 0.25;
@@ -2746,6 +2741,7 @@
         if (elCarRollMax) elCarRollMax.value = CONFIG.carCameraRollMax;
         if (elCarRollSec) elCarRollSec.value = CONFIG.carCameraRollSec;
         if (elCarWakeMax) elCarWakeMax.value = CONFIG.carWakeMaxCount;
+        syncCarDustPanel();
         if (elCar3dFollowTerrain) elCar3dFollowTerrain.checked = CONFIG.car3dFollowTerrain !== false;
         if (elCar3dPitchPivotX) {
             elCar3dPitchPivotX.value = CONFIG.car3dPitchPivotOffsetX != null ? CONFIG.car3dPitchPivotOffsetX : 0;
@@ -2918,6 +2914,8 @@
         if (elWalkTerrainSmoothSec) {
             elWalkTerrainSmoothSec.value = CONFIG.cameraTerrainSmoothSec != null ? CONFIG.cameraTerrainSmoothSec : 0.65;
         }
+        if (elCameraUphillFast) elCameraUphillFast.checked = CONFIG.cameraUphillFast === true;
+        if (elWalkWaterFx) elWalkWaterFx.checked = CONFIG.walkWaterFxEnabled !== false;
         if (elWalkInertiaOff) elWalkInertiaOff.checked = !!CONFIG.walkInertiaDisabled;
         elStyleStatus.textContent = "style: " + styleNameFromUrl(CONFIG.styleUrl);
         elHelpShift.innerHTML = "<kbd>Shift</kbd> — sprint boost";
@@ -2954,7 +2952,7 @@
 
     function sky3dOptionsFromConfig() {
         return {
-            enabled: CONFIG.sky3dEnabled !== false,
+            enabled: CONFIG.sky3dEnabled === true,
             src: CONFIG.sky3dSrc || "images/cloud.png",
             altM: CONFIG.sky3dAltM != null ? CONFIG.sky3dAltM : 1800,
             sizeM: CONFIG.sky3dSizeM != null ? CONFIG.sky3dSizeM : 12000,
@@ -3155,6 +3153,40 @@
         GeowalkCarDrive.init(carDriveOptionsFromConfig());
     }
     initCarDriveModule();
+
+    function carDustOptionsFromConfig() {
+        return {
+            enabled: CONFIG.carDustEnabled !== false,
+            lifeSec: CONFIG.carDustLifeSec != null ? CONFIG.carDustLifeSec : 4,
+            stepM: CONFIG.carDustStepM != null ? CONFIG.carDustStepM : 1.6,
+            points: CONFIG.carDustPoints != null ? CONFIG.carDustPoints : 2,
+            pointSizeM: CONFIG.carDustPointSizeM != null ? CONFIG.carDustPointSizeM : 0.16,
+            pointColor: CONFIG.carDustPointColor || "#b5b5b5",
+            dustSizeM: CONFIG.carDustSizeM != null ? CONFIG.carDustSizeM : 0.75,
+            dustColor: CONFIG.carDustColor || "#8e8e8e",
+            backM: CONFIG.carDustBackM != null ? CONFIG.carDustBackM : 2.4,
+            spreadM: CONFIG.carDustSpreadM != null ? CONFIG.carDustSpreadM : 1.15
+        };
+    }
+
+    function syncCarDustPanel() {
+        const o = carDustOptionsFromConfig();
+        if (elCarDustEnabled) elCarDustEnabled.checked = o.enabled;
+        if (elCarDustLife) elCarDustLife.value = o.lifeSec;
+        if (elCarDustStep) elCarDustStep.value = o.stepM;
+        if (elCarDustPoints) elCarDustPoints.value = o.points;
+        if (elCarDustPointSize) elCarDustPointSize.value = o.pointSizeM;
+        if (elCarDustPointColor) elCarDustPointColor.value = o.pointColor;
+        if (elCarDustSize) elCarDustSize.value = o.dustSizeM;
+        if (elCarDustColor) elCarDustColor.value = o.dustColor;
+        if (elCarDustBack) elCarDustBack.value = o.backM;
+        if (elCarDustSpread) elCarDustSpread.value = o.spreadM;
+    }
+
+    function syncCarDustModule() {
+        if (window.GeowalkCarDust) GeowalkCarDust.sync(carDustOptionsFromConfig());
+    }
+    syncCarDustModule();
 
     function initCar3dModule() {
         if (!window.GeowalkCar3d) return;
@@ -3692,616 +3724,6 @@
         }
     }
 
-    let buildingPaletteOrig = null;
-    let buildingPaletteActive = false;
-    let buildingPaletteBootRetries = 0;
-    const BUILDING_PALETTE_BOOT_MAX = 12;
-
-    function resetBuildingPaletteOrig() {
-        buildingPaletteOrig = null;
-    }
-
-    function syncBuildingPalettePanelUI() {
-        const on = buildingPaletteIsEnabled();
-        if (elBuildingPaletteEnabled) elBuildingPaletteEnabled.checked = on;
-        if (elBuildingPaletteSeed) elBuildingPaletteSeed.disabled = !on;
-        if (elBuildingPaletteClusterM) elBuildingPaletteClusterM.disabled = !on;
-        if (elBuildingPaletteRandomOffsetEnabled) {
-            elBuildingPaletteRandomOffsetEnabled.disabled = !on;
-        }
-        if (elBuildingPaletteRandomOffsetM) {
-            elBuildingPaletteRandomOffsetM.disabled = !on || !buildingPaletteRandomOffsetEnabled();
-        }
-        if (elBuildingPaletteOffsetXY) {
-            elBuildingPaletteOffsetXY.disabled = !on || buildingPaletteRandomOffsetEnabled();
-        }
-    }
-
-    function buildingExtrusionLayerId() {
-        return CONFIG.buildingsLayerId || "building-3d";
-    }
-
-    function buildingFootprintLayerId() {
-        return "building";
-    }
-
-    function isBuildingExtrusionLayer(layerId) {
-        if (!map || !layerId) return false;
-        try {
-            const layer = map.getLayer(layerId);
-            return !!layer && layer.type === "fill-extrusion";
-        } catch (e) {
-            return false;
-        }
-    }
-
-    function ensureBuildingPaletteOrig() {
-        if (buildingPaletteOrig || !map) return;
-        let style;
-        try { style = map.getStyle(); } catch (e) { return; }
-        if (!style || !style.layers) return;
-        const extrusionId = buildingExtrusionLayerId();
-        const footprintId = buildingFootprintLayerId();
-        const orig = {
-            extrusionId,
-            footprintId,
-            extrusion: null,
-            verticalGradient: null,
-            translate: null,
-            translateAnchor: null,
-            filter: null,
-            extrusionVisibility: null,
-            footprintVisibility: null
-        };
-        for (const layer of style.layers) {
-            if (layer.id === extrusionId && layer.type === "fill-extrusion") {
-                orig.filter = layer.filter != null ? layer.filter : null;
-                orig.extrusionVisibility = (layer.layout && layer.layout.visibility) || "visible";
-            }
-            if (layer.id === extrusionId && layer.type === "fill-extrusion" && layer.paint) {
-                orig.extrusion = layer.paint["fill-extrusion-color"];
-                if (layer.paint["fill-extrusion-vertical-gradient"] != null) {
-                    orig.verticalGradient = layer.paint["fill-extrusion-vertical-gradient"];
-                }
-                if (layer.paint["fill-extrusion-translate"] != null) {
-                    orig.translate = layer.paint["fill-extrusion-translate"];
-                }
-                if (layer.paint["fill-extrusion-translate-anchor"] != null) {
-                    orig.translateAnchor = layer.paint["fill-extrusion-translate-anchor"];
-                }
-            }
-            if (layer.id === footprintId && layer.type === "fill") {
-                orig.footprintVisibility = (layer.layout && layer.layout.visibility) || "visible";
-            }
-        }
-        buildingPaletteOrig = orig;
-    }
-
-    const BUILDING_PALETTE = [
-        "#1a1a1a",
-        "#b3b3b3",
-        "#f8f8f8",
-        "#e4d4b8",
-        "#c9dce8"
-    ];
-
-    function buildingVectorSourceId() {
-        return CONFIG.buildingsSourceId || "openmaptiles";
-    }
-
-    function buildingVectorSourceLayer() {
-        return CONFIG.buildingsSourceLayer || "building";
-    }
-
-    function paletteBucketForClusterKey(key, seed) {
-        const sid = Math.max(0, Math.min(9999, seed | 0));
-        let n = Number(key);
-        if (!isFinite(n)) n = 0;
-        n = Math.abs(Math.imul(n | 0, 17) + sid);
-        return n % BUILDING_PALETTE.length;
-    }
-
-    function paletteBucketForFeatureId(id, seed) {
-        return paletteBucketForClusterKey(id, seed);
-    }
-
-    function buildingPaletteClusterM() {
-        const v = CONFIG.buildingPaletteClusterM != null ? +CONFIG.buildingPaletteClusterM : 40;
-        return isFinite(v) ? Math.max(0, Math.min(200, v)) : 40;
-    }
-
-    function buildingFeatureCentroid(f) {
-        const g = f.geometry;
-        if (!g) return null;
-        const polys = g.type === "Polygon" ? [g.coordinates]
-            : g.type === "MultiPolygon" ? g.coordinates : null;
-        if (!polys || !polys.length) return null;
-        const ring = polys[0][0];
-        if (!ring || ring.length < 3) return null;
-        let sx = 0;
-        let sy = 0;
-        let c = 0;
-        const limit = ring.length - 1;
-        for (let i = 0; i < limit; i++) {
-            sx += ring[i][0];
-            sy += ring[i][1];
-            c++;
-        }
-        if (!c) return null;
-        return { lng: sx / c, lat: sy / c };
-    }
-
-    function buildingDistMetersSq(lng1, lat1, lng2, lat2) {
-        const north = (lat2 - lat1) * M_PER_DEG_LAT;
-        const east = (lng2 - lng1) * M_PER_DEG_LAT * Math.cos(((lat1 + lat2) * 0.5) * DEG);
-        return north * north + east * east;
-    }
-
-    function buildingPaletteBucketsByCluster(feats, seed) {
-        const bucketsById = new Map();
-        const clusterM = buildingPaletteClusterM();
-        const entries = [];
-        for (const f of feats) {
-            if (f.id == null || !isBuildingBaseFootprintFeature(f.properties)) continue;
-            const c = buildingFeatureCentroid(f);
-            if (!c) continue;
-            entries.push({ id: f.id, lng: c.lng, lat: c.lat });
-        }
-        if (!entries.length) return bucketsById;
-
-        if (clusterM <= 0) {
-            for (const e of entries) bucketsById.set(e.id, paletteBucketForFeatureId(e.id, seed));
-            return bucketsById;
-        }
-
-        const clusterRSq = clusterM * clusterM;
-        const n = entries.length;
-        const parent = new Array(n);
-        for (let i = 0; i < n; i++) parent[i] = i;
-
-        function find(i) {
-            while (parent[i] !== i) {
-                parent[i] = parent[parent[i]];
-                i = parent[i];
-            }
-            return i;
-        }
-        function unite(a, b) {
-            const ra = find(a);
-            const rb = find(b);
-            if (ra !== rb) parent[rb] = ra;
-        }
-
-        const grid = new Map();
-        function gridKey(lng, lat) {
-            const cosLat = Math.cos(lat * DEG);
-            const cx = Math.floor((lng * M_PER_DEG_LAT * cosLat) / clusterM);
-            const cy = Math.floor((lat * M_PER_DEG_LAT) / clusterM);
-            return cx + "," + cy;
-        }
-
-        for (let i = 0; i < n; i++) {
-            const key = gridKey(entries[i].lng, entries[i].lat);
-            if (!grid.has(key)) grid.set(key, []);
-            grid.get(key).push(i);
-        }
-
-        for (let i = 0; i < n; i++) {
-            const ei = entries[i];
-            const cosLat = Math.cos(ei.lat * DEG);
-            const cx = Math.floor((ei.lng * M_PER_DEG_LAT * cosLat) / clusterM);
-            const cy = Math.floor((ei.lat * M_PER_DEG_LAT) / clusterM);
-            for (let dy = -1; dy <= 1; dy++) {
-                for (let dx = -1; dx <= 1; dx++) {
-                    const cell = grid.get((cx + dx) + "," + (cy + dy));
-                    if (!cell) continue;
-                    for (const j of cell) {
-                        if (j <= i) continue;
-                        const ej = entries[j];
-                        if (buildingDistMetersSq(ei.lng, ei.lat, ej.lng, ej.lat) <= clusterRSq) unite(i, j);
-                    }
-                }
-            }
-        }
-
-        const clusterKey = new Map();
-        for (let i = 0; i < n; i++) {
-            const root = find(i);
-            const id = Number(entries[i].id);
-            const prev = clusterKey.get(root);
-            if (prev == null || id < prev) clusterKey.set(root, id);
-        }
-        for (let i = 0; i < n; i++) {
-            const root = find(i);
-            const key = clusterKey.get(root);
-            bucketsById.set(entries[i].id, paletteBucketForClusterKey(key, seed));
-        }
-        return bucketsById;
-    }
-
-    function isBuildingBaseFootprintFeature(props) {
-        if (!props) return true;
-        const minH = props.render_min_height != null ? +props.render_min_height : 0;
-        return !isFinite(minH) || minH <= 0;
-    }
-
-    function buildingExtrusionBaseFootprintFilter(originalFilter) {
-        const skipParts = ["any",
-            ["!", ["has", "render_min_height"]],
-            ["==", ["to-number", ["get", "render_min_height"]], 0]
-        ];
-        if (!originalFilter || (originalFilter[0] === "all" && originalFilter.length === 1)) {
-            return ["all", skipParts];
-        }
-        if (originalFilter[0] === "all") {
-            return ["all"].concat(originalFilter.slice(1), [skipParts]);
-        }
-        return ["all", originalFilter, skipParts];
-    }
-
-    function buildingPaletteKeyExpression(seed) {
-        const sid = Math.max(0, Math.min(9999, seed | 0));
-        const idNum = ["to-number", ["coalesce", ["id"], 0]];
-        const height = ["to-number", ["coalesce", ["get", "render_height"], 0]];
-        return [
-            "case",
-            [">", idNum, 0],
-            ["floor", ["abs", ["+", ["*", idNum, 17], sid]]],
-            ["floor", ["abs", ["+", ["*", height, 17], sid]]]
-        ];
-    }
-
-    function buildingPaletteColorExpression(seed) {
-        const bucket = ["%", buildingPaletteKeyExpression(seed), BUILDING_PALETTE.length];
-        const expr = ["match", bucket];
-        for (let i = 0; i < BUILDING_PALETTE.length; i++) {
-            expr.push(i, BUILDING_PALETTE[i]);
-        }
-        expr.push(BUILDING_PALETTE[1]);
-        return expr;
-    }
-
-    function buildingPaletteColorExpressionWithFeatureState(seed) {
-        const expr = ["match", ["coalesce", ["feature-state", "palette"], -1]];
-        for (let i = 0; i < BUILDING_PALETTE.length; i++) {
-            expr.push(i, BUILDING_PALETTE[i]);
-        }
-        expr.push(buildingPaletteColorExpression(seed));
-        return expr;
-    }
-
-    let buildingPaletteFeatureStateTime = 0;
-
-    function clearBuildingPaletteFeatureState() {
-        if (!map) return;
-        let feats;
-        try {
-            feats = map.querySourceFeatures(buildingVectorSourceId(), { sourceLayer: buildingVectorSourceLayer() });
-        } catch (e) { return; }
-        const source = buildingVectorSourceId();
-        const sourceLayer = buildingVectorSourceLayer();
-        for (const f of feats) {
-            if (f.id == null) continue;
-            try { map.removeFeatureState({ source, sourceLayer, id: f.id }); } catch (e) { /* ok */ }
-        }
-    }
-
-    function buildingPaletteGeoSourceId() {
-        return "geowalk-building-palette-geo";
-    }
-
-    function buildingPaletteGeoLayerId() {
-        return "geowalk-building-palette-3d";
-    }
-
-    function hideBuildingPaletteGeoLayer() {
-        if (!map) return;
-        const layerId = buildingPaletteGeoLayerId();
-        if (map.getLayer(layerId)) {
-            try { map.setLayoutProperty(layerId, "visibility", "none"); } catch (e) { /* ok */ }
-        }
-    }
-
-    function ensureBuildingPaletteGeoLayer() {
-        if (!map) return false;
-        const sourceId = buildingPaletteGeoSourceId();
-        const layerId = buildingPaletteGeoLayerId();
-        try {
-            if (!map.getSource(sourceId)) {
-                map.addSource(sourceId, {
-                    type: "geojson",
-                    data: { type: "FeatureCollection", features: [] }
-                });
-            }
-            if (!map.getLayer(layerId)) {
-                const extrusionId = buildingExtrusionLayerId();
-                const layers = map.getStyle().layers;
-                let beforeId;
-                const bIdx = layers.findIndex(l => l.id === extrusionId);
-                if (bIdx >= 0 && bIdx < layers.length - 1) beforeId = layers[bIdx + 1].id;
-                map.addLayer({
-                    id: layerId,
-                    type: "fill-extrusion",
-                    source: sourceId,
-                    paint: {
-                        "fill-extrusion-color": ["get", "color"],
-                        "fill-extrusion-height": ["to-number", ["coalesce", ["get", "render_height"], 12]],
-                        "fill-extrusion-base": ["to-number", ["coalesce", ["get", "render_min_height"], 0]],
-                        "fill-extrusion-opacity": 1,
-                        "fill-extrusion-vertical-gradient": false,
-                        "fill-extrusion-translate-anchor": "map",
-                        "fill-extrusion-translate": [0, 0]
-                    }
-                }, beforeId);
-                reassertRenderHierarchy();
-            }
-            map.setLayoutProperty(layerId, "visibility", "visible");
-            return true;
-        } catch (err) {
-            console.warn("Building palette geo layer:", err);
-            return false;
-        }
-    }
-
-    function buildingRingsFromFeature(f) {
-        const g = f.geometry;
-        if (!g) return [];
-        if (g.type === "Polygon") return g.coordinates[0] ? [g.coordinates[0]] : [];
-        if (g.type === "MultiPolygon") return g.coordinates.map(p => p[0]).filter(Boolean);
-        return [];
-    }
-
-    function offsetBuildingRing(ring, eastM, northM, refLat) {
-        if (!ring || ring.length < 3) return null;
-        const cosLat = Math.cos(refLat * DEG);
-        const dLng = eastM / (M_PER_DEG_LAT * cosLat);
-        const dLat = northM / M_PER_DEG_LAT;
-        return ring.map(p => [p[0] + dLng, p[1] + dLat]);
-    }
-
-    function buildBuildingPaletteGeoJson(feats, seed) {
-        const bucketsById = buildingPaletteBucketsByCluster(feats, seed);
-        const randomOff = buildingPaletteRandomOffsetEnabled();
-        const uniformOff = buildingPaletteOffsetM();
-        const features = [];
-        for (const f of feats) {
-            if (f.id == null || !isBuildingBaseFootprintFeature(f.properties)) continue;
-            const bucket = bucketsById.get(f.id);
-            if (bucket == null) continue;
-            const rings = buildingRingsFromFeature(f);
-            if (!rings.length) continue;
-            const centroid = buildingFeatureCentroid(f);
-            const refLat = centroid ? centroid.lat : 0;
-            const offEast = randomOff ? buildingRandomOffsetM(f.id, seed, 0) : uniformOff;
-            const offNorth = randomOff ? buildingRandomOffsetM(f.id, seed, 1) : uniformOff;
-            const props = f.properties || {};
-            const rawH = props.render_height != null ? +props.render_height : 12;
-            const height = isFinite(rawH) ? rawH : 12;
-            const shiftedPolys = [];
-            for (const ring of rings) {
-                const shifted = offsetBuildingRing(ring, offEast, offNorth, refLat);
-                if (shifted && shifted.length >= 4) shiftedPolys.push(shifted);
-            }
-            if (!shiftedPolys.length) continue;
-            const geometry = shiftedPolys.length === 1
-                ? { type: "Polygon", coordinates: [shiftedPolys[0]] }
-                : { type: "MultiPolygon", coordinates: shiftedPolys.map(r => [r]) };
-            features.push({
-                type: "Feature",
-                id: f.id,
-                properties: {
-                    color: BUILDING_PALETTE[bucket],
-                    render_height: height,
-                    render_min_height: 0
-                },
-                geometry: geometry
-            });
-        }
-        return { type: "FeatureCollection", features: features };
-    }
-
-    function refreshBuildingPaletteGeoSource(force) {
-        if (!map || !buildingPaletteIsEnabled() || !buildingPaletteActive || !buildingPaletteRandomOffsetEnabled()) return;
-        const now = performance.now();
-        if (!force && now - buildingPaletteFeatureStateTime < 250) return;
-        buildingPaletteFeatureStateTime = now;
-        let feats;
-        try {
-            feats = map.querySourceFeatures(buildingVectorSourceId(), { sourceLayer: buildingVectorSourceLayer() });
-        } catch (e) { return; }
-        if (!ensureBuildingPaletteGeoLayer()) return;
-        const seed = CONFIG.buildingPaletteSeed;
-        try {
-            map.getSource(buildingPaletteGeoSourceId()).setData(buildBuildingPaletteGeoJson(feats, seed));
-        } catch (err) { console.warn("Building palette geo:", err); }
-        map.triggerRepaint();
-    }
-
-    function refreshBuildingPaletteVisuals(force) {
-        if (buildingPaletteRandomOffsetEnabled()) refreshBuildingPaletteGeoSource(force);
-        else refreshBuildingPaletteFeatureState(force);
-    }
-
-    function buildingPaletteRandomOffsetMaxM() {
-        const v = CONFIG.buildingPaletteRandomOffsetM != null ? +CONFIG.buildingPaletteRandomOffsetM : 1.2;
-        return isFinite(v) ? Math.max(0.05, Math.min(5, v)) : 1.2;
-    }
-
-    function buildingRandomOffsetM(id, seed, axis) {
-        const maxM = buildingPaletteRandomOffsetMaxM();
-        const sid = Math.max(0, Math.min(9999, seed | 0));
-        let n = Number(id);
-        if (!isFinite(n)) n = 0;
-        const h = Math.abs(Math.imul(n | 0, axis === 0 ? 31 : 73) + Math.imul(sid, axis === 0 ? 11 : 29));
-        return ((h % 2001) / 1000 - 1) * maxM;
-    }
-
-    function refreshBuildingPaletteFeatureState(force) {
-        if (!map || !buildingPaletteIsEnabled() || !buildingPaletteActive) return;
-        const now = performance.now();
-        if (!force && now - buildingPaletteFeatureStateTime < 250) return;
-        buildingPaletteFeatureStateTime = now;
-        let feats;
-        try {
-            feats = map.querySourceFeatures(buildingVectorSourceId(), { sourceLayer: buildingVectorSourceLayer() });
-        } catch (e) { return; }
-        const source = buildingVectorSourceId();
-        const sourceLayer = buildingVectorSourceLayer();
-        const seed = CONFIG.buildingPaletteSeed;
-        const bucketsById = buildingPaletteBucketsByCluster(feats, seed);
-        for (const [id, bucket] of bucketsById) {
-            try {
-                map.setFeatureState({ source, sourceLayer, id: id }, { palette: bucket });
-            } catch (e) { /* ok */ }
-        }
-        map.triggerRepaint();
-    }
-
-    function buildingPaletteOffsetM() {
-        const v = CONFIG.buildingPaletteOffsetXY != null ? +CONFIG.buildingPaletteOffsetXY : 0;
-        return isFinite(v) ? Math.max(-5, Math.min(5, v)) : 0;
-    }
-
-    function restoreBuildingPaletteStyle() {
-        const extrusionId = buildingExtrusionLayerId();
-        if (!map || !buildingPaletteOrig || !isBuildingExtrusionLayer(extrusionId)) return;
-        try {
-            if (buildingPaletteOrig.extrusion != null) {
-                map.setPaintProperty(extrusionId, "fill-extrusion-color", buildingPaletteOrig.extrusion);
-            }
-            if (buildingPaletteOrig.verticalGradient != null) {
-                map.setPaintProperty(extrusionId, "fill-extrusion-vertical-gradient", buildingPaletteOrig.verticalGradient);
-            }
-            if (buildingPaletteOrig.translate != null) {
-                map.setPaintProperty(extrusionId, "fill-extrusion-translate", buildingPaletteOrig.translate);
-            } else {
-                map.setPaintProperty(extrusionId, "fill-extrusion-translate", [0, 0]);
-            }
-            if (buildingPaletteOrig.translateAnchor != null) {
-                map.setPaintProperty(extrusionId, "fill-extrusion-translate-anchor", buildingPaletteOrig.translateAnchor);
-            }
-            if (buildingPaletteOrig.filter != null) {
-                map.setFilter(extrusionId, buildingPaletteOrig.filter);
-            } else {
-                map.setFilter(extrusionId, null);
-            }
-            const vis = buildingPaletteOrig.extrusionVisibility || "visible";
-            try { map.setLayoutProperty(extrusionId, "visibility", vis); } catch (e) { /* ok */ }
-        } catch (err) { console.warn("Building palette restore:", err); }
-        hideBuildingPaletteGeoLayer();
-        const footprintId = buildingFootprintLayerId();
-        if (map.getLayer(footprintId)) {
-            const vis = buildingPaletteOrig.footprintVisibility || "visible";
-            try { map.setLayoutProperty(footprintId, "visibility", vis); } catch (e) { /* ok */ }
-        }
-    }
-
-    function applyBuildingPalette(retryOnIdle) {
-        if (!map) return;
-        try {
-            if (map.isStyleLoaded && !map.isStyleLoaded()) return;
-        } catch (e) { return; }
-
-        const extrusionId = buildingExtrusionLayerId();
-        const enabled = buildingPaletteIsEnabled();
-
-        if (!isBuildingExtrusionLayer(extrusionId)) {
-            if (retryOnIdle !== false) {
-                try { map.once("idle", () => applyBuildingPalette()); } catch (e) { /* ok */ }
-            }
-            syncBuildingPalettePanelUI();
-            return;
-        }
-
-        if (!enabled) {
-            if (buildingPaletteActive) {
-                clearBuildingPaletteFeatureState();
-                restoreBuildingPaletteStyle();
-            }
-            buildingPaletteActive = false;
-            syncBuildingPalettePanelUI();
-            map.triggerRepaint();
-            return;
-        }
-
-        ensureBuildingPaletteOrig();
-        const randomOff = buildingPaletteRandomOffsetEnabled();
-        try {
-            map.setFilter(extrusionId, buildingExtrusionBaseFootprintFilter(buildingPaletteOrig.filter));
-            const footprintId = buildingFootprintLayerId();
-            if (map.getLayer(footprintId)) {
-                map.setLayoutProperty(footprintId, "visibility", "none");
-            }
-            if (randomOff) {
-                map.setLayoutProperty(extrusionId, "visibility", "none");
-                buildingPaletteActive = true;
-                refreshBuildingPaletteGeoSource(true);
-            } else {
-                hideBuildingPaletteGeoLayer();
-                map.setLayoutProperty(extrusionId, "visibility", buildingPaletteOrig.extrusionVisibility || "visible");
-                map.setPaintProperty(extrusionId, "fill-extrusion-color", buildingPaletteColorExpressionWithFeatureState(CONFIG.buildingPaletteSeed));
-                map.setPaintProperty(extrusionId, "fill-extrusion-vertical-gradient", false);
-                map.setPaintProperty(extrusionId, "fill-extrusion-translate-anchor", "map");
-                const o = buildingPaletteOffsetM();
-                map.setPaintProperty(extrusionId, "fill-extrusion-translate", [o, o]);
-                buildingPaletteActive = true;
-                refreshBuildingPaletteFeatureState(true);
-            }
-        } catch (err) { console.warn("Building palette:", err); }
-        syncBuildingPalettePanelUI();
-        map.triggerRepaint();
-    }
-
-    function syncBuildingPaletteFromPanel() {
-        applyBuildingPalette();
-    }
-
-    function bootBuildingPalette() {
-        normalizeBuildingPaletteConfig();
-        syncBuildingPalettePanelUI();
-        if (!buildingPaletteIsEnabled() || !map) return;
-        buildingPaletteBootRetries = 0;
-        applyBuildingPalette();
-        try { requestAnimationFrame(() => applyBuildingPalette()); } catch (e) { /* ok */ }
-        scheduleBuildingPaletteBootRetry();
-    }
-
-    function scheduleBuildingPaletteBootRetry() {
-        if (!map || !buildingPaletteIsEnabled() || buildingPaletteActive) return;
-        if (buildingPaletteBootRetries >= BUILDING_PALETTE_BOOT_MAX) return;
-        buildingPaletteBootRetries++;
-        try { map.once("idle", () => {
-            applyBuildingPalette();
-            scheduleBuildingPaletteBootRetry();
-        }); } catch (e) { /* ok */ }
-    }
-
-    let buildingPaletteStyleHook = null;
-    let buildingPaletteSourceHook = null;
-
-    function bindBuildingPaletteStyleHook() {
-        if (!map || buildingPaletteStyleHook) return;
-        buildingPaletteStyleHook = function (e) {
-            if (e && e.dataType && e.dataType !== "style") return;
-            resetBuildingPaletteOrig();
-            buildingPaletteActive = false;
-            applyBuildingPalette();
-        };
-        map.on("styledata", buildingPaletteStyleHook);
-    }
-
-    function bindBuildingPaletteSourceHook() {
-        if (!map || buildingPaletteSourceHook) return;
-        buildingPaletteSourceHook = function (e) {
-            if (!buildingPaletteIsEnabled() || !buildingPaletteActive) return;
-            if (e && e.sourceId && e.sourceId !== buildingVectorSourceId()) return;
-            if (e && e.isSourceLoaded === false) return;
-            refreshBuildingPaletteVisuals();
-        };
-        map.on("sourcedata", buildingPaletteSourceHook);
-        map.on("moveend", () => refreshBuildingPaletteVisuals());
-    }
-
     // ----------------------------------------------------------------------
     // Состояние игрока
     // ----------------------------------------------------------------------
@@ -4328,7 +3750,6 @@
     let sky3dLiftBaseline = player.altOffset;
 
     function sky3dPlayerLiftM() {
-        if (sky3dAutoHighAltActive) return 0;
         return Math.max(0, player.altOffset - sky3dLiftBaseline);
     }
 
@@ -4336,26 +3757,8 @@
         sky3dLiftBaseline = player.altOffset;
     }
 
-    const SKY3D_AUTO_ALT_TRIGGER_M = 1000;
-    let wasAboveSky3dAutoAlt = false;
-    let sky3dAutoHighAltActive = false;
-
-    function playerGroundElevM() {
-        const te = queryPlayerTerrainElevation();
-        if (te != null) return te;
-        if (player.eye != null && isFinite(lastCameraAltM)) {
-            return lastCameraAltM - player.eye - (player.altOffset || 0);
-        }
-        return CONFIG.groundAlt != null ? CONFIG.groundAlt : 0;
-    }
-
-    function sky3dFrozenAltMAtTrigger() {
-        const riseAboveTriggerM = Math.max(0, lastCameraAltM - SKY3D_AUTO_ALT_TRIGGER_M);
-        return SKY3D_AUTO_ALT_TRIGGER_M + riseAboveTriggerM - playerGroundElevM();
-    }
-
     function syncSky3dPanelFromConfig() {
-        if (elSky3dEnabled) elSky3dEnabled.checked = CONFIG.sky3dEnabled !== false;
+        if (elSky3dEnabled) elSky3dEnabled.checked = CONFIG.sky3dEnabled === true;
         if (elSky3dAnim) {
             elSky3dAnim.checked = CONFIG.sky3dAnimEnabled !== false;
             elSky3dAnim.disabled = CONFIG.sky3dEnabled === false;
@@ -4364,28 +3767,6 @@
             elSky3dAlt.value = CONFIG.sky3dAltM != null ? CONFIG.sky3dAltM : 1800;
             elSky3dAlt.disabled = CONFIG.sky3dEnabled === false;
         }
-    }
-
-    function updateSky3dForHighAltitude() {
-        if (!ready) return;
-        const above = lastCameraAltM >= SKY3D_AUTO_ALT_TRIGGER_M;
-        if (above && !wasAboveSky3dAutoAlt) {
-            sky3dAutoHighAltActive = true;
-            CONFIG.sky3dEnabled = true;
-            CONFIG.sky3dAltM = sky3dFrozenAltMAtTrigger();
-            resetSky3dLiftBaseline();
-            syncSky3dPanelFromConfig();
-            syncSky3dModule();
-            recalcSky3dAtPlayer();
-            if (map && map.transform) applyNearFarClip(map.transform);
-        } else if (!above && wasAboveSky3dAutoAlt) {
-            sky3dAutoHighAltActive = false;
-            CONFIG.sky3dEnabled = false;
-            syncSky3dPanelFromConfig();
-            syncSky3dModule();
-            if (map && map.transform) applyNearFarClip(map.transform);
-        }
-        wasAboveSky3dAutoAlt = above;
     }
 
     const CAR_MODE_FOG = 1;
@@ -4961,8 +4342,6 @@
         player.lat = lat;
         player.altOffset = altOffsetForTotalEye(totalEyeHeightForMode(CONFIG.movementMode));
         resetSky3dLiftBaseline();
-        sky3dAutoHighAltActive = false;
-        wasAboveSky3dAutoAlt = false;
         heightAnim = null;
         jumpAnim = null;
         velFwd = 0;
@@ -5351,6 +4730,23 @@
             elWalkTerrainSmoothSec.value = CONFIG.cameraTerrainSmoothSec;
         });
     }
+    if (elCameraUphillFast) {
+        elCameraUphillFast.addEventListener("change", () => {
+            CONFIG.cameraUphillFast = elCameraUphillFast.checked;
+        });
+    }
+    if (elWalkWaterFx) {
+        elWalkWaterFx.addEventListener("change", () => {
+            CONFIG.walkWaterFxEnabled = elWalkWaterFx.checked;
+            syncWalkWater(0);
+        });
+    }
+    const elWalkWaterIn = document.getElementById("walk-water-in");
+    if (elWalkWaterIn) {
+        elWalkWaterIn.addEventListener("animationend", () => {
+            elWalkWaterIn.classList.remove("play");
+        });
+    }
     if (elWalkInertiaOff) {
         elWalkInertiaOff.addEventListener("change", () => {
             CONFIG.walkInertiaDisabled = elWalkInertiaOff.checked;
@@ -5412,52 +4808,6 @@
     function syncPostFxFromPanel() {
         syncPostFxModule();
         if (map) map.triggerRepaint();
-    }
-    if (elBuildingPaletteEnabled) {
-        elBuildingPaletteEnabled.addEventListener("change", () => {
-            CONFIG.buildingPaletteEnabled = elBuildingPaletteEnabled.checked;
-            syncBuildingPalettePanelUI();
-            syncBuildingPaletteFromPanel();
-        });
-    }
-    if (elBuildingPaletteSeed) {
-        bindNumber(elBuildingPaletteSeed, v => {
-            if (!buildingPaletteIsEnabled()) return;
-            CONFIG.buildingPaletteSeed = Math.max(0, Math.min(9999, v | 0));
-            elBuildingPaletteSeed.value = CONFIG.buildingPaletteSeed;
-            syncBuildingPaletteFromPanel();
-        });
-    }
-    if (elBuildingPaletteClusterM) {
-        bindNumber(elBuildingPaletteClusterM, v => {
-            if (!buildingPaletteIsEnabled()) return;
-            CONFIG.buildingPaletteClusterM = Math.max(0, Math.min(200, v));
-            elBuildingPaletteClusterM.value = CONFIG.buildingPaletteClusterM;
-            syncBuildingPaletteFromPanel();
-        });
-    }
-    if (elBuildingPaletteRandomOffsetEnabled) {
-        elBuildingPaletteRandomOffsetEnabled.addEventListener("change", () => {
-            CONFIG.buildingPaletteRandomOffsetEnabled = elBuildingPaletteRandomOffsetEnabled.checked;
-            syncBuildingPalettePanelUI();
-            syncBuildingPaletteFromPanel();
-        });
-    }
-    if (elBuildingPaletteRandomOffsetM) {
-        bindNumber(elBuildingPaletteRandomOffsetM, v => {
-            if (!buildingPaletteRandomOffsetEnabled()) return;
-            CONFIG.buildingPaletteRandomOffsetM = Math.max(0.05, Math.min(5, v));
-            elBuildingPaletteRandomOffsetM.value = CONFIG.buildingPaletteRandomOffsetM;
-            syncBuildingPaletteFromPanel();
-        });
-    }
-    if (elBuildingPaletteOffsetXY) {
-        bindNumber(elBuildingPaletteOffsetXY, v => {
-            if (!buildingPaletteIsEnabled()) return;
-            CONFIG.buildingPaletteOffsetXY = Math.max(-5, Math.min(5, v));
-            elBuildingPaletteOffsetXY.value = CONFIG.buildingPaletteOffsetXY;
-            syncBuildingPaletteFromPanel();
-        });
     }
     if (elPostFxTiltEnabled) {
         elPostFxTiltEnabled.addEventListener("change", () => {
@@ -5526,6 +4876,67 @@
         CONFIG.carWakeMaxCount = Math.max(1, Math.min(30, v | 0));
         if (window.GeowalkCarDrive) GeowalkCarDrive.setWakeMaxCount(CONFIG.carWakeMaxCount);
     });
+    if (elCarDustEnabled) {
+        elCarDustEnabled.addEventListener("change", () => {
+            CONFIG.carDustEnabled = elCarDustEnabled.checked;
+            syncCarDustModule();
+        });
+    }
+    if (elCarDustLife) {
+        bindNumber(elCarDustLife, v => {
+            CONFIG.carDustLifeSec = Math.max(0.2, Math.min(20, v));
+            syncCarDustModule();
+        });
+    }
+    if (elCarDustStep) {
+        bindNumber(elCarDustStep, v => {
+            CONFIG.carDustStepM = Math.max(0.3, Math.min(20, v));
+            syncCarDustModule();
+        });
+    }
+    if (elCarDustPoints) {
+        bindNumber(elCarDustPoints, v => {
+            CONFIG.carDustPoints = Math.max(0, Math.min(8, v | 0));
+            elCarDustPoints.value = CONFIG.carDustPoints;
+            syncCarDustModule();
+        });
+    }
+    if (elCarDustPointSize) {
+        bindNumber(elCarDustPointSize, v => {
+            CONFIG.carDustPointSizeM = Math.max(0.04, Math.min(2, v));
+            syncCarDustModule();
+        });
+    }
+    if (elCarDustPointColor) {
+        elCarDustPointColor.addEventListener("input", () => {
+            CONFIG.carDustPointColor = elCarDustPointColor.value;
+            syncCarDustModule();
+        });
+    }
+    if (elCarDustSize) {
+        bindNumber(elCarDustSize, v => {
+            CONFIG.carDustSizeM = Math.max(0.1, Math.min(4, v));
+            syncCarDustModule();
+        });
+    }
+    if (elCarDustColor) {
+        elCarDustColor.addEventListener("input", () => {
+            CONFIG.carDustColor = elCarDustColor.value;
+            syncCarDustModule();
+        });
+    }
+    if (elCarDustBack) {
+        bindNumber(elCarDustBack, v => {
+            CONFIG.carDustBackM = Math.max(0, Math.min(12, v));
+            syncCarDustModule();
+        });
+    }
+    if (elCarDustSpread) {
+        bindNumber(elCarDustSpread, v => {
+            CONFIG.carDustSpreadM = Math.max(0, Math.min(8, v));
+            syncCarDustModule();
+        });
+    }
     if (elCar3dFollowTerrain) {
         elCar3dFollowTerrain.addEventListener("change", () => {
             CONFIG.car3dFollowTerrain = elCar3dFollowTerrain.checked;
@@ -6072,21 +5483,7 @@
     }
 
     function topBuildingExtrusionLayerId() {
-        if (!map || !map.getStyle || !map.getStyle()) {
-            return CONFIG.buildingsLayerId || "building-3d";
-        }
-        const layers = map.getStyle().layers;
-        const ids = [buildingPaletteGeoLayerId(), CONFIG.buildingsLayerId || "building-3d"];
-        let bestIdx = -1;
-        let bestId = ids[1];
-        for (let i = 0; i < ids.length; i++) {
-            const idx = layers.findIndex((l) => l.id === ids[i]);
-            if (idx > bestIdx) {
-                bestIdx = idx;
-                bestId = ids[i];
-            }
-        }
-        return bestId;
+        return CONFIG.buildingsLayerId || "building-3d";
     }
 
     // Sky-градиент (setSky) → geowalk-skybox (самый низ) → карта/DEM → здания → geowalk-three.
@@ -6691,6 +6088,7 @@
         const lng0 = player.lng, lat0 = player.lat;
         const pad = 0.0025; // ~250 м
         const out = [];
+        const seen = new Set();
         for (const f of feats) {
             const g = f.geometry; if (!g) continue;
             const polys = g.type === "Polygon" ? [g.coordinates]
@@ -6699,16 +6097,22 @@
             const props = f.properties || {};
             const rawH = props.render_height != null ? props.render_height : props.height;
             const height = (rawH != null && isFinite(+rawH)) ? +rawH : 12;
+            const rawMin = props.render_min_height != null ? props.render_min_height : props.min_height;
+            const minH = (rawMin != null && isFinite(+rawMin)) ? +rawMin : 0;
             for (const poly of polys) {
                 const ring = poly[0];
                 if (!ring || ring.length < 3) continue;
+                const key = ring.length + ":" + height + ":" + minH + ":" +
+                    ring[0][0].toFixed(5) + ":" + ring[0][1].toFixed(5);
+                if (seen.has(key)) continue;
+                seen.add(key);
                 let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
                 for (const p of ring) {
                     if (p[0] < minx) minx = p[0]; if (p[0] > maxx) maxx = p[0];
                     if (p[1] < miny) miny = p[1]; if (p[1] > maxy) maxy = p[1];
                 }
                 if (maxx < lng0 - pad || minx > lng0 + pad || maxy < lat0 - pad || miny > lat0 + pad) continue;
-                out.push({ ring, minx, miny, maxx, maxy, height });
+                out.push({ rings: poly, minx, miny, maxx, maxy, height, minH });
             }
         }
         buildingCache = out;
@@ -6723,12 +6127,155 @@
         return inside;
     }
 
+    function pointInBuilding(b, lng, lat) {
+        const rings = b.rings;
+        if (!rings || !rings[0]) return false;
+        if (lng < b.minx || lng > b.maxx || lat < b.miny || lat > b.maxy) return false;
+        if (!pointInRing(lng, lat, rings[0])) return false;
+        for (let h = 1; h < rings.length; h++) {
+            if (rings[h] && rings[h].length >= 3 && pointInRing(lng, lat, rings[h])) return false;
+        }
+        return true;
+    }
+
     function isInsideBuilding(lng, lat) {
-        for (const b of buildingCache) {
-            if (lng < b.minx || lng > b.maxx || lat < b.miny || lat > b.maxy) continue;
-            if (pointInRing(lng, lat, b.ring)) return true;
+        for (let i = 0; i < buildingCache.length; i++) {
+            if (pointInBuilding(buildingCache[i], lng, lat)) return true;
         }
         return false;
+    }
+
+    // Высота низа тела над местной землёй. Стена держит, пока крыша выше этой отметки.
+    function playerClearanceM() {
+        if (isCarLikeMode()) return 0;
+        if (isFollowMode()) {
+            const base = altOffsetForTotalEye(totalEyeHeightForMode("follow"));
+            return Math.max(0, player.altOffset - base);
+        }
+        const ground = queryPlayerTerrainElevation();
+        const groundM = ground != null ? ground : (fixedElevation != null ? fixedElevation : 0);
+        const eyeAbs = (fixedElevation != null ? fixedElevation : groundM) +
+            CONFIG.groundAlt + CONFIG.eyeHeight + player.altOffset;
+        return Math.max(0, eyeAbs - groundM);
+    }
+
+    function buildingHitsBody(b, clearance) {
+        const roof = b.height != null ? b.height : 12;
+        const floor = b.minH || 0;
+        if (clearance >= roof - 0.3) return false;
+        if (clearance < floor - 0.25) return false;
+        return true;
+    }
+
+    function pointBlocked(lng, lat, clearance) {
+        for (let i = 0; i < buildingCache.length; i++) {
+            const b = buildingCache[i];
+            if (!buildingHitsBody(b, clearance)) continue;
+            if (pointInBuilding(b, lng, lat)) return true;
+        }
+        return false;
+    }
+
+    function bodyRadiusM() {
+        return isCarLikeMode() ? 0.85 : 0.42;
+    }
+
+    function offsetMeters(lng, lat, east, north) {
+        const cosLat = Math.cos(lat * DEG) || 1e-6;
+        return {
+            lng: lng + east / (M_PER_DEG_LAT * cosLat),
+            lat: lat + north / M_PER_DEG_LAT
+        };
+    }
+
+    const BODY_OFFSETS = (function () {
+        const pts = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        const d = 0.7071;
+        pts.push([d, d], [d, -d], [-d, d], [-d, -d]);
+        return pts;
+    })();
+
+    function bodyBlocked(lng, lat, clearance) {
+        if (pointBlocked(lng, lat, clearance)) return true;
+        const r = bodyRadiusM();
+        for (let i = 0; i < BODY_OFFSETS.length; i++) {
+            const p = offsetMeters(lng, lat, BODY_OFFSETS[i][0] * r, BODY_OFFSETS[i][1] * r);
+            if (pointBlocked(p.lng, p.lat, clearance)) return true;
+        }
+        return false;
+    }
+
+    function cacheMightBlock(clearance) {
+        for (let i = 0; i < buildingCache.length; i++) {
+            if (buildingHitsBody(buildingCache[i], clearance)) return true;
+        }
+        return false;
+    }
+
+    function slideStep(lng, lat, dLng, dLat, clearance) {
+        if (!bodyBlocked(lng + dLng, lat + dLat, clearance)) {
+            return { lng: lng + dLng, lat: lat + dLat };
+        }
+        const eastFree = dLng !== 0 && !bodyBlocked(lng + dLng, lat, clearance);
+        const northFree = dLat !== 0 && !bodyBlocked(lng, lat + dLat, clearance);
+        if (eastFree && !northFree) return { lng: lng + dLng, lat: lat };
+        if (northFree && !eastFree) return { lng: lng, lat: lat + dLat };
+        if (eastFree && northFree) {
+            const cosLat = Math.cos(lat * DEG) || 1e-6;
+            if (Math.abs(dLng) * cosLat >= Math.abs(dLat)) return { lng: lng + dLng, lat: lat };
+            return { lng: lng, lat: lat + dLat };
+        }
+        return { lng: lng, lat: lat };
+    }
+
+    function resolveBlockedMove(lng, lat, dLng, dLat, clearance) {
+        const cosLat = Math.cos(lat * DEG) || 1e-6;
+        const dist = Math.hypot(dLng * M_PER_DEG_LAT * cosLat, dLat * M_PER_DEG_LAT);
+        if (dist < 1e-6 || !cacheMightBlock(clearance)) {
+            return { lng: lng + dLng, lat: lat + dLat, moved: dist };
+        }
+        const steps = Math.min(16, Math.max(1, Math.ceil(dist / Math.max(0.3, bodyRadiusM()))));
+        const sLng = dLng / steps;
+        const sLat = dLat / steps;
+        let curLng = lng;
+        let curLat = lat;
+        for (let i = 0; i < steps; i++) {
+            const nxt = slideStep(curLng, curLat, sLng, sLat, clearance);
+            if (nxt.lng === curLng && nxt.lat === curLat) break;
+            curLng = nxt.lng;
+            curLat = nxt.lat;
+        }
+        const moved = Math.hypot((curLng - lng) * M_PER_DEG_LAT * cosLat, (curLat - lat) * M_PER_DEG_LAT);
+        return { lng: curLng, lat: curLat, moved: moved };
+    }
+
+    function projectVelocityOntoMove(startLng, startLat, endLng, endLat) {
+        const cosLat = Math.cos(startLat * DEG) || 1e-6;
+        const east = (endLng - startLng) * M_PER_DEG_LAT * cosLat;
+        const north = (endLat - startLat) * M_PER_DEG_LAT;
+        const moved = Math.hypot(east, north);
+        if (moved < 1e-4) {
+            velFwd = 0;
+            velStrafe = 0;
+            return;
+        }
+        const dirE = east / moved;
+        const dirN = north / moved;
+        const b = player.yaw * DEG;
+        const sinB = Math.sin(b);
+        const cosB = Math.cos(b);
+        const velEast = velFwd * sinB + velStrafe * cosB;
+        const velNorth = velFwd * cosB - velStrafe * sinB;
+        const along = velEast * dirE + velNorth * dirN;
+        if (along <= 0) {
+            velFwd = 0;
+            velStrafe = 0;
+            return;
+        }
+        const newEast = dirE * along;
+        const newNorth = dirN * along;
+        velFwd = newNorth * cosB + newEast * sinB;
+        velStrafe = newEast * cosB - newNorth * sinB;
     }
 
     function geoOffsetFromYaw(lng, lat, yawDeg, forwardM, strafeM) {
@@ -6840,6 +6387,69 @@
         return layers.includes("water") && !layers.includes("road_area_pattern");
     }
 
+    let walkWaterT = 0;
+    let walkWaterOn = false;
+    let walkWaterWasIn = false;
+    let walkWaterSplashPending = false;
+    let walkWaterInLayer = false;
+
+    function walkOnWaterLayer() {
+        if (!isFollowMode() || CONFIG.walkWaterFxEnabled === false || !ready) return false;
+        if (performance.now() - surfaceCacheTime > 350) {
+            refreshSurfaceCache();
+            surfaceCacheTime = performance.now();
+        }
+        return isOnSurface(surfaceCache.water || [], player.lng, player.lat);
+    }
+
+    function walkWaterRollDeg() {
+        if (!walkWaterOn) return 0;
+        return Math.sin(walkWaterT * 1.15) * 4;
+    }
+
+    function playWalkWaterSplash() {
+        const el = document.getElementById("walk-water-in");
+        if (!el) return;
+        el.classList.remove("play");
+        void el.offsetWidth;
+        el.classList.add("play");
+    }
+
+    function syncWalkWater(dt) {
+        walkWaterT += dt > 0 ? dt : 0;
+        const inWater = walkOnWaterLayer();
+        const jumping = !!jumpAnim;
+        walkWaterInLayer = inWater;
+        const on = inWater && !jumping;
+        if (!inWater) walkWaterSplashPending = false;
+        else if (!walkWaterWasIn || jumping) walkWaterSplashPending = true;
+        if (walkWaterSplashPending && !jumping) {
+            walkWaterSplashPending = false;
+            playWalkWaterSplash();
+        }
+        walkWaterWasIn = inWater;
+        if (on !== walkWaterOn) {
+            walkWaterOn = on;
+            document.body.classList.toggle("walk-water", on);
+        }
+        if (!on) return;
+        const edge = document.getElementById("walk-water-edge");
+        const fill = document.getElementById("walk-water-fill");
+        if (!edge || !fill) return;
+        const w = 1200;
+        const h = 1000;
+        const base = 640;
+        const amp = 26;
+        const phase = walkWaterT * 0.45;
+        let d = "";
+        for (let x = 0; x <= w; x += 40) {
+            const y = base + Math.sin((x / w) * Math.PI + phase) * amp;
+            d += (x === 0 ? "M " : " L ") + x + " " + y.toFixed(1);
+        }
+        edge.setAttribute("d", d);
+        fill.setAttribute("d", d + " L " + w + " " + h + " L 0 " + h + " Z");
+    }
+
     function isOnSurface(cache, lng, lat) {
         for (const item of cache) {
             if (lng < item.minx || lng > item.maxx || lat < item.miny || lat > item.maxy) continue;
@@ -6875,11 +6485,143 @@
     // ----------------------------------------------------------------------
     // Игровой цикл
     // ----------------------------------------------------------------------
+    function parseCssColor(c) {
+        if (typeof c !== "string") return null;
+        const s = c.trim();
+        let m = s.match(/^#([0-9a-f]{3})$/i);
+        if (m) {
+            const h = m[1];
+            return {
+                r: parseInt(h[0] + h[0], 16),
+                g: parseInt(h[1] + h[1], 16),
+                b: parseInt(h[2] + h[2], 16)
+            };
+        }
+        m = s.match(/^#([0-9a-f]{6})$/i);
+        if (m) {
+            const h = m[1];
+            return {
+                r: parseInt(h.slice(0, 2), 16),
+                g: parseInt(h.slice(2, 4), 16),
+                b: parseInt(h.slice(4, 6), 16)
+            };
+        }
+        m = s.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+        if (m) return { r: +m[1], g: +m[2], b: +m[3] };
+        m = s.match(/^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/i);
+        if (m) {
+            const hue = (((+m[1]) % 360) + 360) % 360 / 360;
+            const sat = +m[2] / 100;
+            const lig = +m[3] / 100;
+            const q = lig < 0.5 ? lig * (1 + sat) : lig + sat - lig * sat;
+            const p = 2 * lig - q;
+            const ch = (t) => {
+                let x = t;
+                if (x < 0) x += 1;
+                if (x > 1) x -= 1;
+                if (x < 1 / 6) return p + (q - p) * 6 * x;
+                if (x < 1 / 2) return q;
+                if (x < 2 / 3) return p + (q - p) * (2 / 3 - x) * 6;
+                return p;
+            };
+            return {
+                r: Math.round(ch(hue + 1 / 3) * 255),
+                g: Math.round(ch(hue) * 255),
+                b: Math.round(ch(hue - 1 / 3) * 255)
+            };
+        }
+        return null;
+    }
+
+    function isDarkFlatColor(c) {
+        if (!c) return false;
+        const max = Math.max(c.r, c.g, c.b);
+        const min = Math.min(c.r, c.g, c.b);
+        return max < 130 && (max - min) < 36;
+    }
+
+    function valueAtZoom(expr, z) {
+        if (typeof expr === "number" || typeof expr === "string") return expr;
+        if (!Array.isArray(expr) || expr[0] !== "interpolate") return null;
+        const stops = [];
+        for (let i = 3; i < expr.length; i += 2) {
+            if (typeof expr[i] === "number") stops.push([expr[i], expr[i + 1]]);
+        }
+        if (!stops.length) return null;
+        if (z <= stops[0][0]) return stops[0][1];
+        const last = stops[stops.length - 1];
+        if (z >= last[0]) return last[1];
+        for (let i = 1; i < stops.length; i++) {
+            if (z <= stops[i][0]) {
+                const a = stops[i - 1];
+                const b = stops[i];
+                if (typeof a[1] !== "number" || typeof b[1] !== "number") return b[1];
+                const t = (z - a[0]) / (b[0] - a[0]);
+                return a[1] + (b[1] - a[1]) * t;
+            }
+        }
+        return last[1];
+    }
+
+    // Камера 2D car сидит на зуме ~20.5. Тёмная линия в 2px на такой же заливке дороги
+    // не читается. На дальнем зуме стиль не трогаем, ближе линия светлеет и толстеет.
+    function boostCloseRoadLines() {
+        let style;
+        try { style = map.getStyle(); } catch (e) { return; }
+        if (!style || !style.layers) return;
+        const closeColor = "rgba(214, 214, 208, 1)";
+        for (const layer of style.layers) {
+            if (!layer || layer.type !== "line" || layer["source-layer"] !== "transportation") continue;
+            let vis = "visible";
+            try { vis = map.getLayoutProperty(layer.id, "visibility") || "visible"; } catch (e) {}
+            if (vis === "none") continue;
+            let widthExpr, colorExpr;
+            try {
+                widthExpr = map.getPaintProperty(layer.id, "line-width");
+                colorExpr = map.getPaintProperty(layer.id, "line-color");
+            } catch (e) { continue; }
+            const w16 = valueAtZoom(widthExpr, 16);
+            const w20 = valueAtZoom(widthExpr, 20);
+            const color20 = valueAtZoom(colorExpr, 20);
+            const parsed = parseCssColor(typeof color20 === "string" ? color20 : "");
+            const dark = isDarkFlatColor(parsed);
+            const thin = typeof w20 !== "number" || w20 < 16;
+            if (!dark && !thin) continue;
+            if (typeof w16 === "number") {
+                const low = Math.max(0, w16);
+                const high = Math.max(typeof w20 === "number" ? w20 : low, dark ? 26 : 18);
+                if (high > low + 0.5) {
+                    const mid = Math.max(low, low + (high - low) * 0.45);
+                    try {
+                        map.setPaintProperty(layer.id, "line-width", [
+                            "interpolate", ["exponential", 1.35], ["zoom"],
+                            16, low,
+                            18, mid,
+                            20.5, high
+                        ]);
+                    } catch (e) {}
+                }
+            }
+            if (dark) {
+                const color16 = valueAtZoom(colorExpr, 16);
+                const base = typeof color16 === "string" ? color16
+                    : (typeof color20 === "string" ? color20 : closeColor);
+                try {
+                    map.setPaintProperty(layer.id, "line-color", [
+                        "interpolate", ["linear"], ["zoom"],
+                        16.5, base,
+                        18.2, closeColor
+                    ]);
+                } catch (e) {}
+            }
+        }
+    }
+
     // Применяет все наши настройки поверх (свеже)загруженного стиля карты.
     function setupStyle() {
         applyFov();
-        resetBuildingPaletteOrig();
         stripIconLayers();
+        boostCloseRoadLines();
         applySky();
         syncNearFarClip();
 
@@ -6943,7 +6685,6 @@
             try { GeowalkGiantMob.setup(map); } catch (err) { console.warn("Sprite1:", err); }
         }
         reassertRenderHierarchy();
-        applyBuildingPalette();
     }
 
     function applyNearFarClip(tr) {
@@ -6956,7 +6697,7 @@
             const carChase = isCarLikeMode() && carCameraView !== "topdown";
             if (CONFIG.clip3dEnabled && isFinite(farZ) && !carChase) {
                 let factor = Math.max(0.05, Math.min(1, CONFIG.clip3dFactor || 0.5));
-                if (CONFIG.sky3dEnabled !== false) factor = Math.max(factor, 0.72);
+                if (CONFIG.sky3dEnabled === true) factor = Math.max(factor, 0.72);
                 if (CONFIG.skyboxEnabled !== false) factor = Math.max(factor, skyboxMinClip3dFactor());
                 farZ = nearZ + (farZ - nearZ) * factor;
             }
@@ -6980,10 +6721,7 @@
     }
 
     map.on("load", () => {
-        bindBuildingPaletteStyleHook();
-        bindBuildingPaletteSourceHook();
         setupStyle();
-        bootBuildingPalette();
         applyCarModeVisuals();
         if (window.GeowalkWoodTerrainExtrude) GeowalkWoodTerrainExtrude.bindMapEvents(map);
         if (window.GeowalkPostFx) {
@@ -6993,12 +6731,9 @@
         if (isIgnoreMode()) startHeightAnimForMode("ignore");
         syncClimeSkyFromPosition(true);
         applyCamera();
-        bootBuildingPalette();
     });
     map.on("idle", () => {
         reassertRenderHierarchy();
-        if (buildingPaletteIsEnabled() && !buildingPaletteActive) applyBuildingPalette();
-        else if (buildingPaletteActive) refreshBuildingPaletteVisuals();
     });
 
     // Замена стиля карты в рамках сессии (из выбранного JSON-файла)
@@ -7316,12 +7051,47 @@
         return false;
     }
 
-    function resolveFollowTerrainElevation() {
-        if (!map.getTerrain() || !map.isSourceLoaded("terrain-dem")) return null;
-        if (hasWalkMoveInput() || lastFollowTerrainElev == null) {
-            const te = queryPlayerTerrainElevation();
-            if (te != null) lastFollowTerrainElev = te;
+    let simDt = 0.016;
+
+    function uphillGrade() {
+        if (!map.getTerrain() || !map.isSourceLoaded("terrain-dem")) return 0;
+        const dist = 14;
+        const dir = (player.yaw + (velFwd < -0.4 ? 180 : 0)) * DEG;
+        const cosLat = Math.max(0.2, player.cosLat || Math.cos(player.lat * DEG));
+        const aheadLng = player.lng + Math.sin(dir) * dist / (M_PER_DEG_LAT * cosLat);
+        const aheadLat = player.lat + Math.cos(dir) * dist / M_PER_DEG_LAT;
+        try {
+            const here = map.queryTerrainElevation([player.lng, player.lat]);
+            const ahead = map.queryTerrainElevation([aheadLng, aheadLat]);
+            if (typeof here !== "number" || typeof ahead !== "number") return 0;
+            if (!isFinite(here) || !isFinite(ahead)) return 0;
+            return (ahead - here) / dist;
+        } catch (e) {
+            return 0;
         }
+    }
+
+    function blendTerrainElev(prev, sample, moving) {
+        if (sample == null || !isFinite(sample)) return prev;
+        if (prev == null || !isFinite(prev)) return sample;
+        const delta = sample - prev;
+        const abs = Math.abs(delta);
+        if (!moving && abs < 0.4) return prev;
+        if (abs > 40) return sample;
+        let tau = abs < 2.2
+            ? Math.max(0.08, CONFIG.cameraTerrainSmoothSec || 0.65)
+            : 0.14;
+        if (CONFIG.cameraUphillFast === true && moving && delta > 0.2 && uphillGrade() >= 0.2) {
+            tau = 0.06;
+        }
+        const blend = 1 - Math.exp(-Math.max(simDt, 0.001) / tau);
+        return prev + delta * blend;
+    }
+
+    function resolveFollowTerrainElevation() {
+        if (!map.getTerrain() || !map.isSourceLoaded("terrain-dem")) return lastFollowTerrainElev;
+        const moving = hasWalkMoveInput() || player.speed > 0.2;
+        lastFollowTerrainElev = blendTerrainElev(lastFollowTerrainElev, queryPlayerTerrainElevation(), moving);
         return lastFollowTerrainElev;
     }
 
@@ -7340,7 +7110,13 @@
     }
 
     function cameraSig(parts) {
-        return parts.map((v) => Math.round(v * 1e5)).join(",");
+        let sig = "";
+        for (let i = 0; i < parts.length; i++) {
+            const scale = i < 2 ? 1e7 : 1e4;
+            if (i) sig += ",";
+            sig += Math.round(parts[i] * scale);
+        }
+        return sig;
     }
 
     function update(dt) {
@@ -7353,15 +7129,13 @@
             player.yaw = ((player.yaw + touchJoy.turn * 120 * dt) % 360 + 360) % 360;
         }
 
-        // коллизия активна, пока высота над землёй ≤ collisionHeight
-        const heightAboveGround = CONFIG.eyeHeight + player.altOffset;
-        const collisionActive = heightAboveGround <= CONFIG.collisionHeight;
-        player.collision = collisionActive;
+        const clearanceM = playerClearanceM();
         const carBuildingFadeActive = isCarMode() && carCameraView !== "topdown";
-        if ((collisionActive || carBuildingFadeActive) && performance.now() - cacheTime > 350) {
+        if (performance.now() - cacheTime > 350) {
             refreshBuildingCache();
             cacheTime = performance.now();
         }
+        player.collision = cacheMightBlock(clearanceM) || carBuildingFadeActive;
 
         let maxSpeed = (keys["ShiftLeft"] || keys["ShiftRight"]) ? CONFIG.walkSpeed * CONFIG.runMultiplier : CONFIG.walkSpeed;
         let targetFwd = 0, targetStrafe = 0;
@@ -7426,28 +7200,24 @@
             const cosLat = player.cosLat != null ? player.cosLat : Math.cos(player.lat * DEG);
             const north = (velFwd * cosB - velStrafe * sinB) * dt;
             const east  = (velFwd * sinB + velStrafe * cosB) * dt;
-            let dLat = north / M_PER_DEG_LAT;
-            let dLng = east / (M_PER_DEG_LAT * cosLat);
+            const dLat = north / M_PER_DEG_LAT;
+            const dLng = east / (M_PER_DEG_LAT * cosLat);
             const reqDist = Math.hypot(north, east);
+            const startLng = player.lng;
+            const startLat = player.lat;
 
-            // упираемся в дома (скольжение вдоль стен по осям), но не застреваем,
-            // если уже оказались внутри здания — тогда даём выйти
-            if (collisionActive && !isInsideBuilding(player.lng, player.lat)) {
-                if (isInsideBuilding(player.lng + dLng, player.lat)) dLng = 0;
-                if (isInsideBuilding(player.lng, player.lat + dLat)) dLat = 0;
-                if (dLng !== 0 && dLat !== 0 && isInsideBuilding(player.lng + dLng, player.lat + dLat)) { dLng = 0; dLat = 0; }
-            }
-            player.lat += dLat;
-            player.lng += dLng;
-
-            // при ударе о стену гасим инерцию пропорционально фактическому сдвигу
-            if (useHorizontalInertia() && reqDist > 1e-6) {
-                const actDist = Math.hypot(dLat * M_PER_DEG_LAT, dLng * M_PER_DEG_LAT * cosLat);
-                if (actDist < reqDist * 0.99) {
-                    const scale = actDist / reqDist;
-                    velFwd *= scale;
-                    velStrafe *= scale;
+            // Уже внутри контура — не запираем, чтобы можно было выйти.
+            // Снаружи шаг режется о стены с учётом высоты крыши и радиуса тела.
+            if (!pointBlocked(player.lng, player.lat, clearanceM)) {
+                const moved = resolveBlockedMove(player.lng, player.lat, dLng, dLat, clearanceM);
+                player.lng = moved.lng;
+                player.lat = moved.lat;
+                if (reqDist > 1e-6 && moved.moved < reqDist * 0.99) {
+                    projectVelocityOntoMove(startLng, startLat, player.lng, player.lat);
                 }
+            } else {
+                player.lat += dLat;
+                player.lng += dLng;
             }
         }
         player.speed = dt > 0 ? Math.hypot(velFwd, velStrafe) : 0;
@@ -7492,6 +7262,7 @@
         if (isCarLikeMode() && carCameraView !== "topdown" && CONFIG.carCameraRollEnabled !== false) {
             roll += carCameraRoll;
         }
+        roll += walkWaterRollDeg();
         return roll;
     }
 
@@ -7561,8 +7332,8 @@
             if (map.getTerrain() && map.isSourceLoaded("terrain-dem")) {
                 const te = queryPlayerTerrainElevation();
                 if (te != null) {
-                    lastCarTerrainElev = te;
-                    elev = te + liftM;
+                    lastCarTerrainElev = blendTerrainElev(lastCarTerrainElev, te, player.speed > 0.2);
+                    elev = lastCarTerrainElev + liftM;
                     elevReady = true;
                 } else if (lastCarTerrainElev != null) {
                     elev = lastCarTerrainElev + liftM;
@@ -7705,12 +7476,13 @@
         }
         const dt = Math.min(0.05, (now - lastSimT) / 1000);
         lastSimT = now;
+        simDt = dt;
         updateOverlayIdleBearing(dt);
         update(dt);
         syncClimeSkyFromPosition(false);
         syncSpeedOverlay();
+        syncWalkWater(dt);
         const camChanged = applyCamera();
-        updateSky3dForHighAltitude();
         let originShifted = false;
         if (window.GeowalkThree && ready) {
             originShifted = GeowalkThree.updateOrigin(player.lng, player.lat);
@@ -7721,7 +7493,7 @@
         const worldSimActive = player.speed > VEL_SNAP || Math.abs(velFwd) > VEL_SNAP ||
             Math.abs(velStrafe) > VEL_SNAP || Math.abs(carYawVel) > 0.05;
         const renderSimActive = camChanged || worldSimActive || !!heightAnim || !!jumpAnim;
-        const sky3dActive = CONFIG.sky3dEnabled !== false && window.Geowalk3dSky;
+        const sky3dActive = CONFIG.sky3dEnabled === true && window.Geowalk3dSky;
         const skyboxActive = CONFIG.skyboxEnabled !== false && window.GeowalkSkyboxThree;
         if (sky3dActive && ready) {
             Geowalk3dSky.tick({
@@ -7790,7 +7562,21 @@
                 speed: player.speed
             });
         }
-        if (ready && (camChanged || originShifted || isCarLikeMode() || renderSimActive || sky3dActive || skyboxActive || skyboxNeedsRepaint || weatherActive || woodNeedsRepaint || weatherNeedsRepaint)) {
+        let dustNeedsRepaint = false;
+        if (window.GeowalkCarDust && ready) {
+            dustNeedsRepaint = !!GeowalkCarDust.tick({
+                active: isCarMode() && !overlayVisible() && CONFIG.carDustEnabled !== false,
+                lng: player.lng,
+                lat: player.lat,
+                yaw: player.yaw,
+                speed: player.speed,
+                cosLat: player.cosLat,
+                turnRate: carYawVel,
+                braking: !!(keys["Space"]),
+                dt
+            });
+        }
+        if (ready && (camChanged || originShifted || isCarLikeMode() || renderSimActive || sky3dActive || skyboxActive || skyboxNeedsRepaint || weatherActive || woodNeedsRepaint || weatherNeedsRepaint || dustNeedsRepaint)) {
             map.triggerRepaint();
         }
         let carMapRect = null;
@@ -7810,10 +7596,11 @@
         updateHUD();
         updateMiniMap();
         if (window.GeowalkFollowTerrainHands && isFollowMode() && ready) {
+            const handsInWaterJump = !!jumpAnim && walkWaterInLayer;
             GeowalkFollowTerrainHands.tick({
                 speed: player.speed,
                 dt,
-                surfaceLayers: playerSurfaceLayers,
+                surfaceLayers: handsInWaterJump ? [] : playerSurfaceLayers,
                 sprinting: !!(keys["ShiftLeft"] || keys["ShiftRight"]) && player.speed > 0.05,
                 jumping: !!jumpAnim
             });
